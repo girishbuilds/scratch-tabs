@@ -1,7 +1,7 @@
-import { ReconcileInput, ReconcileResult } from "./types";
+import { ReconcileInput, ReconcileResponse } from "./types";
 
 export interface ReconcileWorkerClient {
-  onmessage: ((event: MessageEvent<{ result?: ReconcileResult; error?: string }>) => void) | null;
+  onmessage: ((event: MessageEvent<ReconcileResponse>) => void) | null;
   postMessage(input: ReconcileInput): void;
   terminate(): void;
 }

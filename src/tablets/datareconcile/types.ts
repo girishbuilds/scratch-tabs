@@ -48,6 +48,10 @@ export interface ReconcileResult {
   headers?: { a: string[]; b: string[] };
 }
 
+export type ReconcileResponse = {
+  headers?: ReconcileResult["headers"];
+} & ({ result: ReconcileResult; error?: never } | { error: string; result?: never });
+
 export interface DataReconcilePayload {
   sourceAId?: string;
   sourceBId?: string;

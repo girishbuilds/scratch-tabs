@@ -1,5 +1,5 @@
 import * as Papa from "papaparse";
-import { ReconcileInput, ReconcileOptions, ReconcileResult, ReconcileRow, Scope } from "./types";
+import { ReconcileInput, ReconcileOptions, ReconcileResponse, ReconcileResult, ReconcileRow, Scope } from "./types";
 
 const normalize = (value: string, options: ReconcileOptions["normalization"]): string => {
   let next = value;
@@ -36,6 +36,14 @@ function parseCsv(content: string, source: "A" | "B"): { headers: string[]; rows
       values: Object.fromEntries(headers.map((header, column) => [header, cells[column] ?? ""])),
     })),
   };
+}
+
+function getReconcileHeaders(input: ReconcileInput): ReconcileResult["headers"] {
+  if (input.options.mode !== "csv") return undefined;
+  const headersFor = (content: string, source: "A" | "B"): string[] => {
+    try { return parseCsv(content, source).headers; } catch { return []; }
+  };
+  return { a: headersFor(input.a, "A"), b: headersFor(input.b, "B") };
 }
 
 function consumeMatches(
@@ -105,4 +113,16 @@ function reconcileCsv(input: ReconcileInput): ReconcileResult {
 
 export function reconcile(input: ReconcileInput): ReconcileResult {
   return input.options.mode === "csv" ? reconcileCsv(input) : reconcileLines(input);
+}
+
+export function createReconcileResponse(input: ReconcileInput): ReconcileResponse {
+  try {
+    const result = reconcile(input);
+    return { result, headers: result.headers };
+  } catch (error) {
+    return {
+      headers: getReconcileHeaders(input),
+      error: error instanceof Error ? error.message : "Comparison failed.",
+    };
+  }
 }
