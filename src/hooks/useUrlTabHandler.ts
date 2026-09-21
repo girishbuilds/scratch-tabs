@@ -235,57 +235,65 @@ export const useUrlTabHandler = () => {
       stateUpdateTimeout.current = null;
     }
 
-    // 1. Try to find existing tab matching the new URL
-    const { tab, side } = findTabByUrlIdentifier(urlIdentifierParam);
+    const processUrlChange = async () => {
+      try {
+        // 1. Try to find existing tab matching the new URL
+        const { tab, side } = findTabByUrlIdentifier(urlIdentifierParam);
 
-    if (tab) {
-      activateTab(tab, side);
-    } else if (urlIdentifierParam) {
-      // No existing tab found, create a new one
-      const { activeWorkspaceId } = useWorkspaceStore.getState();
-      const currentSplitView = useSplitViewStore.getState().splitView;
-      const shouldAddToRight =
-        currentSplitView?.isSplit &&
-        currentSplitView?.activeSide === "right";
-      if (urlIdentifierParam === "canvas") {
-        useRootStore
-          .getState()
-          .handleNewCanvas(!!shouldAddToRight)
-          .catch((error) => {
-            console.error("[useUrlTabHandler] Failed to create Canvas:", error);
-          });
-      } else if (activeWorkspaceId) {
-          createNewTabFromUrl(urlIdentifierParam, activeWorkspaceId)
-          .then((newTab) => {
-            // Determine which side to add the tab based on current split view state
-            const {
-              addTab,
-              setActiveLeftTab,
-              setActiveRightTab,
-              setActiveSide,
-            } = useRootStore.getState();
+        if (tab) {
+          activateTab(tab, side);
+          return;
+        }
+        if (!urlIdentifierParam) return;
 
-            if (shouldAddToRight) {
-              addTab(newTab, true); // true = right side
-              setActiveRightTab(newTab.id);
-              setActiveSide("right");
-            } else {
-              addTab(newTab, false); // false = left side
-              setActiveLeftTab(newTab.id);
-              setActiveSide("left");
-            }
-          })
-          .catch((error) => {
-            console.error("[useUrlTabHandler] Failed to create tab:", error);
-          });
+        // No existing tab found, create a new one. URL entry points must also
+        // work before the user has created their first workspace.
+        const currentSplitView = useSplitViewStore.getState().splitView;
+        const shouldAddToRight =
+          currentSplitView?.isSplit &&
+          currentSplitView?.activeSide === "right";
+
+        if (urlIdentifierParam === "canvas") {
+          await useRootStore
+            .getState()
+            .handleNewCanvas(!!shouldAddToRight);
+          return;
+        }
+
+        const workspaceId = await getOrCreateActiveWorkspace();
+        if (!workspaceId) return;
+
+        const newTab = await createNewTabFromUrl(
+          urlIdentifierParam,
+          workspaceId,
+        );
+        const {
+          addTab,
+          setActiveLeftTab,
+          setActiveRightTab,
+          setActiveSide,
+        } = useRootStore.getState();
+
+        if (shouldAddToRight) {
+          addTab(newTab, true);
+          setActiveRightTab(newTab.id);
+          setActiveSide("right");
+        } else {
+          addTab(newTab, false);
+          setActiveLeftTab(newTab.id);
+          setActiveSide("left");
+        }
+      } catch (error) {
+        console.error("[useUrlTabHandler] Failed to process URL:", error);
+      } finally {
+        prevUrlIdentifierParamRef.current = urlIdentifierParam;
+        // Keep state-to-URL synchronization locked until lazy tablet loading
+        // and tab creation have actually finished.
+        isProcessingUrlChange.current = false;
       }
-    }
+    };
 
-    prevUrlIdentifierParamRef.current = urlIdentifierParam; // Update prev ref
-    // Use a shorter timeout here just to release the lock
-    setTimeout(() => {
-      isProcessingUrlChange.current = false;
-    }, 50);
+    void processUrlChange();
   }, [urlIdentifierParam, isLoading, initialUrlProcessed]); // Add the new flag to the dependency array.
 
   // Cleanup
@@ -296,6 +304,11 @@ export const useUrlTabHandler = () => {
       }
     };
   }, []);
+};
+
+const getOrCreateActiveWorkspace = async (): Promise<string | null> => {
+  const { activeWorkspaceId, ensureWorkspace } = useWorkspaceStore.getState();
+  return activeWorkspaceId ?? ensureWorkspace();
 };
 
 // Helper function to create a new tab from URL identifier
@@ -374,7 +387,7 @@ const createNewTabFromUrl = async (
 // Guard to prevent multiple executions
 let handleInitialUrlExecuted = false;
 
-export const handleInitialUrl = async () => {
+export const openInitialUrlIdentifier = async (urlIdentifier: string) => {
   const { tabs } = useTabsStore.getState();
   const { splitView } = useSplitViewStore.getState();
   const {
@@ -382,8 +395,41 @@ export const handleInitialUrl = async () => {
     setActiveRightTab,
     setActiveSide,
     addTab,
-    setInitialUrlProcessed,
   } = useRootStore.getState();
+
+  const existingTab = tabs.find(
+    (tab) => generateUrlIdentifier(tab) === urlIdentifier,
+  );
+
+  if (existingTab) {
+    const isOnRightSide = splitView?.rightTabs.includes(existingTab.id);
+
+    if (isOnRightSide) {
+      setActiveRightTab(existingTab.id);
+      setActiveSide("right");
+    } else {
+      setActiveLeftTab(existingTab.id);
+      setActiveSide("left");
+    }
+    return;
+  }
+
+  if (urlIdentifier === "canvas") {
+    await useRootStore.getState().handleNewCanvas(false);
+    return;
+  }
+
+  const workspaceId = await getOrCreateActiveWorkspace();
+  if (!workspaceId) return;
+
+  const newTab = await createNewTabFromUrl(urlIdentifier, workspaceId);
+  addTab(newTab, false);
+  setActiveLeftTab(newTab.id);
+  setActiveSide("left");
+};
+
+export const handleInitialUrl = async () => {
+  const { setInitialUrlProcessed } = useRootStore.getState();
 
   // Prevent multiple executions
   if (handleInitialUrlExecuted) {
@@ -395,36 +441,7 @@ export const handleInitialUrl = async () => {
 
   if (pathSegments.length > 0) {
     const urlIdentifier = pathSegments[0];
-
-    const { activeWorkspaceId } = useWorkspaceStore.getState();
-
-    const existingTab = tabs.find(
-      (tab) => generateUrlIdentifier(tab) === urlIdentifier,
-    );
-
-    if (existingTab) {
-      // Check which side the tab is currently on
-      const isOnRightSide = splitView?.rightTabs.includes(existingTab.id);
-
-      if (isOnRightSide) {
-        setActiveRightTab(existingTab.id);
-        setActiveSide("right");
-      } else {
-        setActiveLeftTab(existingTab.id);
-        setActiveSide("left");
-      }
-    } else if (urlIdentifier === "canvas") {
-      await useRootStore.getState().handleNewCanvas(false);
-    } else if (activeWorkspaceId && urlIdentifier) {
-      // If no tab exists for this URL, create a new one.
-      // createNewTabFromUrl will correctly handle language, tablet, or plaintext.
-      const newTab = await createNewTabFromUrl(
-        urlIdentifier,
-        activeWorkspaceId,
-      );
-      addTab(newTab, false);
-      setActiveLeftTab(newTab.id);
-    }
+    await openInitialUrlIdentifier(urlIdentifier);
 
     setInitialUrlProcessed(true);
   } else {

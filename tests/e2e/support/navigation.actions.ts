@@ -10,6 +10,12 @@ export class NavigationActions {
     await this.waitForPageStabilization();
   }
 
+  async navigateToPath(path: string) {
+    const baseUrl = process.env.BASE_URL ?? 'http://localhost:5173/';
+    await this.page.goto(new URL(path, baseUrl).toString());
+    await this.page.waitForLoadState('domcontentloaded');
+  }
+
   async clickButton(buttonText: string) {
     await this.page.getByRole('button', { name: buttonText, exact: true }).click();
   }
