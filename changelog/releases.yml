@@ -7,15 +7,20 @@ releases:
     type: "latest"
     draft: false
     date: "2026-09-21"
-    headline: "Merge Tabs"
-    summary: "Combine tabs in a chosen order as plain text, CSV, JSON, or HAR while keeping every source unchanged."
-    description: "Tabs in the same workspace can now be combined into a new tab with a preview before anything is created. Join any supported text tabs with a chosen separator, or preserve structure when merging compatible CSV, JSON, and HAR tabs."
+    headline: "Merge Tabs + CSV Improvements"
+    summary: "Combine tabs into a new tab, use negative CSV text filters, and keep Data Reconcile headers available through validation errors."
+    description: "Merge Tabs combines ordered sources as text, CSV, JSON, or HAR without changing the originals. CSV workflows now include negative text filters and more reliable header selection in Data Reconcile."
     categories:
       - name: "✨ New Features"
         changes:
           - "**Merge tabs:** Select and reorder tabs from either side of split view, name the result, and preview it before creating a new tab"
-          - "**Structured formats:** Merge CSV and TSV rows, JSON arrays or objects, and HAR requests with format-specific validation and options"
-          - "**Safe source handling:** Source tabs stay open and unchanged, and edits made after preview must be reviewed before the merge can be created"
+          - "**Structured merges:** Combine CSV and TSV rows, JSON arrays or objects, and HAR requests with format-specific validation"
+      - name: "🔧 Improvements"
+        changes:
+          - "**Negative CSV filters:** Text columns now support does not equal and does not contain"
+      - name: "🐛 Bug Fixes"
+        changes:
+          - "**Data Reconcile headers:** CSV key-column selectors retain parsed headers when a comparison reports a validation error"
 
   - version: "1.48.0"
     type: "release"

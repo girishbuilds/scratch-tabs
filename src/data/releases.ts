@@ -22,15 +22,26 @@ export const RELEASES: Release[] = [
     "version": "1.49.0",
     "type": "latest",
     "date": "2026-09-21",
-    "headline": "Merge Tabs",
-    "summary": "Combine tabs in a chosen order as plain text, CSV, JSON, or HAR while keeping every source unchanged.",
+    "headline": "Merge Tabs + CSV Improvements",
+    "summary": "Combine tabs into a new tab, use negative CSV text filters, and keep Data Reconcile headers available through validation errors.",
     "categories": [
       {
         "name": "New Features",
         "changes": [
           "**Merge tabs:** Select and reorder tabs from either side of split view, name the result, and preview it before creating a new tab",
-          "**Structured formats:** Merge CSV and TSV rows, JSON arrays or objects, and HAR requests with format-specific validation and options",
-          "**Safe source handling:** Source tabs stay open and unchanged, and edits made after preview must be reviewed before the merge can be created"
+          "**Structured merges:** Combine CSV and TSV rows, JSON arrays or objects, and HAR requests with format-specific validation"
+        ]
+      },
+      {
+        "name": "Improvements",
+        "changes": [
+          "**Negative CSV filters:** Text columns now support does not equal and does not contain"
+        ]
+      },
+      {
+        "name": "Bug Fixes",
+        "changes": [
+          "**Data Reconcile headers:** CSV key-column selectors retain parsed headers when a comparison reports a validation error"
         ]
       }
     ]
