@@ -4,6 +4,7 @@ export type FilterOperator =
   | "equals"
   | "notEquals"
   | "contains"
+  | "notContains"
   | "startsWith"
   | "gt"
   | "gte"
@@ -229,6 +230,15 @@ function matchesFilter(
       return caseSensitive
         ? cellValue.includes(needle)
         : cellValue.toLowerCase().includes(needle.toLowerCase());
+    }
+
+    case "notContains": {
+      if (typeof filter.value !== "string" && typeof filter.value !== "number")
+        return true;
+      const needle = String(filter.value);
+      return caseSensitive
+        ? !cellValue.includes(needle)
+        : !cellValue.toLowerCase().includes(needle.toLowerCase());
     }
 
     case "startsWith": {

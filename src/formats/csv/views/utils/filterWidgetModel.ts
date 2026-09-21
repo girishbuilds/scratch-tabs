@@ -14,7 +14,9 @@ export type BooleanSelection = "any" | "true" | "false";
 
 export const TEXT_FILTER_OPERATORS = [
   "contains",
+  "notContains",
   "equals",
+  "notEquals",
   "startsWith",
   "regex",
 ] as const;
@@ -23,6 +25,7 @@ const OPERATOR_LABELS: Record<string, string> = {
   equals: "=",
   notEquals: "≠",
   contains: "contains",
+  notContains: "does not contain",
   startsWith: "starts with",
   regex: "matches /…/",
   gt: ">",

@@ -45,6 +45,12 @@ describe("ColumnFilterInput", () => {
       screen.getByLabelText("Filter operator for Name"),
     ).toHaveValue("contains");
     expect(screen.getByLabelText("Filter Name")).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: "does not contain" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: "does not equal" }),
+    ).toBeInTheDocument();
   });
 
   it("debounces commits while typing and clears when emptied", () => {
@@ -116,6 +122,32 @@ describe("ColumnFilterInput", () => {
     expect(onChange).toHaveBeenCalledWith({
       columnId: "col_0",
       operator: "startsWith",
+      value: "an",
+    });
+  });
+
+  it("emits negative text operators", () => {
+    const onChange = jest.fn();
+    render(
+      <Harness
+        column={makeColumn({ type: "text" })}
+        initialFilter={{ columnId: "col_0", operator: "contains", value: "an" }}
+        onChange={onChange}
+      />,
+    );
+
+    const select = screen.getByLabelText("Filter operator for Name");
+    fireEvent.change(select, { target: { value: "notContains" } });
+    expect(onChange).toHaveBeenLastCalledWith({
+      columnId: "col_0",
+      operator: "notContains",
+      value: "an",
+    });
+
+    fireEvent.change(select, { target: { value: "notEquals" } });
+    expect(onChange).toHaveBeenLastCalledWith({
+      columnId: "col_0",
+      operator: "notEquals",
       value: "an",
     });
   });

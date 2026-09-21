@@ -119,6 +119,23 @@ describe("filtering", () => {
       ).toEqual([]);
     });
 
+    it("notContains excludes substring matches case-insensitively", () => {
+      expect(
+        filterRows({ columnId: "name", operator: "notContains", value: "AN" }),
+      ).toEqual(["Apple", "Cherry", "(empty)"]);
+    });
+
+    it("notContains honors caseSensitive", () => {
+      expect(
+        filterRows({
+          columnId: "name",
+          operator: "notContains",
+          value: "AN",
+          caseSensitive: true,
+        }),
+      ).toEqual(["Apple", "banana", "Cherry", "(empty)"]);
+    });
+
     it("startsWith matches prefixes", () => {
       expect(filterRows({ columnId: "name", operator: "startsWith", value: "ba" })).toEqual(["banana"]);
     });

@@ -20,7 +20,9 @@ interface ColumnFilterInputProps {
 
 const TEXT_OPERATOR_OPTIONS: Array<{ value: FilterOperator; label: string }> = [
   { value: "contains", label: "contains" },
+  { value: "notContains", label: "does not contain" },
   { value: "equals", label: "equals" },
+  { value: "notEquals", label: "does not equal" },
   { value: "startsWith", label: "starts with" },
   { value: "regex", label: "matches" },
 ];

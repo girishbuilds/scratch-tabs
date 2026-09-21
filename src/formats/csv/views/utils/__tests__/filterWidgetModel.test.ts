@@ -127,6 +127,12 @@ describe("filterWidgetModel", () => {
         toTextValues({ columnId: "name", operator: "startsWith", value: "Ap" }),
       ).toEqual({ operator: "startsWith", value: "Ap" });
       expect(
+        toTextValues({ columnId: "name", operator: "notEquals", value: "Pear" }),
+      ).toEqual({ operator: "notEquals", value: "Pear" });
+      expect(
+        toTextValues({ columnId: "name", operator: "notContains", value: "err" }),
+      ).toEqual({ operator: "notContains", value: "err" });
+      expect(
         toTextValues({ columnId: "name", operator: "regex", value: "^a" }),
       ).toEqual({ operator: "regex", value: "^a" });
     });
@@ -211,6 +217,9 @@ describe("filterWidgetModel", () => {
       expect(
         describeFilter({ columnId: "a", operator: "contains", value: "oo" }, "Name"),
       ).toBe("Name contains oo");
+      expect(
+        describeFilter({ columnId: "a", operator: "notContains", value: "oo" }, "Name"),
+      ).toBe("Name does not contain oo");
       expect(
         describeFilter({ columnId: "a", operator: "startsWith", value: "Ap" }, "Name"),
       ).toBe("Name starts with Ap");
