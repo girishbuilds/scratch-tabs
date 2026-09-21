@@ -73,6 +73,11 @@ export interface UseContextMenuConfigReturn {
     tabId: string;
     onClose: () => void;
   } | null;
+  mergeModalProps: {
+    tabId: string;
+    isRightSide: boolean;
+    onClose: () => void;
+  } | null;
   shareModalProps: {
     isOpen: boolean;
     tabId: string;
@@ -114,6 +119,7 @@ export const useContextMenuConfig = (
   } | null>(null);
 
   const [splitModalState, setSplitModalState] = useState<{ tabId: string } | null>(null);
+  const [mergeModalOpen, setMergeModalOpen] = useState(false);
   const [shareModalState, setShareModalState] = useState<{ tabId: string } | null>(null);
   const [tabletModalOpen, setTabletModalOpen] = useState(false);
   const [canvasSendSource, setCanvasSendSource] =
@@ -141,6 +147,11 @@ export const useContextMenuConfig = (
   const canDownload = !!tab && !tab.isTablet;
   const canRename = !!tab;
   const canSendToCanvas = !!tab && getTabContentKind(tab) === "text";
+  const canMergeTabs = !!tab && getTabContentKind(tab) === "text" &&
+    tabsStore.tabs.filter((candidate) =>
+      candidate.workspaceId === tab.workspaceId &&
+      getTabContentKind(candidate) === "text",
+    ).length >= 2;
   const hasCanvasTabContent =
     !!tab && !!(modelManager.getContent(tab.id) ?? tab.content);
   const activeEditorStore = useActiveEditorStore.getState();
@@ -369,6 +380,11 @@ Add any other context about the problem here.
     closeContextMenu();
   };
 
+  const handleCloseMergeModal = () => {
+    setMergeModalOpen(false);
+    closeContextMenu();
+  };
+
   const handleOpenShareModal = () => {
     setShareModalState({ tabId });
   };
@@ -557,6 +573,13 @@ Add any other context about the problem here.
       action: handleOpenSplitModal,
       condition: !!tab && !tab.isTablet && !tab.isRich,
     },
+    {
+      id: "mergeTabs",
+      label: "Merge tabs...",
+      icon: Layers,
+      action: () => setMergeModalOpen(true),
+      condition: canMergeTabs,
+    },
     // 9. Copy Content
     {
       id: "copyContent",
@@ -707,6 +730,9 @@ Add any other context about the problem here.
         tabId: splitModalState.tabId,
         onClose: handleCloseSplitModal,
       }
+      : null,
+    mergeModalProps: mergeModalOpen
+      ? { tabId, isRightSide, onClose: handleCloseMergeModal }
       : null,
     shareModalProps: shareModalState
       ? {

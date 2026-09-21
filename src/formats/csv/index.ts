@@ -7,10 +7,12 @@ import { Table } from "../../components/Icons";
 import { CsvTableViewer } from "./views/components/CsvTableViewer";
 import { SmartViewButtons } from "../../components/StatusBar/SmartViewButtons";
 import { StatusItemProps } from "../../components/StatusBar/types";
+import { csvMergeStrategy } from "./mergeStrategy";
 
 // Create the CSV format module that implements the new interface
 export class CsvFormatModule implements FormatModule {
   private detector: CsvFormatDetector;
+  readonly mergeStrategy = csvMergeStrategy;
 
   constructor() {
     this.detector = new CsvFormatDetector();
@@ -36,7 +38,9 @@ export class CsvFormatModule implements FormatModule {
     return this.detector.detect(content);
   }
 
-  registerProvider(monaco: any): void {
+  registerProvider(
+    monaco: Parameters<FormatModule["registerProvider"]>[0],
+  ): void {
     this.detector.registerProvider(monaco);
   }
 
@@ -89,6 +93,8 @@ csvModule.getSmartViews()?.forEach(view => {
 });
 
 // Export for backward compatibility
-export const registerCsvProvider = (monaco: any) => {
+export const registerCsvProvider = (
+  monaco: Parameters<FormatModule["registerProvider"]>[0],
+) => {
   csvModule.registerProvider(monaco);
-}; 
+};

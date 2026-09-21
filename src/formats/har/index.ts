@@ -7,9 +7,11 @@ import { Network } from "lucide-react";
 import { HarViewer } from "./views/components/HarViewer";
 import { SmartViewButtons } from "../../components/StatusBar/SmartViewButtons";
 import { StatusItemProps } from "../../components/StatusBar/types";
+import { harMergeStrategy } from "./mergeStrategy";
 
 export class HarFormatModule implements FormatModule {
   private detector: HarFormatDetector;
+  readonly mergeStrategy = harMergeStrategy;
 
   constructor() {
     this.detector = new HarFormatDetector();
@@ -21,7 +23,11 @@ export class HarFormatModule implements FormatModule {
   get priority(): number { return this.detector.priority; }
 
   detect(content: string) { return this.detector.detect(content); }
-  registerProvider(monaco: any): void { this.detector.registerProvider(monaco); }
+  registerProvider(
+    monaco: Parameters<FormatModule["registerProvider"]>[0],
+  ): void {
+    this.detector.registerProvider(monaco);
+  }
   sampleContent(): string { return this.detector.sampleContent(); }
   getFileExtension(): string { return this.detector.getFileExtension(); }
 
@@ -61,6 +67,8 @@ harModule.getSmartViews().forEach((view) => {
   smartViewRegistry.register(view);
 });
 
-export const registerHarProvider = (monaco: any) => {
+export const registerHarProvider = (
+  monaco: Parameters<FormatModule["registerProvider"]>[0],
+) => {
   harModule.registerProvider(monaco);
 };

@@ -3,8 +3,22 @@ config:
   max_versions: 100  # Maximum number of versions to display
 
 releases:
-  - version: "1.48.0"
+  - version: "1.49.0"
     type: "latest"
+    draft: false
+    date: "2026-09-21"
+    headline: "Merge Tabs"
+    summary: "Combine tabs in a chosen order as plain text, CSV, JSON, or HAR while keeping every source unchanged."
+    description: "Tabs in the same workspace can now be combined into a new tab with a preview before anything is created. Join any supported text tabs with a chosen separator, or preserve structure when merging compatible CSV, JSON, and HAR tabs."
+    categories:
+      - name: "✨ New Features"
+        changes:
+          - "**Merge tabs:** Select and reorder tabs from either side of split view, name the result, and preview it before creating a new tab"
+          - "**Structured formats:** Merge CSV and TSV rows, JSON arrays or objects, and HAR requests with format-specific validation and options"
+          - "**Safe source handling:** Source tabs stay open and unchanged, and edits made after preview must be reviewed before the merge can be created"
+
+  - version: "1.48.0"
+    type: "release"
     draft: false
     date: "2026-09-03"
     headline: "Canvas Quick Transform + CSV Find and Replace"

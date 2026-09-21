@@ -21,6 +21,7 @@ import { QuickTransformActions } from './quickTransform.actions';
 import { XmlSmartViewActions } from './xmlSmartView.actions';
 import { CanvasActions } from './canvas.actions';
 import { CanvasConflictActions } from './canvasConflict.actions';
+import { MergeTabsActions } from './mergeTabs.actions';
 
 /**
  * E2E World Class - Lightweight Orchestrator & Dependency Injection Container
@@ -57,6 +58,7 @@ export class E2EWorld extends World {
   xmlSmartView!: XmlSmartViewActions;
   canvas!: CanvasActions;
   canvasConflict!: CanvasConflictActions;
+  mergeTabs!: MergeTabsActions;
 
   constructor(options: IWorldOptions) {
     super(options);
@@ -94,6 +96,7 @@ export class E2EWorld extends World {
       this.context,
       this.canvas,
     );
+    this.mergeTabs = new MergeTabsActions(this.page);
   }
 }
 

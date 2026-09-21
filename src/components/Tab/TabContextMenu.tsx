@@ -8,6 +8,7 @@ import { ContextMenuItem } from "./ContextMenuItem";
 import { DownloadModal } from "./DownloadModal";
 import { ConfirmationDialog } from "./ConfirmationDialog";
 import { SplitTabModal } from "./SplitTabModal";
+import { MergeTabsModal } from "./MergeTabsModal";
 import { ShareModal } from "../Share/ShareModal";
 import { ContextMenuAction, TabSide } from "../../constants";
 import { useTabsStore } from "../../stores/tabsStore";
@@ -79,7 +80,7 @@ export const TabContextMenu: React.FC<TabContextMenuProps> = ({
     closeThisContextMenu(); // Close context menu when download modal closes
   };
 
-  const { menuItems, confirmationDialogProps, splitModalProps, shareModalProps, canvasSendDialogProps, tabletModalOpen, onOpenTabletModal, onSelectTool }: UseContextMenuConfigReturn =
+  const { menuItems, confirmationDialogProps, splitModalProps, mergeModalProps, shareModalProps, canvasSendDialogProps, tabletModalOpen, onSelectTool }: UseContextMenuConfigReturn =
     useContextMenuConfig(
       tabId,
       isRightSide,
@@ -97,6 +98,7 @@ export const TabContextMenu: React.FC<TabContextMenuProps> = ({
       !tabletModalOpen &&
       (!confirmationDialogProps || !confirmationDialogProps.isOpen) &&
       (!splitModalProps || !splitModalProps.isOpen) &&
+      !mergeModalProps &&
       (!shareModalProps || !shareModalProps.isOpen) &&
       !canvasSendDialogProps
     ) {
@@ -108,6 +110,7 @@ export const TabContextMenu: React.FC<TabContextMenuProps> = ({
     <>
       {/* Hide context menu when any modal is open, but keep component mounted */}
       {(!splitModalProps || !splitModalProps.isOpen) &&
+        !mergeModalProps &&
         (!shareModalProps || !shareModalProps.isOpen) &&
         !canvasSendDialogProps &&
         !tabletModalOpen && (
@@ -158,6 +161,8 @@ export const TabContextMenu: React.FC<TabContextMenuProps> = ({
           onClose={splitModalProps.onClose}
         />
       )}
+
+      {mergeModalProps && <MergeTabsModal {...mergeModalProps} />}
 
       {/* Render the share modal */}
       {shareModalProps && shareModalProps.isOpen && tab && (

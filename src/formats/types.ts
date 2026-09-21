@@ -98,6 +98,9 @@ export interface FormatModule {
    */
   shareStrategy?: ShareStrategy;
 
+  /** Optional structured merge behavior owned by this format. */
+  mergeStrategy?: MergeStrategy;
+
   // --- LEGACY: For backward compatibility (Phase 1) ---
   /**
    * Get status item component for this format (optional) - LEGACY
@@ -173,6 +176,60 @@ export interface ShareStrategy {
    * @returns true if valid, false otherwise
    */
   validateTrimmedContent?: (content: string) => boolean;
+}
+
+/** A source captured in the user's chosen merge order. */
+export interface MergeInput {
+  id: string;
+  title: string;
+  content: string;
+  language: string;
+}
+
+export type MergeOptions = Readonly<Record<string, unknown>>;
+
+export interface MergeOptionsUIProps {
+  inputs: ReadonlyArray<Readonly<MergeInput>>;
+  options: MergeOptions;
+  onOptionsChange: (options: MergeOptions) => void;
+}
+
+export type MergeEligibility =
+  | { canMerge: true }
+  | { canMerge: false; reason: string };
+
+export interface MergeSuccess {
+  ok: true;
+  content: string;
+  language: string;
+  warnings: string[];
+  /** Paths where values conflicted, when a format has conflict semantics. */
+  conflicts?: string[];
+  /** Format-specific counts for a bounded preview. */
+  counts?: Record<string, number>;
+}
+
+export interface MergeValidationError {
+  ok: false;
+  error: {
+    code: string;
+    message: string;
+    paths?: string[];
+  };
+}
+
+export type MergeResult = MergeSuccess | MergeValidationError;
+
+/** Format-owned structured merge. The caller supplies fresh, ordered snapshots. */
+export interface MergeStrategy {
+  canMerge(inputs: ReadonlyArray<Readonly<MergeInput>>): MergeEligibility;
+  getOptionsUI?: () => Promise<{
+    default: React.ComponentType<MergeOptionsUIProps>;
+  }>;
+  merge(
+    inputs: ReadonlyArray<Readonly<MergeInput>>,
+    options: MergeOptions,
+  ): MergeResult;
 }
 
 /**

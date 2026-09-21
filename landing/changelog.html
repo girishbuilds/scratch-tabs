@@ -130,30 +130,39 @@
     <div class="container mx-auto px-6">
       <div class="max-w-4xl mx-auto">
 
-        <!-- Version 1.48.0 -->
+        <!-- Version 1.49.0 -->
         <div class="changelog-entry latest">
           <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2">
             <div class="flex items-center gap-3">
-              <h2 class="text-2xl font-bold text-white">V1.48.0</h2>
+              <h2 class="text-2xl font-bold text-white">V1.49.0</h2>
               <span class="badge latest">LATEST</span>
             </div>
-            <span class="text-gray-500 text-xs font-mono">09/03/2026</span>
+            <span class="text-gray-500 text-xs font-mono">09/21/2026</span>
           </div>
-          <h3 class="text-lg font-bold text-emerald-500 mb-4 font-mono">CANVAS QUICK TRANSFORM + CSV FIND AND REPLACE</h3>
+          <h3 class="text-lg font-bold text-emerald-500 mb-4 font-mono">MERGE TABS</h3>
           <div class="changelog-content text-gray-400 text-sm leading-relaxed">
-            <p class="mb-4">Canvas cards can now run pipeline operations in place from a quick search dialog, with results landing as a linked card next to the source. CSV tables get a proper find and replace bar and a copy down action for filling columns fast. This update also fixes the pipeline menu opening empty when you right click with no text selected.</p>
+            <p class="mb-4">Tabs in the same workspace can now be combined into a new tab with a preview before anything is created. Join any supported text tabs with a chosen separator, or preserve structure when merging compatible CSV, JSON, and HAR tabs.</p>
 
             <h4 class="text-white text-xs font-mono uppercase tracking-widest mb-3"># new_features</h4>
             <ul class="space-y-2 mb-6">
-              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Canvas quick transform:</strong> Search any pipeline operation from a text or code card, tweak params, and run it with the result placed as a linked card beside the source</span></li>
-              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>CSV find and replace:</strong> Replace across the whole table, one column, or just the selected cells, with match case and whole cell options</span></li>
-              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>CSV copy down:</strong> Right click any cell to copy its value into every cell below it in the same column, with full undo support</span></li>
+              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Merge tabs:</strong> Select and reorder tabs from either side of split view, name the result, and preview it before creating a new tab</span></li>
+              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Structured formats:</strong> Merge CSV and TSV rows, JSON arrays or objects, and HAR requests with format-specific validation and options</span></li>
+              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Safe source handling:</strong> Source tabs stay open and unchanged, and edits made after preview must be reviewed before the merge can be created</span></li>
             </ul>
-
-            <h4 class="text-white text-xs font-mono uppercase tracking-widest mb-3"># bug_fixes</h4>
-            <ul class="space-y-2 mb-6">
-              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Pipeline menu with no selection:</strong> Right clicking with nothing selected now opens the pipeline with full tab content instead of an empty input</span></li>
-            </ul>
+          </div>
+        </div>
+        <!-- Version 1.48.0 -->
+        <div class="changelog-entry release">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2">
+            <div class="flex items-center gap-3">
+              <h2 class="text-xl font-bold text-white uppercase">V1.48.0</h2>
+              <span class="badge release">RELEASE</span>
+            </div>
+            <span class="text-gray-500 text-xs font-mono">09/03/2026</span>
+          </div>
+          <h3 class="text-lg font-bold text-gray-400 mb-4 font-mono">CANVAS QUICK TRANSFORM + CSV FIND AND REPLACE</h3>
+          <div class="changelog-content text-gray-400 text-sm leading-relaxed">
+            <p>Run any pipeline operation right from a Canvas card, plus CSV find and replace and one-click copy down for faster table cleanup.</p>
           </div>
         </div>
         <!-- Version 1.47.0 -->
@@ -981,7 +990,7 @@
       <div class="flex flex-col md:flex-row justify-between items-center gap-8">
         <div class="flex items-center space-x-3">
           <img src="https://scratchtabs.b-cdn.net/favicon-gray.svg" alt="Scratch Tabs" class="logo-size" />
-          <span class="text-gray-400 font-mono text-sm">SCRATCH_TABS // v1.48.0</span>
+          <span class="text-gray-400 font-mono text-sm">SCRATCH_TABS // v1.49.0</span>
         </div>
 
         <div class="flex space-x-8">

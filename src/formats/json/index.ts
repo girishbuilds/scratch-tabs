@@ -9,12 +9,14 @@ import { JsonStatusItem } from "./StatusItem";
 import { SmartViewButtons } from "../../components/StatusBar/SmartViewButtons";
 import { StatusItemProps } from "../../components/StatusBar/types";
 import { jsonShareStrategy } from "./shareStrategy";
+import { jsonMergeStrategy } from "./mergeStrategy";
 
 // Create the JSON format module that implements the new interface
 // while preserving the legacy methods for backward compatibility
 export class JsonFormatModule implements FormatModule {
   private detector: JsonFormatDetector;
   shareStrategy = jsonShareStrategy;
+  mergeStrategy = jsonMergeStrategy;
 
   constructor() {
     this.detector = new JsonFormatDetector();
@@ -40,7 +42,9 @@ export class JsonFormatModule implements FormatModule {
     return this.detector.detect(content);
   }
 
-  registerProvider(monaco: any): void {
+  registerProvider(
+    monaco: Parameters<FormatModule["registerProvider"]>[0],
+  ): void {
     this.detector.registerProvider(monaco);
   }
 
@@ -98,9 +102,11 @@ jsonModule.getSmartViews()?.forEach(view => {
 });
 
 // Export for backward compatibility
-export const registerJsonProvider = (monaco: any) => {
+export const registerJsonProvider = (
+  monaco: Parameters<FormatModule["registerProvider"]>[0],
+) => {
   jsonModule.registerProvider(monaco);
 };
 
 // Register pipeline operations (self-registration on import)
-import "./pipelineOperations"; 
+import "./pipelineOperations";

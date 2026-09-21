@@ -15,12 +15,29 @@ export interface Release {
   categories: ReleaseCategory[];
 }
 
-export const APP_VERSION = '1.48.0';
+export const APP_VERSION = '1.49.0';
 
 export const RELEASES: Release[] = [
   {
-    "version": "1.48.0",
+    "version": "1.49.0",
     "type": "latest",
+    "date": "2026-09-21",
+    "headline": "Merge Tabs",
+    "summary": "Combine tabs in a chosen order as plain text, CSV, JSON, or HAR while keeping every source unchanged.",
+    "categories": [
+      {
+        "name": "New Features",
+        "changes": [
+          "**Merge tabs:** Select and reorder tabs from either side of split view, name the result, and preview it before creating a new tab",
+          "**Structured formats:** Merge CSV and TSV rows, JSON arrays or objects, and HAR requests with format-specific validation and options",
+          "**Safe source handling:** Source tabs stay open and unchanged, and edits made after preview must be reviewed before the merge can be created"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "1.48.0",
+    "type": "release",
     "date": "2026-09-03",
     "headline": "Canvas Quick Transform + CSV Find and Replace",
     "summary": "Run any pipeline operation right from a Canvas card, plus CSV find and replace and one-click copy down for faster table cleanup.",

@@ -12,7 +12,6 @@ import { operationRegistry } from "../../services/pipeline/OperationRegistry";
 import { OperationDefinition } from "../../services/pipeline/types";
 import {
   minifyJson,
-  sortJsonKeys,
   flattenJson,
   unflattenJson,
   removeEmptyValues,
@@ -21,10 +20,7 @@ import {
   unstringifyJsonContent,
 } from "./actions/jsonOperations";
 import { JSONPath } from "jsonpath-plus";
-
-const unsafeJsonObjectKeys = new Set(["__proto__", "constructor", "prototype"]);
-
-const isSafeJsonObjectKey = (key: string): boolean => !unsafeJsonObjectKeys.has(key);
+import { deepMergeJsonValues, isSafeJsonObjectKey } from "./mergeUtils";
 
 /**
  * JSON operations for the pipeline
@@ -414,59 +410,11 @@ const jsonOperations: OperationDefinition[] = [
       const patch = JSON.parse((params.patch as string) || "{}");
       const indent = (params.indent as number) ?? 2;
 
-      function sanitizeJsonValue(value: unknown): unknown {
-        if (
-          value === null ||
-          typeof value !== "object"
-        ) return value;
-        if (Array.isArray(value)) {
-          return value.map(sanitizeJsonValue);
-        }
-
-        const result: Record<string, unknown> = {};
-        for (const key of Object.keys(value as Record<string, unknown>)) {
-          if (isSafeJsonObjectKey(key)) {
-            result[key] = sanitizeJsonValue((value as Record<string, unknown>)[key]);
-          }
-        }
-        return result;
-      }
-
-      function deepMerge(target: unknown, source: unknown): unknown {
-        if (
-          source === null ||
-          typeof source !== "object" ||
-          Array.isArray(source)
-        ) return sanitizeJsonValue(source);
-
-        const targetObject =
-          target !== null && typeof target === "object" && !Array.isArray(target)
-            ? (target as Record<string, unknown>)
-            : {};
-        const sourceObject = source as Record<string, unknown>;
-        const result: Record<string, unknown> = {};
-
-        for (const key of Object.keys(targetObject)) {
-          if (isSafeJsonObjectKey(key)) {
-            result[key] = sanitizeJsonValue(targetObject[key]);
-          }
-        }
-
-        for (const key of Object.keys(sourceObject)) {
-          if (!isSafeJsonObjectKey(key)) {
-            continue;
-          }
-          result[key] = deepMerge(
-            Object.prototype.hasOwnProperty.call(targetObject, key)
-              ? targetObject[key]
-              : undefined,
-            sourceObject[key]
-          );
-        }
-        return result;
-      }
-
-      return JSON.stringify(deepMerge(base, patch), null, indent);
+      return JSON.stringify(
+        deepMergeJsonValues(base, patch, "later").value,
+        null,
+        indent,
+      );
     },
     keywords: ["merge", "combine", "deep", "patch", "extend", "assign", "defaults", "mixin"],
     icon: "GitMerge",

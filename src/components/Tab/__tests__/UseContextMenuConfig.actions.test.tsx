@@ -224,6 +224,29 @@ describe('UseContextMenuConfig - Actions and Structure', () => {
     expect(splitTabItem?.label).toBe('Split Content');
   });
 
+  it('offers merge only when another editor tab shares the workspace', () => {
+    const other = { ...mockTab, id: 'other', title: 'Other' };
+    mockUseTabsStore.mockReturnValue({ tabs: [mockTab, mockTabletTab, other] } as any);
+    const { result } = renderHook(() =>
+      useContextMenuConfig('test-tab-id', false, mockCloseContextMenu)
+    );
+    const mergeItem = result.current.menuItems.find(item => item.id === 'mergeTabs');
+    expect(mergeItem?.label).toBe('Merge tabs...');
+    act(() => mergeItem?.action?.());
+    expect(result.current.mergeModalProps).toEqual(expect.objectContaining({
+      tabId: 'test-tab-id', isRightSide: false,
+    }));
+  });
+
+  it('hides merge for non-editor tabs and tabs in other workspaces', () => {
+    const otherWorkspace = { ...mockTab, id: 'elsewhere', workspaceId: 'other-workspace' };
+    mockUseTabsStore.mockReturnValue({ tabs: [mockTab, mockTabletTab, otherWorkspace] } as any);
+    const { result } = renderHook(() =>
+      useContextMenuConfig('test-tab-id', false, mockCloseContextMenu)
+    );
+    expect(result.current.menuItems.find(item => item.id === 'mergeTabs')).toBeUndefined();
+  });
+
   it('should set splitModalProps when split tab action is triggered', () => {
     const { result } = renderHook(() =>
       useContextMenuConfig('test-tab-id', false, mockCloseContextMenu)

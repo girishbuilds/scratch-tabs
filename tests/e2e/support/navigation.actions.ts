@@ -118,16 +118,16 @@ export class NavigationActions {
   }
 
   async expectLeftPanelContainsTab(tabTitle: string) {
-    const leftPanel = this.page.locator('[data-editor-pane-side="left"]');
-    await expect(leftPanel).toBeVisible();
-    const tab = leftPanel.locator(`[data-testid="tab-${tabTitle}"]`);
+    const tab = this.page.locator(
+      `[data-testid="tab-${tabTitle}"][data-side="left"]`,
+    );
     await expect(tab).toBeVisible();
   }
 
   async expectRightPanelContainsTab(tabTitle: string) {
-    const rightPanel = this.page.locator('[data-editor-pane-side="right"]');
-    await expect(rightPanel).toBeVisible();
-    const tab = rightPanel.locator(`[data-testid="tab-${tabTitle}"]`);
+    const tab = this.page.locator(
+      `[data-testid="tab-${tabTitle}"][data-side="right"]`,
+    );
     await expect(tab).toBeVisible();
   }
 
@@ -145,18 +145,20 @@ export class NavigationActions {
   }
 
   async expectTabActiveOnLeftSide(tabTitle: string) {
-    const leftPanel = this.page.locator('[data-editor-pane-side="left"]');
-    await expect(leftPanel).toBeVisible();
-    const tab = leftPanel.locator(`[data-testid="tab-${tabTitle}"]`);
+    const tab = this.page.locator(
+      `[data-testid="tab-${tabTitle}"][data-side="left"]`,
+    );
     await expect(tab).toBeVisible();
-    const activeTab = leftPanel.locator(`[data-testid="tab-${tabTitle}"][aria-selected="true"]`);
+    const activeTab = this.page.locator(
+      `[data-testid="tab-${tabTitle}"][data-side="left"][aria-selected="true"]`,
+    );
     await expect(activeTab).toBeVisible();
   }
 
   async expectTabExistsOnRightSide(tabTitle: string) {
-    const rightPanel = this.page.locator('[data-editor-pane-side="right"]');
-    await expect(rightPanel).toBeVisible();
-    const tab = rightPanel.locator(`[data-testid="tab-${tabTitle}"]`);
+    const tab = this.page.locator(
+      `[data-testid="tab-${tabTitle}"][data-side="right"]`,
+    );
     await expect(tab).toBeVisible();
   }
 
