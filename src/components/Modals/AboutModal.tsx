@@ -18,7 +18,7 @@ import {
 } from "../Icons";
 
 const LINKS = {
-  github: "https://github.com/spectra-g/scratch-tabs-feedback/issues",
+  github: "https://github.com/girishbuilds/scratch-tabs/issues",
   kofi: "https://ko-fi.com/scratchtabs",
   discord: "https://discord.gg/HwsfpTzMVS",
 };

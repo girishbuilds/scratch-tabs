@@ -85,7 +85,7 @@ The tablet should render normally without breaking the entire application.
       labels: "bug,tablet-error",
     });
 
-    return `https://github.com/spectra-g/scratch-tabs/issues/new?${params.toString()}`;
+    return `https://github.com/girishbuilds/scratch-tabs/issues/new?${params.toString()}`;
   };
 
   private handleRetry = () => {

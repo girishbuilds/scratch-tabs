@@ -40,9 +40,24 @@ describe("reconcile", () => {
     expect(() => reconcile(input("email,email\na,b", "email\na", { mode: "csv" }))).toThrow("duplicate header");
   });
 
-  it("treats non-key columns present on only one CSV source as changes", () => {
+  it("ignores non-key columns present on only one CSV source", () => {
     const result = reconcile(input("id,name,extra\n1,Ada,yes", "id,name\n1,Ada", { mode: "csv", keyPairs: [{ a: "id", b: "id" }] }));
-    expect(result.changed[0].differences).toEqual([{ column: "extra", a: "yes", b: "" }]);
+    expect(result.changed).toHaveLength(0);
+    expect(result.inBoth).toHaveLength(1);
+  });
+
+  it("counts rows as in both when every non-key column is missing from one CSV source", () => {
+    const result = reconcile(input("id,code\n1,X\n2,Y", "id,code,note\n1,X,hello\n2,Y,world", { mode: "csv" }));
+    expect(result.inBoth).toHaveLength(2);
+    expect(result.changed).toHaveLength(0);
+    expect(result.onlyA).toHaveLength(0);
+    expect(result.onlyB).toHaveLength(0);
+  });
+
+  it("still reports differences for non-key columns shared by both CSV sources", () => {
+    const result = reconcile(input("id,code,note\n1,X,hello", "id,code,note\n1,X,goodbye", { mode: "csv", keyPairs: [{ a: "id", b: "id" }] }));
+    expect(result.inBoth).toHaveLength(0);
+    expect(result.changed[0].differences).toEqual([{ column: "note", a: "hello", b: "goodbye" }]);
   });
 
   it("supports set semantics when requested", () => {

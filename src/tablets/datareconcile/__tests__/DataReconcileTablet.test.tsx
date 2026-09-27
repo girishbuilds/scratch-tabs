@@ -100,6 +100,31 @@ describe("DataReconcileTablet", () => {
     expect(screen.getByRole("button", { name: "1 Lines from A also in B" })).toBeInTheDocument();
   });
 
+  it("shows the auto-matched shared key columns and counts rows against a wider CSV", () => {
+    mockTabs[0].content = "id,code\n1,X\n2,Y";
+    mockTabs[1].content = "id,code,note\n1,X,hello\n2,Y,world";
+    render(<StatefulTablet initialState={DataReconcileTablet.createInitialState({ sourceAId: "a", sourceBId: "b", csvMode: true })} />);
+
+    expect(screen.getByTestId("csv-key-columns")).toHaveTextContent("id → id, code → code");
+    expect(screen.getByRole("button", { name: "2 Lines from A also in B" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "0 A rows changed in B" })).toBeInTheDocument();
+  });
+
+  it("adds each key column pair to an unused header", () => {
+    mockTabs[0].content = "id,code\n1,X";
+    mockTabs[1].content = "id,code,note\n1,X,hello";
+    render(<StatefulTablet initialState={DataReconcileTablet.createInitialState({ sourceAId: "a", sourceBId: "b", csvMode: true })} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Add column" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add column" }));
+
+    expect(screen.getByRole("combobox", { name: "Key column A 1" })).toHaveValue("id");
+    expect(screen.getByRole("combobox", { name: "Key column B 1" })).toHaveValue("id");
+    expect(screen.getByRole("combobox", { name: "Key column A 2" })).toHaveValue("code");
+    expect(screen.getByRole("combobox", { name: "Key column B 2" })).toHaveValue("code");
+    expect(screen.getByTestId("csv-key-columns")).toHaveTextContent("id → id, code → code");
+  });
+
   it("creates CSV-aware initial state and safely restores serialized state", () => {
     expect(DataReconcileTablet.createInitialState({ sourceAId: "a", csvMode: true })).toMatchObject({ type: "datareconcile", data: { sourceAId: "a", options: { mode: "csv" }, selectedResult: "aInB" } });
     expect(DataReconcileTablet.deserializeState("invalid")).toMatchObject({ type: "datareconcile" });

@@ -99,7 +99,7 @@ function reconcileCsv(input: ReconcileInput): ReconcileResult {
   const result = consumeMatches(aRows, bRows, key, input.options);
   const nonKeyA = a.headers.filter((header) => !pairs.some((pair) => pair.a === header));
   const nonKeyB = b.headers.filter((header) => !pairs.some((pair) => pair.b === header));
-  const comparedColumns = [...nonKeyA, ...nonKeyB.filter((header) => !nonKeyA.includes(header))];
+  const comparedColumns = nonKeyA.filter((header) => nonKeyB.includes(header));
   const exact: typeof result.inBoth = [];
   for (const match of result.inBoth) {
     const differences = comparedColumns.filter((header) => normalize(match.a.values?.[header] ?? "", input.options.normalization) !== normalize(match.b.values?.[header] ?? "", input.options.normalization))

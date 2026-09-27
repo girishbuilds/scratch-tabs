@@ -41,7 +41,7 @@ export const HamburgerMenu: React.FC = () => {
   };
 
   const handleFeedbackClick = () => {
-    window.open('https://github.com/spectra-g/scratch-tabs/issues/new', '_blank');
+    window.open('https://github.com/girishbuilds/scratch-tabs/issues/new', '_blank');
     setIsOpen(false);
   };
 

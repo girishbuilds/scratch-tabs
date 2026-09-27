@@ -145,7 +145,7 @@ function generateChangelogHTML(releases, maxVersions) {
             Want to suggest a feature or report a bug? Join the conversation on GitHub or Discord.
           </p>
           <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <a href="https://github.com/spectra-g/scratch-tabs/issues" target="_blank"
+            <a href="https://github.com/girishbuilds/scratch-tabs/issues" target="_blank"
               class="terminal-button px-6 py-2">
               <span class="text-gray-500 mr-2">$</span> open_github_issue<span class="cursor-blink">|</span>
             </a>
