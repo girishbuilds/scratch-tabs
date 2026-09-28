@@ -66,6 +66,16 @@ describe("FacetFilterPopover", () => {
     expect(props.onSelectionChange).toHaveBeenCalledWith(["west", "east"]);
   });
 
+  it("shows only one value when its Only action is clicked", () => {
+    const props = renderPopover({ selection: ["west"] });
+
+    fireEvent.click(screen.getByRole("button", { name: "Show only east in Region" }));
+
+    expect(props.onSelectionChange).toHaveBeenCalledWith(["east"]);
+    expect(props.onSelectionChange).toHaveBeenCalledTimes(1);
+    expect(props.onClose).not.toHaveBeenCalled();
+  });
+
   it("emits an empty selection when the last selected value is unticked", () => {
     const props = renderPopover({ selection: ["west"] });
 

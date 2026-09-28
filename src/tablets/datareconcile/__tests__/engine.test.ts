@@ -72,7 +72,7 @@ describe("createReconcileResponse", () => {
   it("returns headers and error for disjoint CSV headers with no keyPairs", () => {
     const response = createReconcileResponse(input("id,name\n1,Ada", "ref,title\n9,Guide", { mode: "csv" }));
     expect(response.result).toBeUndefined();
-    expect(response.error).toBe("Choose valid CSV key columns for both sources.");
+    expect(response.error).toBe("No shared CSV headers found. Choose columns manually to match these files.");
     expect(response.headers).toEqual({ a: ["id", "name"], b: ["ref", "title"] });
   });
 

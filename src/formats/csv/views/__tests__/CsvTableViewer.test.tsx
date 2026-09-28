@@ -72,6 +72,30 @@ describe("CsvTableViewer", () => {
     expect(screen.getByRole("button", { name: /redo/i })).toBeInTheDocument();
   });
 
+  it("filters to one value, then adds another from the value picker", () => {
+    const csv = `Name,Region
+Alice,east
+Bob,west
+Cara,north`;
+    render(
+      <CsvTableViewer
+        content={csv}
+        onContentChange={mockOnContentChange}
+        tabId="test-tab"
+        isActive={true}
+        side="left"
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Filter Region by value" }));
+    fireEvent.click(screen.getByRole("button", { name: "Show only east in Region" }));
+    expect(screen.getByTestId("filter-summary")).toHaveTextContent("Showing 1 of 3 rows");
+
+    fireEvent.click(screen.getByLabelText("Filter by Region = west"));
+    expect(screen.getByTestId("filter-summary")).toHaveTextContent("Showing 2 of 3 rows");
+    expect(screen.getByTestId("filter-chip-col_1_Region")).toHaveTextContent("east, west");
+  });
+
   it("should show loading state", () => {
     render(
       <CsvTableViewer

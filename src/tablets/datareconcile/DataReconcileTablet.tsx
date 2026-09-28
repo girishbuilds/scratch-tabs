@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Check, Copy, Database, Plus } from "../../components/Icons";
+import { Check, Copy, Database, Plus, Trash2 } from "../../components/Icons";
 import { useRootStore } from "../../stores/rootStore";
 import { useTabsStore } from "../../stores/tabsStore";
 import { Tablet, TabletState } from "../types";
@@ -11,7 +11,7 @@ type ResultKind = DataReconcileStateData["selectedResult"];
 const defaultOptions = (csvMode = false) => ({
   mode: csvMode ? "csv" as const : "line" as const,
   normalization: { trim: true, ignoreCase: false, collapseWhitespace: false },
-  scopeA: { kind: "all" as const }, scopeB: { kind: "all" as const }, keyPairs: [],
+  scopeA: { kind: "all" as const }, scopeB: { kind: "all" as const }, keyMode: "auto" as const, keyPairs: [],
 });
 
 const emptyResult: ReconcileResult = { inBoth: [], changed: [], onlyA: [], onlyB: [] };
@@ -46,7 +46,7 @@ function useReconciliation(input: ReconcileInput | null) {
 }
 
 const ResultButton: React.FC<{ label: string; count: number; active: boolean; onClick: () => void }> = ({ label, count, active, onClick }) => (
-  <button onClick={onClick} aria-pressed={active} className={`rounded border px-3 py-2 text-left ${active ? "border-accent bg-surface-secondary" : "border-base bg-surface"}`}>
+  <button onClick={onClick} aria-pressed={active} className={`min-w-[9rem] flex-1 rounded border px-3 py-2 text-left ${active ? "border-accent bg-surface-secondary" : "border-base bg-surface"}`}>
     <span className="block text-lg font-semibold">{count}</span><span className="text-xs text-secondary">{label}</span>
   </button>
 );
@@ -63,14 +63,20 @@ const DataReconcileUI: React.FC<{ state: TabletState; onChange: (state: TabletSt
   const { result, error } = useReconciliation(input);
   const update = (patch: Partial<DataReconcileStateData>) => onChange({ ...state, data: { ...data, ...patch } });
   const updateOptions = (patch: Partial<DataReconcileStateData["options"]>) => update({ options: { ...data.options, ...patch } });
-  const aHeaders = result.headers?.a ?? [];
-  const bHeaders = result.headers?.b ?? [];
-  const activeKeyPairs = data.options.keyPairs.length
-    ? data.options.keyPairs
-    : aHeaders.filter((header) => bHeaders.includes(header)).map((header) => ({ a: header, b: header }));
-  const nextKeyPair = () => ({
-    a: aHeaders.find((header) => !data.options.keyPairs.some((pair) => pair.a === header)) ?? "",
-    b: bHeaders.find((header) => !data.options.keyPairs.some((pair) => pair.b === header)) ?? "",
+  const aHeaders = input ? result.headers?.a ?? [] : [];
+  const bHeaders = input ? result.headers?.b ?? [] : [];
+  const keyMode = data.options.keyMode ?? (data.options.keyPairs.length ? "manual" : "auto");
+  const automaticKeyPairs = aHeaders.filter((header) => bHeaders.includes(header)).map((header) => ({ a: header, b: header }));
+  const nextKeyPair = (pairs = data.options.keyPairs) => {
+    const a = aHeaders.find((header) => !pairs.some((pair) => pair.a === header)) ?? "";
+    return {
+      a,
+      b: (a && bHeaders.includes(a) && !pairs.some((pair) => pair.b === a) ? a : bHeaders.find((header) => !pairs.some((pair) => pair.b === header))) ?? "",
+    };
+  };
+  const chooseManualKeys = () => updateOptions({
+    keyMode: "manual",
+    keyPairs: automaticKeyPairs.length ? automaticKeyPairs : aHeaders.length && bHeaders.length ? [nextKeyPair([])] : [],
   });
   const selections: Record<ResultKind, { label: string; rows: typeof result.onlyA; source: "A" | "B"; count: number }> = {
     aInB: { label: "Lines from A also in B", rows: result.inBoth.map((pair) => pair.a), source: "A", count: result.inBoth.length },
@@ -111,10 +117,11 @@ const DataReconcileUI: React.FC<{ state: TabletState; onChange: (state: TabletSt
     }
   };
 
-  return <div className="h-full overflow-auto custom-scrollbar bg-canvas text-main p-5" data-testid="data-reconcile-tablet">
-    <div className="mb-5 flex items-center gap-3"><Database className="text-accent" /><div><h2 className="text-xl font-semibold">Data Reconcile</h2><p className="text-sm text-secondary">Find which lines from either tab do or do not appear in the other.</p></div></div>
-    <div className="grid gap-4 md:grid-cols-2">
-      {(["A", "B"] as const).map((side) => <label key={side} className="text-sm font-medium">Source {side}
+  return <div className="h-full overflow-auto custom-scrollbar bg-canvas text-main p-4 sm:p-5" data-testid="data-reconcile-tablet">
+    <div className="mx-auto w-full max-w-5xl min-w-0">
+    <div className="mb-5 flex items-start gap-3"><Database className="mt-1 shrink-0 text-accent" /><div><h2 className="text-xl font-semibold">Data Reconcile</h2><p className="text-sm text-secondary">Compare rows from two tabs and find matches, changes, and missing rows.</p></div></div>
+    <div className="flex flex-wrap gap-4">
+      {(["A", "B"] as const).map((side) => <label key={side} className="min-w-0 flex-1 basis-64 text-sm font-medium">Source {side}
         <select aria-label={`Source ${side}`} value={side === "A" ? data.sourceAId ?? "" : data.sourceBId ?? ""} onChange={(e) => update(side === "A" ? { sourceAId: e.target.value || undefined } : { sourceBId: e.target.value || undefined })} className="mt-1 w-full rounded border border-base bg-surface p-2 text-main">
           <option value="">Choose tab</option>{tabs.map((tab) => <option key={tab.id} value={tab.id}>{tab.title}</option>)}
         </select></label>)}
@@ -124,12 +131,41 @@ const DataReconcileUI: React.FC<{ state: TabletState; onChange: (state: TabletSt
       <label><input type="radio" checked={data.options.mode === "csv"} onChange={() => updateOptions({ mode: "csv" })} /> Match CSV columns</label>
       {(["trim", "ignoreCase", "collapseWhitespace"] as const).map((key) => <label key={key}><input type="checkbox" checked={data.options.normalization[key]} onChange={(e) => updateOptions({ normalization: { ...data.options.normalization, [key]: e.target.checked } })} /> {key === "trim" ? "Trim whitespace" : key === "ignoreCase" ? "Ignore case" : "Collapse internal whitespace"}</label>)}
     </div>
-    {data.options.mode === "csv" && <div className="mt-4 space-y-2"><p className="text-sm text-secondary">Key columns pair headers independently. Without a pair, shared header names are used. Rows match on the key columns; remaining columns shared by both sources are compared for changes.</p>{data.options.keyPairs.map((pair, index) => <div key={index} className="flex gap-2"><select aria-label={`Key column A ${index + 1}`} value={pair.a} onChange={(e) => updateOptions({ keyPairs: data.options.keyPairs.map((item, i) => i === index ? { ...item, a: e.target.value } : item) })}>{aHeaders.map((header) => <option key={header}>{header}</option>)}</select><span>→</span><select aria-label={`Key column B ${index + 1}`} value={pair.b} onChange={(e) => updateOptions({ keyPairs: data.options.keyPairs.map((item, i) => i === index ? { ...item, b: e.target.value } : item) })}>{bHeaders.map((header) => <option key={header}>{header}</option>)}</select></div>)}<button data-testid="csv-key-columns" className="text-sm text-secondary">Key columns in use: {activeKeyPairs.map((pair) => `${pair.a} → ${pair.b}`).join(", ") || "none"}</button><button className="text-sm text-accent" onClick={() => updateOptions({ keyPairs: [...data.options.keyPairs, nextKeyPair()] })}><Plus size={14} className="inline" /> Add column</button></div>}
-    <div className="mt-4 grid gap-3 md:grid-cols-2">{(["A", "B"] as const).map((side) => { const scope = side === "A" ? data.options.scopeA : data.options.scopeB; const pattern = side === "A" ? scopePatterns.a : scopePatterns.b; return <div key={side}><label className="text-sm">Scope {side}<select value={scope.kind} onChange={(e) => { const kind = e.target.value as typeof scope.kind; updateOptions(side === "A" ? { scopeA: { kind, pattern: kind === "all" ? undefined : pattern } } : { scopeB: { kind, pattern: kind === "all" ? undefined : pattern } }); }} className="ml-2 rounded border border-base bg-canvas p-1"><option value="all">All rows</option><option value="matching">Rows matching a regex</option><option value="not-matching">Rows not matching a regex</option></select></label>{scope.kind !== "all" && <input aria-label={`Scope ${side} regex`} value={pattern} onChange={(e) => { const next = e.target.value; setScopePatterns((current) => ({ ...current, [side.toLowerCase()]: next })); updateOptions(side === "A" ? { scopeA: { ...scope, pattern: next } } : { scopeB: { ...scope, pattern: next } }); }} className="mt-1 w-full rounded border border-base bg-canvas p-1" placeholder="Regular expression" />}</div>; })}</div></section>
+    {data.options.mode === "csv" && <div className="mt-5 border-t border-base pt-4">
+      <h3 className="text-sm font-semibold">Match rows by key columns</h3>
+      <p className="mt-1 text-sm text-secondary">Rows with the same key are matched. Other shared columns are checked for changes.</p>
+      <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm">
+        <label className="flex items-center gap-2"><input type="radio" name="csv-key-mode" checked={keyMode === "auto"} onChange={() => updateOptions({ keyMode: "auto", keyPairs: [] })} /> Use shared header names</label>
+        <label className="flex items-center gap-2"><input type="radio" name="csv-key-mode" checked={keyMode === "manual"} onChange={chooseManualKeys} /> Choose columns manually</label>
+      </div>
+      {keyMode === "auto" ? <div className="mt-3 rounded border border-base bg-canvas p-3 text-sm" data-testid="csv-key-columns">
+        <p className="font-medium">Key columns in use</p>
+        {automaticKeyPairs.length ? <><ul className="mt-2 flex flex-wrap gap-2">{automaticKeyPairs.map((pair) => <li key={pair.a} className="rounded border border-base bg-surface px-2 py-1 font-mono text-xs break-all">{pair.a} → {pair.b}</li>)}</ul><p className="mt-2 text-secondary">To check other columns for changes, choose columns manually and keep only the identifiers as keys.</p></> : <p className="mt-1 text-secondary">{input ? "No shared headers. Choose columns manually to pair different names." : "Choose two source tabs to see shared headers."}</p>}
+      </div> : <div className="mt-3 space-y-3">
+        {data.options.keyPairs.map((pair, index) => <div key={index} className="rounded border border-base bg-canvas p-3">
+          <div className="flex flex-wrap items-end gap-3">
+            <label className="min-w-[9rem] flex-1 text-xs font-medium text-secondary">Source A column
+              <select aria-label={`Key column A ${index + 1}`} value={pair.a} onChange={(e) => updateOptions({ keyPairs: data.options.keyPairs.map((item, i) => i === index ? { ...item, a: e.target.value } : item) })} className="mt-1 block w-full min-w-0 rounded border border-base bg-surface p-2 text-sm text-main">
+                {!aHeaders.includes(pair.a) && <option value={pair.a} disabled>{pair.a ? `Missing: ${pair.a}` : "Choose column"}</option>}{aHeaders.map((header) => <option key={header} value={header}>{header}</option>)}
+              </select>
+            </label>
+            <label className="min-w-[9rem] flex-1 text-xs font-medium text-secondary">Source B column
+              <select aria-label={`Key column B ${index + 1}`} value={pair.b} onChange={(e) => updateOptions({ keyPairs: data.options.keyPairs.map((item, i) => i === index ? { ...item, b: e.target.value } : item) })} className="mt-1 block w-full min-w-0 rounded border border-base bg-surface p-2 text-sm text-main">
+                {!bHeaders.includes(pair.b) && <option value={pair.b} disabled>{pair.b ? `Missing: ${pair.b}` : "Choose column"}</option>}{bHeaders.map((header) => <option key={header} value={header}>{header}</option>)}
+              </select>
+            </label>
+            <button type="button" aria-label={`Remove key column pair ${index + 1}`} onClick={() => updateOptions({ keyPairs: data.options.keyPairs.filter((_, i) => i !== index) })} className="rounded border border-base px-3 py-2 text-sm text-secondary hover:text-danger"><Trash2 size={14} className="mr-1 inline" /> Remove</button>
+          </div>
+        </div>)}
+        {!data.options.keyPairs.length && <p className="text-sm text-secondary">{input ? "Add a column pair to start matching rows." : "Choose two source tabs to add a column pair."}</p>}
+        <button type="button" className="rounded border border-base px-3 py-2 text-sm text-accent disabled:cursor-not-allowed disabled:opacity-50" disabled={!aHeaders.length || !bHeaders.length || !nextKeyPair().a || !nextKeyPair().b} onClick={() => updateOptions({ keyPairs: [...data.options.keyPairs, nextKeyPair()] })}><Plus size={14} className="mr-1 inline" /> Add column pair</button>
+      </div>}
+    </div>}
+    <div className="mt-4 flex flex-wrap gap-3">{(["A", "B"] as const).map((side) => { const scope = side === "A" ? data.options.scopeA : data.options.scopeB; const pattern = side === "A" ? scopePatterns.a : scopePatterns.b; return <div key={side} className="min-w-0 flex-1 basis-64"><label className="block text-sm">Scope {side}<select value={scope.kind} onChange={(e) => { const kind = e.target.value as typeof scope.kind; updateOptions(side === "A" ? { scopeA: { kind, pattern: kind === "all" ? undefined : pattern } } : { scopeB: { kind, pattern: kind === "all" ? undefined : pattern } }); }} className="mt-1 block w-full rounded border border-base bg-canvas p-2"><option value="all">All rows</option><option value="matching">Rows matching a regex</option><option value="not-matching">Rows not matching a regex</option></select></label>{scope.kind !== "all" && <input aria-label={`Scope ${side} regex`} value={pattern} onChange={(e) => { const next = e.target.value; setScopePatterns((current) => ({ ...current, [side.toLowerCase()]: next })); updateOptions(side === "A" ? { scopeA: { ...scope, pattern: next } } : { scopeB: { ...scope, pattern: next } }); }} className="mt-1 w-full rounded border border-base bg-canvas p-2" placeholder="Regular expression" />}</div>; })}</div></section>
     {!input && <p className="mt-5 text-secondary">Choose two source tabs to reconcile their lines.</p>}{error && <p role="alert" className="mt-4 text-danger">{error}</p>}
-    {input && !error && <><p className="mt-5 text-sm text-secondary">Choose a set to preview its original source lines, then extract exactly those lines to a new tab.</p><div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4"><ResultButton label={selections.aInB.label} count={selections.aInB.count} active={selectedKind === "aInB"} onClick={() => update({ selectedResult: "aInB" })} /><ResultButton label={selections.aNotInB.label} count={selections.aNotInB.count} active={selectedKind === "aNotInB"} onClick={() => update({ selectedResult: "aNotInB" })} /><ResultButton label={selections.bInA.label} count={selections.bInA.count} active={selectedKind === "bInA"} onClick={() => update({ selectedResult: "bInA" })} /><ResultButton label={selections.bNotInA.label} count={selections.bNotInA.count} active={selectedKind === "bNotInA"} onClick={() => update({ selectedResult: "bNotInA" })} />{data.options.mode === "csv" && <ResultButton label={selections.changed.label} count={selections.changed.count} active={selectedKind === "changed"} onClick={() => update({ selectedResult: "changed" })} />}</div>
-    <div className="mt-4 flex flex-wrap gap-2"><button onClick={createOutput} disabled={selectedRows.length === 0} className="rounded bg-accent px-3 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-50">Open selected lines in new tab</button><button onClick={copyOutput} disabled={selectedRows.length === 0} className={`rounded border border-base px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50 ${copied ? "text-success" : ""}`}>{copied ? <Check size={14} className="mr-1 inline" /> : <Copy size={14} className="mr-1 inline" />}{copied ? "Copied" : "Copy selected lines"}</button></div>
-    <div className="mt-4 overflow-hidden rounded border border-base"><table className="w-full text-sm"><thead className="bg-surface-secondary text-left"><tr><th className="p-2">Source</th><th className="p-2">Row</th><th className="p-2">Preview</th></tr></thead><tbody>{selectedRows.map((row) => <tr key={`${row.source}-${row.rowNumber}`} className="border-t border-base"><td className="p-2">{row.source}</td><td className="p-2">{row.rowNumber}</td><td className="max-w-0 truncate p-2 font-mono">{row.text}</td></tr>)}</tbody></table></div></>}</div>;
+    {input && !error && <><p className="mt-5 text-sm text-secondary">Choose a set to preview its original source lines, then extract exactly those lines to a new tab.</p><div className="mt-3 flex flex-wrap gap-2"><ResultButton label={selections.aInB.label} count={selections.aInB.count} active={selectedKind === "aInB"} onClick={() => update({ selectedResult: "aInB" })} /><ResultButton label={selections.aNotInB.label} count={selections.aNotInB.count} active={selectedKind === "aNotInB"} onClick={() => update({ selectedResult: "aNotInB" })} /><ResultButton label={selections.bInA.label} count={selections.bInA.count} active={selectedKind === "bInA"} onClick={() => update({ selectedResult: "bInA" })} /><ResultButton label={selections.bNotInA.label} count={selections.bNotInA.count} active={selectedKind === "bNotInA"} onClick={() => update({ selectedResult: "bNotInA" })} />{data.options.mode === "csv" && <ResultButton label={selections.changed.label} count={selections.changed.count} active={selectedKind === "changed"} onClick={() => update({ selectedResult: "changed" })} />}</div>
+    <div className="mt-4 flex flex-wrap gap-2"><button onClick={createOutput} disabled={selectedRows.length === 0} className="rounded border border-base px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50">Open selected lines in new tab</button><button onClick={copyOutput} disabled={selectedRows.length === 0} className={`rounded border border-base px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50 ${copied ? "text-success" : ""}`}>{copied ? <Check size={14} className="mr-1 inline" /> : <Copy size={14} className="mr-1 inline" />}{copied ? "Copied" : "Copy selected lines"}</button></div>
+    <div className="mt-4 overflow-x-auto rounded border border-base"><table className="w-full text-sm"><thead className="bg-surface-secondary text-left"><tr><th className="p-2">Source</th><th className="p-2">Row</th><th className="p-2">Preview</th></tr></thead><tbody>{selectedRows.map((row) => <tr key={`${row.source}-${row.rowNumber}`} className="border-t border-base"><td className="p-2">{row.source}</td><td className="p-2">{row.rowNumber}</td><td className="max-w-0 truncate p-2 font-mono">{row.text}</td></tr>)}</tbody></table></div></>}</div></div>;
 };
 
 function createState(payload?: DataReconcilePayload): TabletState { return { type: "datareconcile", data: { sourceAId: payload?.sourceAId, sourceBId: payload?.sourceBId, options: defaultOptions(payload?.csvMode), selectedResult: "aInB" } }; }

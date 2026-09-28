@@ -93,22 +93,33 @@ export const FacetFilterPopover: React.FC<FacetFilterPopoverProps> = ({
         </div>
         <div className="overflow-auto custom-scrollbar">
           {visible.map((facet) => (
-            <label
+            <div
               key={facet.value}
-              className="flex items-center gap-2 px-3 py-1 text-xs text-main rounded hover:bg-element-hover cursor-pointer"
+              className="flex items-center gap-2 px-3 py-1 text-xs text-main rounded hover:bg-element-hover"
               data-testid={`facet-option-${facet.value}`}
             >
-              <input
-                type="checkbox"
-                checked={selected.has(facet.value)}
-                onChange={() => toggle(facet.value)}
-                aria-label={`Filter by ${column.name} = ${facet.value}`}
-              />
-              <span className="flex-1 truncate" title={facet.value}>
-                {facet.value}
-              </span>
-              <span className="text-secondary tabular-nums">{facet.count}</span>
-            </label>
+              <label className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={selected.has(facet.value)}
+                  onChange={() => toggle(facet.value)}
+                  aria-label={`Filter by ${column.name} = ${facet.value}`}
+                />
+                <span className="flex-1 truncate" title={facet.value}>
+                  {facet.value}
+                </span>
+                <span className="text-secondary tabular-nums">{facet.count}</span>
+              </label>
+              <button
+                type="button"
+                onClick={() => emit(new Set([facet.value]))}
+                aria-label={`Show only ${facet.value} in ${column.name}`}
+                title={`Show only ${facet.value}`}
+                className="flex-none rounded px-1 py-0.5 text-primary hover:bg-primary/20"
+              >
+                Only
+              </button>
+            </div>
           ))}
           {visible.length === 0 && (
             <p className="px-3 py-2 text-xs text-secondary">No values</p>

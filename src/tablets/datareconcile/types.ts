@@ -17,6 +17,7 @@ export interface ReconcileOptions {
   normalization: NormalizationOptions;
   scopeA: Scope;
   scopeB: Scope;
+  keyMode?: "auto" | "manual";
   keyPairs: CsvKeyPair[];
   treatDuplicatesAsOne?: boolean;
 }

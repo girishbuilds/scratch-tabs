@@ -87,11 +87,12 @@ function reconcileLines(input: ReconcileInput): ReconcileResult {
 function reconcileCsv(input: ReconcileInput): ReconcileResult {
   const a = parseCsv(input.a, "A");
   const b = parseCsv(input.b, "B");
-  const pairs = input.options.keyPairs.length
+  const keyMode = input.options.keyMode ?? (input.options.keyPairs.length ? "manual" : "auto");
+  const pairs = keyMode === "manual"
     ? input.options.keyPairs
     : a.headers.filter((header) => b.headers.includes(header)).map((header) => ({ a: header, b: header }));
   if (!pairs.length || pairs.some((pair) => !a.headers.includes(pair.a) || !b.headers.includes(pair.b))) {
-    throw new Error("Choose valid CSV key columns for both sources.");
+    throw new Error(pairs.length ? "Choose valid CSV key columns for both sources." : keyMode === "auto" ? "No shared CSV headers found. Choose columns manually to match these files." : "Add at least one CSV key column pair.");
   }
   const aRows = scoped(a.rows, input.options.scopeA);
   const bRows = scoped(b.rows, input.options.scopeB);

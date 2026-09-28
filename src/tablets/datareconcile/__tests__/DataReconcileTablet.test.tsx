@@ -56,8 +56,8 @@ describe("DataReconcileTablet", () => {
     setCsvSources();
     render(<StatefulTablet initialState={DataReconcileTablet.createInitialState({ sourceAId: "a", sourceBId: "b", csvMode: true })} />);
 
-    expect(screen.getByRole("alert")).toHaveTextContent("Choose valid CSV key columns");
-    fireEvent.click(screen.getByRole("button", { name: "Add column" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("No shared CSV headers");
+    fireEvent.click(screen.getByRole("radio", { name: "Choose columns manually" }));
     expect(columnOptions("A")).toEqual(["label", "id"]);
     expect(columnOptions("B")).toEqual(["description", "ref"]);
     fireEvent.change(screen.getByRole("combobox", { name: "Key column A 1" }), { target: { value: "id" } });
@@ -73,11 +73,11 @@ describe("DataReconcileTablet", () => {
     setCsvSources();
     mockTabs.push({ ...mockTabs[1], id: "c", title: "C", content: "note,code\n,1" });
     render(<StatefulTablet initialState={DataReconcileTablet.createInitialState({ sourceAId: "a", sourceBId: "b", csvMode: true })} />);
-    fireEvent.click(screen.getByRole("button", { name: "Add column" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Choose columns manually" }));
     fireEvent.change(screen.getByRole("combobox", { name: "Source B" }), { target: { value: "c" } });
 
     expect(screen.getByRole("alert")).toHaveTextContent("Choose valid CSV key columns");
-    expect(columnOptions("B")).toEqual(["note", "code"]);
+    expect(columnOptions("B")).toEqual(["Missing: description", "note", "code"]);
     expect(screen.queryByRole("button", { name: "Copy selected lines" })).not.toBeInTheDocument();
     fireEvent.change(screen.getByRole("combobox", { name: "Key column B 1" }), { target: { value: "code" } });
     fireEvent.change(screen.getByRole("combobox", { name: "Key column A 1" }), { target: { value: "id" } });
@@ -85,12 +85,13 @@ describe("DataReconcileTablet", () => {
     expect(screen.getByRole("button", { name: "1 Lines from A also in B" })).toBeInTheDocument();
   });
 
-  it("recovers empty key pairs added before both sources are selected", () => {
+  it("allows manual mapping after the second source is selected", () => {
     setCsvSources();
     render(<StatefulTablet initialState={DataReconcileTablet.createInitialState({ sourceAId: "a", csvMode: true })} />);
-    fireEvent.click(screen.getByRole("button", { name: "Add column" }));
-    expect(columnOptions("A")).toEqual([]);
+    fireEvent.click(screen.getByRole("radio", { name: "Choose columns manually" }));
+    expect(screen.queryByRole("combobox", { name: "Key column A 1" })).not.toBeInTheDocument();
     fireEvent.change(screen.getByRole("combobox", { name: "Source B" }), { target: { value: "b" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add column pair" }));
 
     expect(columnOptions("A")).toEqual(["label", "id"]);
     expect(columnOptions("B")).toEqual(["description", "ref"]);
@@ -105,24 +106,47 @@ describe("DataReconcileTablet", () => {
     mockTabs[1].content = "id,code,note\n1,X,hello\n2,Y,world";
     render(<StatefulTablet initialState={DataReconcileTablet.createInitialState({ sourceAId: "a", sourceBId: "b", csvMode: true })} />);
 
-    expect(screen.getByTestId("csv-key-columns")).toHaveTextContent("id → id, code → code");
+    expect(screen.getByTestId("csv-key-columns")).toHaveTextContent("id → id");
+    expect(screen.getByTestId("csv-key-columns")).toHaveTextContent("code → code");
     expect(screen.getByRole("button", { name: "2 Lines from A also in B" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "0 A rows changed in B" })).toBeInTheDocument();
   });
 
-  it("adds each key column pair to an unused header", () => {
+  it("lets shared key columns be removed and restored without silently changing modes", () => {
     mockTabs[0].content = "id,code\n1,X";
-    mockTabs[1].content = "id,code,note\n1,X,hello";
+    mockTabs[1].content = "id,code,note\n1,Y,hello";
     render(<StatefulTablet initialState={DataReconcileTablet.createInitialState({ sourceAId: "a", sourceBId: "b", csvMode: true })} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Add column" }));
-    fireEvent.click(screen.getByRole("button", { name: "Add column" }));
+    expect(screen.getByRole("button", { name: "0 A rows changed in B" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("radio", { name: "Choose columns manually" }));
 
     expect(screen.getByRole("combobox", { name: "Key column A 1" })).toHaveValue("id");
     expect(screen.getByRole("combobox", { name: "Key column B 1" })).toHaveValue("id");
     expect(screen.getByRole("combobox", { name: "Key column A 2" })).toHaveValue("code");
     expect(screen.getByRole("combobox", { name: "Key column B 2" })).toHaveValue("code");
-    expect(screen.getByTestId("csv-key-columns")).toHaveTextContent("id → id, code → code");
+    fireEvent.click(screen.getByRole("button", { name: "Remove key column pair 2" }));
+    expect(screen.getByRole("radio", { name: "Choose columns manually" })).toBeChecked();
+    expect(screen.getByRole("button", { name: "1 A rows changed in B" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Remove key column pair 1" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("Add at least one CSV key column pair");
+    expect(screen.getByRole("radio", { name: "Choose columns manually" })).toBeChecked();
+    fireEvent.click(screen.getByRole("button", { name: "Add column pair" }));
+    expect(screen.getByRole("combobox", { name: "Key column A 1" })).toHaveValue("id");
+    fireEvent.click(screen.getByRole("radio", { name: "Use shared header names" }));
+    expect(screen.getByTestId("csv-key-columns")).toHaveTextContent("id → id");
+    expect(screen.getByTestId("csv-key-columns")).toHaveTextContent("code → code");
+    expect(screen.getByRole("button", { name: "0 A rows changed in B" })).toBeInTheDocument();
+  });
+
+  it("adds an unused pair in manual mode", () => {
+    mockTabs[0].content = "id,code\n1,X";
+    mockTabs[1].content = "id,ref\n1,X";
+    render(<StatefulTablet initialState={DataReconcileTablet.createInitialState({ sourceAId: "a", sourceBId: "b", csvMode: true })} />);
+    fireEvent.click(screen.getByRole("radio", { name: "Choose columns manually" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add column pair" }));
+    expect(screen.getByRole("combobox", { name: "Key column A 2" })).toHaveValue("code");
+    expect(screen.getByRole("combobox", { name: "Key column B 2" })).toHaveValue("ref");
+    expect(screen.getByRole("button", { name: "Add column pair" })).toBeDisabled();
   });
 
   it("creates CSV-aware initial state and safely restores serialized state", () => {
