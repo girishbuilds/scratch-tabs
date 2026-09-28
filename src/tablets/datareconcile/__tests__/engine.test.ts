@@ -46,6 +46,19 @@ describe("reconcile", () => {
     expect(result.inBoth).toHaveLength(1);
   });
 
+  it.each([
+    ["id\n1\n2", "id,name\n1,Ada\n3,Cia", ["id"], ["id", "name"]],
+    ["id,name\n1,Ada\n3,Cia", "id\n1\n2", ["id", "name"], ["id"]],
+    ["id\n1\n2", "id\n1\n3", ["id"], ["id"]],
+  ])("reconciles CSVs when a source has one column", (a, b, aHeaders, bHeaders) => {
+    const result = reconcile(input(a, b, { mode: "csv" }));
+    expect(result.headers).toEqual({ a: aHeaders, b: bHeaders });
+    expect(result.inBoth).toHaveLength(1);
+    expect(result.changed).toHaveLength(0);
+    expect(result.onlyA).toHaveLength(1);
+    expect(result.onlyB).toHaveLength(1);
+  });
+
   it("counts rows as in both when every non-key column is missing from one CSV source", () => {
     const result = reconcile(input("id,code\n1,X\n2,Y", "id,code,note\n1,X,hello\n2,Y,world", { mode: "csv" }));
     expect(result.inBoth).toHaveLength(2);
@@ -122,7 +135,7 @@ describe("createReconcileResponse", () => {
   it("preserves valid other source headers when one CSV source is empty", () => {
     const response = createReconcileResponse(input("", "ref,title\n9,Guide", { mode: "csv" }));
     expect(response.result).toBeUndefined();
-    expect(response.error).toContain("Unable to parse CSV A");
+    expect(response.error).toBe("CSV A needs a non-empty header row.");
     expect(response.headers).toEqual({ a: [], b: ["ref", "title"] });
   });
 

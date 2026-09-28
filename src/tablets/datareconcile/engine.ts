@@ -23,7 +23,8 @@ const lines = (content: string, source: "A" | "B"): ReconcileRow[] =>
 
 function parseCsv(content: string, source: "A" | "B"): { headers: string[]; rows: ReconcileRow[] } {
   const parsed = Papa.parse<string[]>(content, { skipEmptyLines: false });
-  if (parsed.errors.length) throw new Error(`Unable to parse CSV ${source}: ${parsed.errors[0].message}. Try whole-line comparison instead.`);
+  const parseError = parsed.errors.find((error) => error.code !== "UndetectableDelimiter");
+  if (parseError) throw new Error(`Unable to parse CSV ${source}: ${parseError.message}. Try whole-line comparison instead.`);
   const [headers = [], ...data] = parsed.data;
   if (!headers.length || headers.some((header) => !header)) throw new Error(`CSV ${source} needs a non-empty header row.`);
   if (new Set(headers).size !== headers.length) throw new Error(`CSV ${source} has duplicate header names.`);
