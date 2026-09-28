@@ -112,6 +112,15 @@ describe("DataReconcileTablet", () => {
     expect(screen.getByRole("button", { name: "0 A rows changed in B" })).toBeInTheDocument();
   });
 
+  it("shows no unmatched A rows for a CSV with a trailing blank line", () => {
+    mockTabs[0].content = "ID,Name\n1,John\n2,Jane\n\n";
+    mockTabs[1].content = "ID\n1\n2\n3\n";
+    render(<StatefulTablet initialState={DataReconcileTablet.createInitialState({ sourceAId: "a", sourceBId: "b", csvMode: true })} />);
+
+    expect(screen.getByRole("button", { name: "0 Lines from A not in B" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "1 Lines from B not in A" })).toBeInTheDocument();
+  });
+
   it("lets shared key columns be removed and restored without silently changing modes", () => {
     mockTabs[0].content = "id,code\n1,X";
     mockTabs[1].content = "id,code,note\n1,Y,hello";

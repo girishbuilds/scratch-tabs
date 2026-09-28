@@ -22,7 +22,7 @@ const lines = (content: string, source: "A" | "B"): ReconcileRow[] =>
     .map((text, index) => ({ source, rowNumber: index + 1, text }));
 
 function parseCsv(content: string, source: "A" | "B"): { headers: string[]; rows: ReconcileRow[] } {
-  const parsed = Papa.parse<string[]>(content, { skipEmptyLines: false });
+  const parsed = Papa.parse<string[]>(content.replace(/[\r\n]+$/, ""), { skipEmptyLines: false });
   const parseError = parsed.errors.find((error) => error.code !== "UndetectableDelimiter");
   if (parseError) throw new Error(`Unable to parse CSV ${source}: ${parseError.message}. Try whole-line comparison instead.`);
   const [headers = [], ...data] = parsed.data;

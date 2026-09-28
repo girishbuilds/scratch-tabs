@@ -59,6 +59,16 @@ describe("reconcile", () => {
     expect(result.onlyB).toHaveLength(1);
   });
 
+  it("does not count trailing CSV line breaks as unmatched records", () => {
+    const a = "ID,First Name,Last Name,Email\n1,John,Doe,john.doe@example.com\n2,Jane,Smith,jane.smith@example.com\n3,Michael,Johnson,michael.j@example.com\n4,Girish,Patel,girish.j@example.com\n\n";
+    const b = "ID\n1\n2\n3\n4\n5\n";
+    const result = reconcile(input(a, b, { mode: "csv" }));
+
+    expect(result.inBoth.map(({ a: row }) => row.values?.ID)).toEqual(["1", "2", "3", "4"]);
+    expect(result.onlyA).toHaveLength(0);
+    expect(result.onlyB.map((row) => row.values?.ID)).toEqual(["5"]);
+  });
+
   it("counts rows as in both when every non-key column is missing from one CSV source", () => {
     const result = reconcile(input("id,code\n1,X\n2,Y", "id,code,note\n1,X,hello\n2,Y,world", { mode: "csv" }));
     expect(result.inBoth).toHaveLength(2);
