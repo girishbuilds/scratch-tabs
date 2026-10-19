@@ -20,6 +20,16 @@ find dist/e2e -name '*.cjs' -print0 | while IFS= read -r -d '' file; do
 done
 
 echo "🧪 Running E2E tests..."
-node run-cucumber.cjs "$@" --tags 'not @wip and not @bug'
+# If no positional path argument is given, default to all feature files.
+# Without this, cucumber-js finds no features under the repo root and reports
+# "0 scenarios" while still exiting 0.
+if [[ $# -eq 0 ]] || [[ "$1" == --* ]]; then
+  shopt -s nullglob
+  features=(tests/e2e/features/*.feature)
+  shopt -u nullglob
+  node run-cucumber.cjs "${features[@]}" "$@" --tags 'not @wip and not @bug'
+else
+  node run-cucumber.cjs "$@" --tags 'not @wip and not @bug'
+fi
 
 echo "✅ E2E test run completed" 

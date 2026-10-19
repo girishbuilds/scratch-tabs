@@ -1,4 +1,4 @@
-import { generateRota, rotaToText } from "../rotaModel";
+import { generateRota, rotaToTable } from "../rotaModel";
 import { DEFAULT_ROTA_CONFIG } from "../../contentModel";
 import type { RotaConfig } from "../../types";
 
@@ -89,13 +89,29 @@ describe("generateRota", () => {
   });
 });
 
-describe("rotaToText", () => {
-  it("formats one date-name line per slot", () => {
-    expect(
-      rotaToText([
-        { date: "2026-08-03", name: "Alice" },
-        { date: "2026-08-10", name: "Bob" },
-      ]),
-    ).toBe("2026-08-03 Alice\n2026-08-10 Bob");
+describe("rotaToTable", () => {
+  const slots = [
+    { date: "2026-08-03", name: "Alice" },
+    { date: "2026-08-10", name: "Bob" },
+  ];
+
+  it("emits a header row and one tab-separated row per slot", () => {
+    expect(rotaToTable(slots)).toBe("Date\tName\n2026-08-03\tAlice\n2026-08-10\tBob");
+  });
+
+  it("keeps every slot so no names are dropped on copy", () => {
+    const rows = rotaToTable(slots).split("\n");
+    expect(rows).toHaveLength(slots.length + 1);
+    expect(rows.slice(1).map((row) => row.split("\t")[1])).toEqual(["Alice", "Bob"]);
+  });
+
+  it("returns just the header when there are no slots", () => {
+    expect(rotaToTable([])).toBe("Date\tName");
+  });
+
+  it("collapses tabs and newlines inside cells so columns stay aligned", () => {
+    expect(rotaToTable([{ date: "2026-08-03", name: "Ann\tMarie\nJones" }])).toBe(
+      "Date\tName\n2026-08-03\tAnn Marie Jones",
+    );
   });
 });
