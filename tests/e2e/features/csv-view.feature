@@ -203,7 +203,6 @@ Feature: CSV View and Auto-Detection
     And the table should render efficiently with virtualization
     And I should be able to scroll through the data smoothly
 
-    @wip
   Scenario: CSV table view export functionality
     Given I click the icon for "New tab"
     When I type the following content into the active editor:
@@ -294,7 +293,6 @@ Feature: CSV View and Auto-Detection
     When I click the "Redo" button
     Then the changes should be reapplied
 
-    @wip
   Scenario: CSV table view column manipulation
     Given I click the icon for "New tab"
     When I type the following content into the active editor:
@@ -314,13 +312,12 @@ Feature: CSV View and Auto-Detection
     Then I should see the Monaco editor
     And the active editor content should include the new column
 
-    @bug
   Scenario: CSV table view preserves data integrity
     Given I click the icon for "New tab"
     When I type the following content into the active editor:
       """
       "Product","Price","Description","Age"
-      "Laptop","$999.99","HP laptop with \"quotes\"","1"
+      "Laptop","$999.99","HP laptop with ""quotes""","1"
       "Mouse","$29.99","Wireless optical mouse","2"
       "Keyboard","$79.99","Mechanical keyboard","3"
       """

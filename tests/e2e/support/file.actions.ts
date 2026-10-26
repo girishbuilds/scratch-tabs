@@ -3,32 +3,22 @@ import { Page } from '@playwright/test';
 export class FileActions {
   constructor(private page: Page) {}
 
+  /**
+   * Opens a file through the Welcome screen's "Open File" button, answering the
+   * native file chooser the app triggers.
+   */
   async uploadFile(filename: string, content: string) {
-    // Create a file input element temporarily
-    const fileInput = await this.page.evaluateHandle(() => {
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.style.display = 'none';
-      document.body.appendChild(input);
-      return input;
-    });
+    // A second copy of the button lives in the collapsed mobile section; getByRole skips hidden elements
+    const openFileButton = this.page.getByRole('button', { name: /Open File/ });
+    const [fileChooser] = await Promise.all([
+      this.page.waitForEvent('filechooser'),
+      openFileButton.click(),
+    ]);
 
-    // Set the file content
-    await fileInput.setInputFiles({
+    await fileChooser.setFiles({
       name: filename,
       mimeType: 'text/plain',
-      buffer: Buffer.from(content)
-    });
-
-    // Trigger the file upload event
-    await fileInput.evaluate((input) => {
-      const event = new Event('change', { bubbles: true });
-      input.dispatchEvent(event);
-    });
-
-    // Clean up
-    await fileInput.evaluate((input) => {
-      input.remove();
+      buffer: Buffer.from(content),
     });
   }
 

@@ -146,6 +146,7 @@ export const EditorInstance: React.FC<EditorInstanceProps> = ({
     editor: editorRef.current,
     monaco: monacoRef.current,
     latestActiveTabRef,
+    side,
     isAiReady,
     isAiLoading,
     isCodegenReady,

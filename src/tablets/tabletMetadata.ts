@@ -352,6 +352,7 @@ export const tabletMetadata: TabletMetadata[] = [
           id: 'generate-content',
           label: 'Generate Mock Content',
           icon: Type,
+          showInEditorMenu: false,
           action: () => {
             tabletActionService.handleAction({
               targetTablet: 'loremipsum',

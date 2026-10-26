@@ -82,6 +82,23 @@ Desk;299.99;Furniture;25`;
       }
     });
 
+    test("should detect CSV with RFC 4180 doubled quotes inside quoted fields", () => {
+      const csvContent = `"Product","Price","Description","Age"
+"Laptop","$999.99","HP laptop with ""quotes""","1"
+"Mouse","$29.99","Wireless optical mouse","2"
+"Keyboard","$79.99","Mechanical keyboard","3"`;
+      const result = detector.detect(csvContent);
+      expect(result.match).toBe(true);
+    });
+
+    test("should not detect CSV when a quoted field has a stray unescaped quote", () => {
+      const csvContent = `"Product","Price","Description"
+"Laptop","$999.99","HP "laptop" stand"
+"Mouse","$29.99","Wireless optical mouse"`;
+      const result = detector.detect(csvContent);
+      expect(result.match).toBe(false);
+    });
+
     test("should detect CSV with numeric data", () => {
       const csvContent = `Year,Q1,Q2,Q3,Q4,Total
 2020,1000,1200,1100,1300,4600

@@ -312,7 +312,6 @@ Feature: Transformations Pipeline
     And I select "Transformation Pipeline" from the context menu
     And I add the "Add Prefix" operation
     And I set parameter "Prefix" to ">> "
-    And I toggle Apply per line for the current step
     Then the pipeline output should contain ">> line1"
     And the pipeline output should contain ">> line2"
 

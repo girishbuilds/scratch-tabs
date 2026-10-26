@@ -158,11 +158,11 @@ export const WelcomeScreen: React.FC = () => {
         reader.onload = (e) => {
           const content = e.target?.result as string;
           if (content) {
-            // Extract filename without extension for tab title
-            handleNewTab(false, content);
-            // Update the tab title after creation
-            // Note: This is a simplified approach - in a real implementation
-            // you might want to wait for the tab to be created and then update its title
+            // Title without extension, matching tabs created by dropping a file
+            handleNewPopulatedTab({
+              title: file.name.replace(/\.[^/.]+$/, ""),
+              content,
+            });
           }
         };
         reader.readAsText(file);
@@ -173,7 +173,7 @@ export const WelcomeScreen: React.FC = () => {
 
     document.body.appendChild(input);
     input.click();
-  }, [handleNewTab]);
+  }, [handleNewPopulatedTab]);
 
   const handleImportWorkspace = useCallback(async () => {
     const input = document.createElement("input");

@@ -117,8 +117,8 @@ const DataReconcileUI: React.FC<{ state: TabletState; onChange: (state: TabletSt
     }
   };
 
-  return <div className="h-full overflow-auto custom-scrollbar bg-canvas text-main p-4 sm:p-5" data-testid="data-reconcile-tablet">
-    <div className="mx-auto w-full max-w-5xl min-w-0">
+  return <div className="h-full overflow-auto custom-scrollbar bg-canvas text-main p-3" data-testid="data-reconcile-tablet">
+    <div className="w-full min-w-0">
     <div className="mb-5 flex items-start gap-3"><Database className="mt-1 shrink-0 text-accent" /><div><h2 className="text-xl font-semibold">Data Reconcile</h2><p className="text-sm text-secondary">Compare rows from two tabs and find matches, changes, and missing rows.</p></div></div>
     <div className="flex flex-wrap gap-4">
       {(["A", "B"] as const).map((side) => <label key={side} className="min-w-0 flex-1 basis-64 text-sm font-medium">Source {side}

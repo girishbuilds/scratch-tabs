@@ -172,6 +172,10 @@ When('I type {string} into the checksum text input', async function (text: strin
   await this.tablets.typeIntoChecksumInput(text);
 });
 
+Then('the checksum text input should contain {string}', async function (text: string) {
+  await this.tablets.expectChecksumInputValue(text);
+});
+
 Then('I should see a calculated hash', async function () {
   await this.tablets.expectCalculatedHashVisible();
 });

@@ -22,6 +22,7 @@ export interface TabletAction {
   label: string;
   icon?: LucideIcon;
   action: () => void; // This will dispatch the message to the service.
+  showInEditorMenu?: boolean; // Set to false to keep the action out of the editor right-click menu.
 }
 
 // Base interface that all tablets must implement

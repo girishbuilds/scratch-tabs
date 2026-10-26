@@ -1,4 +1,4 @@
-const { When } = require('@cucumber/cucumber');
+const { When, Then } = require('@cucumber/cucumber');
 const { expect } = require('@playwright/test');
 import { waitForSaveIndicator, waitForCursorAtLine } from '../support/testIndicator.utils';
 
@@ -131,6 +131,33 @@ When('I double-click in the editor', async function () {
 });
 When('I select "{string}" from the context menu', async function (optionText) {
   await this.contextMenu.selectContextMenuOption(optionText);
+});
+When('I right-click on the first line of the editor', async function () {
+  await this.editor.rightClickFirstLineOfEditor();
+});
+When('I select all text in the editor', async function () {
+  await this.editor.selectAllTextInEditor();
+});
+When('I select {string} from the editor context menu', async function (optionText) {
+  await this.contextMenu.selectFromEditorContextMenu(optionText);
+});
+When('I run the {string} editor context menu action', async function (actionId) {
+  await this.editor.runEditorContextMenuAction(actionId);
+});
+Then('the editor context menu should show {string}', async function (optionText) {
+  await this.contextMenu.expectEditorContextMenuHasOption(optionText);
+});
+Then('the editor context menu should not show {string}', async function (optionText) {
+  await this.contextMenu.expectEditorContextMenuDoesNotHaveOption(optionText);
+});
+Then('the macro toolbar should be visible', async function () {
+  await this.editor.expectMacroToolbarVisible();
+});
+Then('the send to canvas dialog should be visible', async function () {
+  await this.canvas.expectSendToCanvasDialogVisible();
+});
+Then('the diff modal should be visible', async function () {
+  await this.navigation.expectDiffModalToAppear();
 });
 When('I wait for the page to stabilize', async function () {
   await this.navigation.waitForPageStabilization();
