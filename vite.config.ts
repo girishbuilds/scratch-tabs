@@ -7,6 +7,12 @@ const shouldAnalyzeBundle = process.env.ANALYZE === "true";
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  // Sharded e2e runs give each dev server its own dep cache so they don't race on node_modules/.vite
+  cacheDir: process.env.VITE_CACHE_DIR || undefined,
+  server: {
+    // E2E reports/screenshots are written into the project; don't let them trigger page reloads mid-test
+    watch: { ignored: ["**/reports/**"] },
+  },
   plugins: [
     react(),
     VitePWA({

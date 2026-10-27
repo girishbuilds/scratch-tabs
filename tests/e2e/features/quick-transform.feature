@@ -7,6 +7,7 @@ Feature: Quick Transform
   Background:
     Given I am on the homepage
 
+  @serial
   Scenario: Quick Transform is registered in the Monaco editor context menu
     When I click the icon for "New tab"
     And I type "hello" into the editor

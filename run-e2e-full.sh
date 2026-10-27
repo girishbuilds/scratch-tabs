@@ -25,6 +25,8 @@ fi
 echo "🧪 Running E2E tests..."
 # If no positional path argument is given, default to all feature files
 if [[ $# -eq 0 ]] || [[ "$1" == --* ]]; then
+  # Whole-suite runs are sharded across parallel processes by default (override with E2E_SHARDS=1)
+  export E2E_SHARDS="${E2E_SHARDS:-4}"
   node run-cucumber.cjs tests/e2e/features/**/*.feature "$@"
 else
   node run-cucumber.cjs "$@"

@@ -7,6 +7,7 @@ Feature: Editor context menu
   Background:
     Given I am on the homepage
 
+  @serial
   Scenario: Editor context menu exposes the app actions
     When I click the icon for "New tab"
     And I type "hello world" into the editor
@@ -25,6 +26,7 @@ Feature: Editor context menu
     And I run the "macro-recording" editor context menu action
     Then the macro toolbar should be visible
 
+  @serial
   Scenario: Compare with other side is available in split view
     When I click the icon for "New tab"
     And I type "left content" into the editor
@@ -36,6 +38,7 @@ Feature: Editor context menu
     And I right-click on the first line of the editor
     Then the editor context menu should show "Compare with other side"
 
+  @serial
   Scenario: Compare with other side opens the diff modal
     When I click the icon for "New tab"
     And I type "left content" into the editor
@@ -47,6 +50,7 @@ Feature: Editor context menu
     And I run the "compare-with-other-side" editor context menu action
     Then the diff modal should be visible
 
+  @serial
   Scenario: Selection only actions are hidden without a selection
     When I click the icon for "New tab"
     And I type "hello world" into the editor
@@ -54,6 +58,7 @@ Feature: Editor context menu
     Then the editor context menu should not show "UPPERCASE"
     And the editor context menu should not show "Send Selection to Canvas..."
 
+  @serial
   Scenario: Selection only actions are shown when text is selected
     When I click the icon for "New tab"
     And I type "hello world" into the editor
@@ -82,12 +87,14 @@ Feature: Editor context menu
     And I run the "send-selection-to-canvas" editor context menu action
     Then the send to canvas dialog should be visible
 
+  @serial
   Scenario: Generate Mock Content is not offered in the editor menu
     When I click the icon for "New tab"
     And I type "hello world" into the editor
     And I right-click in the editor
     Then the editor context menu should not show "Generate Mock Content"
 
+  @serial
   Scenario: Calculate Checksum is listed in the editor menu
     When I click the icon for "New tab"
     And I type "hello world" into the editor

@@ -24,6 +24,8 @@ echo "🧪 Running E2E tests..."
 # Without this, cucumber-js finds no features under the repo root and reports
 # "0 scenarios" while still exiting 0.
 if [[ $# -eq 0 ]] || [[ "$1" == --* ]]; then
+  # Whole-suite runs are sharded across parallel processes by default (override with E2E_SHARDS=1)
+  export E2E_SHARDS="${E2E_SHARDS:-4}"
   shopt -s nullglob
   features=(tests/e2e/features/*.feature)
   shopt -u nullglob
