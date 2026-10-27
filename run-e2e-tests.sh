@@ -16,7 +16,7 @@ echo "🔗 Fixing module imports..."
 find dist/e2e -name '*.cjs' -print0 | while IFS= read -r -d '' file; do
   perl -pi -e 's/require\("\.\/([^"]*)\.actions"\)/require(".\/$1.actions.cjs")/g' "$file"
   perl -pi -e 's/require\("\.\/([^"]*)\.actions\.js"\)/require(".\/$1.actions.cjs")/g' "$file"
-  perl -pi -e 's/require\("\.\/(clipboardLock)(\.js)?"\)/require(".\/$1.cjs")/g' "$file"
+  perl -pi -e 's/require\("\.\/(clipboardLock|cdnCache)(\.js)?"\)/require(".\/$1.cjs")/g' "$file"
   perl -pi -e 's/require\("\.\.\/support\/testIndicator\.utils"\)/require("..\/support\/testIndicator.utils.cjs")/g' "$file"
 done
 

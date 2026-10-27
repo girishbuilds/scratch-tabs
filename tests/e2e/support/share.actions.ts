@@ -1,4 +1,5 @@
 import { Page, expect, BrowserContext } from '@playwright/test';
+import { installCdnCache } from './cdnCache.js';
 
 export class ShareActions {
   private shareUrl: string = '';
@@ -96,6 +97,7 @@ export class ShareActions {
 
     // Create a new browser context
     this.newContext = await this.context.browser()!.newContext();
+    await installCdnCache(this.newContext);
     this.newPage = await this.newContext.newPage();
 
     // Navigate to the share URL

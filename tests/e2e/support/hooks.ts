@@ -4,6 +4,7 @@ import { E2EWorld } from './world.js';
 import * as net from 'net';
 import * as http from 'http';
 import { spawn, ChildProcess } from 'child_process';
+import { installCdnCache } from './cdnCache.js';
 import { acquireClipboardLock, releaseClipboardLock, CLIPBOARD_LOCK_TIMEOUT_MS } from './clipboardLock.js';
 
 let browser: any;
@@ -104,6 +105,7 @@ BeforeAll({ timeout: 3 * 60 * 1000 }, async function () {
   // A fresh dev server (and, when sharded, a fresh dep cache) compiles on first request, which can
   // exceed a scenario's 30s step timeout. Load the app once up front so scenarios hit a warm server.
   const warmupContext = await browser.newContext();
+  await installCdnCache(warmupContext);
   try {
     const warmupPage = await warmupContext.newPage();
     await warmupPage.goto(process.env.BASE_URL!, { timeout: 2 * 60 * 1000 });
@@ -137,6 +139,7 @@ Before(async function () {
   this.context = await browser.newContext({
     permissions: ['clipboard-read', 'clipboard-write']
   });
+  await installCdnCache(this.context);
   this.page = await this.context.newPage();
   
   // Initialize the action helpers now that page is available
