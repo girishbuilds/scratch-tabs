@@ -162,10 +162,14 @@ export class EditorActions {
   }
 
   async expectEditorContainsMarkdown() {
-    const content = await this.getMonacoEditorContent();
     const markdownPatterns = [/^#\s+/m, /\*\*.*\*\*/, /\*.*\*/, /\[.*\]\(.*\)/, /```[\s\S]*```/, /^\s*[-*+]\s+/m];
-    const hasMarkdown = markdownPatterns.some(pattern => pattern.test(content));
-    if (!hasMarkdown) throw new Error(`Editor content does not contain markdown syntax. Content: "${content}"`);
+    await expect.poll(
+      async () => {
+        const content = await this.getMonacoEditorContent();
+        return markdownPatterns.some(pattern => pattern.test(content));
+      },
+      { message: 'Editor content does not contain markdown syntax' },
+    ).toBe(true);
   }
 
   getRichTextEditor(side: 'left' | 'right' = 'left') {

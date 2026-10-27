@@ -122,10 +122,19 @@ export class CanvasConflictActions {
         () => window.__canvasRevisionMessages ?? [],
       )),
     );
-    await Promise.all([this.primaryPage.reload(), secondary.reload()]);
+    // The `load` event also waits on CDN fonts and Monaco, which can take 30s+ with parallel shards;
+    // canvas-flow being visible is the readiness signal this step actually needs.
     await Promise.all([
-      expect(this.primaryPage.getByTestId("canvas-flow")).toBeVisible(),
-      expect(secondary.getByTestId("canvas-flow")).toBeVisible(),
+      this.primaryPage.reload({ waitUntil: "domcontentloaded" }),
+      secondary.reload({ waitUntil: "domcontentloaded" }),
+    ]);
+    await Promise.all([
+      expect(this.primaryPage.getByTestId("canvas-flow")).toBeVisible({
+        timeout: 20000,
+      }),
+      expect(secondary.getByTestId("canvas-flow")).toBeVisible({
+        timeout: 20000,
+      }),
     ]);
   }
 

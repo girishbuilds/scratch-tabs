@@ -37,6 +37,25 @@ export async function waitForSaveIndicator(page: Page): Promise<void> {
 }
 
 /**
+ * Wait until an autosave has completed that began after this call.
+ *
+ * The autosave tick that is already in flight when this is called may have snapshotted the stores
+ * before the caller's changes, so a single indicator change is not enough. Waiting for two ticks
+ * guarantees the second one saw them. Needed before a reload when the change under test (tab
+ * layout, split view) is only persisted by the 2.5s autosave. Takes up to ~5s.
+ */
+export async function waitForFullSaveCycle(page: Page): Promise<void> {
+  const indicator = page.locator('#test-save-indicator');
+  await expect(indicator).toBeAttached();
+
+  let lastSeen = await indicator.getAttribute('data-last-save');
+  for (let tick = 0; tick < 2; tick++) {
+    await expect(indicator).not.toHaveAttribute('data-last-save', lastSeen ?? '', { timeout: 10_000 });
+    lastSeen = await indicator.getAttribute('data-last-save');
+  }
+}
+
+/**
  * Wait for cursor position to stabilize.
  *
  * Pass `preActionValue` (the indicator value captured before the cursor-moving

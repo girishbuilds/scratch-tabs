@@ -1,6 +1,6 @@
 const { When, Then } = require('@cucumber/cucumber');
 const { expect } = require('@playwright/test');
-import { waitForSaveIndicator, waitForCursorAtLine } from '../support/testIndicator.utils';
+import { waitForSaveIndicator, waitForFullSaveCycle, waitForCursorAtLine } from '../support/testIndicator.utils';
 
 // Updated to use action classes directly instead of delegate methods
 // Aliases for quoted and unquoted variants
@@ -86,6 +86,10 @@ When('I wait for the application to load', async function () {
 When('I wait for the state to be saved', async function () {
   // Wait for the app's save operation to complete by observing DOM changes
   await waitForSaveIndicator(this.page);
+});
+When('I wait for the workspace layout to be persisted', async function () {
+  // The tab/split layout is only written by the 2.5s autosave, so wait for a tick that began after the change
+  await waitForFullSaveCycle(this.page);
 });
 
 When('I refresh the page', async function () {
