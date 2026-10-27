@@ -233,6 +233,67 @@ describe('Tablet Metadata Actions', () => {
     });
   });
 
+  describe('Checksum metadata getActionsForContext', () => {
+    const tab: Tab = {
+      id: 'tab-1', title: 'Notes', content: 'hash me',
+      language: 'plaintext', languageLocked: false, workspaceId: 'workspace',
+      dateCreated: 1, lastModified: 1, cursorPosition: { lineNumber: 1, column: 1 },
+    };
+    const checksumMeta = tabletMetadata.find((item) => item.id === 'checksum');
+
+    it('seeds the checksum tablet with the content it was given', () => {
+      const [action] = checksumMeta?.getActionsForContext?.({
+        source: 'editor-tab', tab, content: 'hash me', side: 'right',
+      }) ?? [];
+
+      action.action();
+
+      expect(mockTabletActionService.handleAction).toHaveBeenCalledWith(expect.objectContaining({
+        targetTablet: 'checksum',
+        action: 'new-tab',
+        payload: { text: 'hash me' },
+        source: expect.objectContaining({ side: 'right' }),
+      }));
+    });
+
+    it('opens an empty checksum tablet when there is no content', () => {
+      const [action] = checksumMeta?.getActionsForContext?.({ source: 'editor-tab', tab, content: '' }) ?? [];
+
+      action.action();
+
+      expect(mockTabletActionService.handleAction).toHaveBeenCalledWith(expect.objectContaining({ payload: {} }));
+    });
+  });
+
+  describe('Lorem Ipsum metadata getActionsForContext', () => {
+    const loremMeta = tabletMetadata.find((item) => item.id === 'loremipsum');
+
+    it('still offers Generate Mock Content for the tab menu', () => {
+      const actions = loremMeta?.getActionsForContext?.({ source: 'editor-tab', content: '' }) ?? [];
+
+      expect(actions.map((action) => action.label)).toEqual(['Generate Mock Content']);
+    });
+
+    it('keeps Generate Mock Content out of the editor right-click menu', () => {
+      const [action] = loremMeta?.getActionsForContext?.({ source: 'editor-tab', content: '' }) ?? [];
+
+      expect(action.showInEditorMenu).toBe(false);
+    });
+
+    it('does not hide any other tablet action from the editor menu', () => {
+      const tab = {
+        id: 'tab-1', title: 'T', content: 'a'.repeat(80), language: 'plaintext', languageLocked: false,
+        workspaceId: 'w', dateCreated: 1, lastModified: 1, cursorPosition: { lineNumber: 1, column: 1 },
+      } as Tab;
+      const hidden = tabletMetadata
+        .flatMap((meta) => meta.getActionsForContext?.({ source: 'editor-tab', tab, content: tab.content }) ?? [])
+        .filter((action) => action.showInEditorMenu === false)
+        .map((action) => action.id);
+
+      expect(hidden).toEqual(['generate-content']);
+    });
+  });
+
   describe('Metadata consistency with tablet implementations', () => {
     it('should have WordCount metadata with correct properties', () => {
       const wordCountMetadata = tabletMetadata.find(meta => meta.id === 'wordcount');

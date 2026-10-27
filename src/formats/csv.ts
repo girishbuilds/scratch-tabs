@@ -101,8 +101,9 @@ export class CsvFormatDetector extends BaseFormatDetector implements FormatModul
             return this.noMatch();
           }
           
-          // Check for unescaped internal quotes (simplified check)
-          const innerContent = trimmedField.slice(1, -1);
+          // Check for unescaped internal quotes (simplified check).
+          // Both RFC 4180 doubled quotes ("") and backslash escapes (\") are accepted.
+          const innerContent = trimmedField.slice(1, -1).replace(/""/g, "");
           const unescapedQuotes = innerContent.match(/(?<!\\)"/g);
           if (unescapedQuotes && unescapedQuotes.length > 0) {
             return this.noMatch();

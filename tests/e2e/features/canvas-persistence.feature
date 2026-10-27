@@ -36,6 +36,7 @@ Feature: Canvas lifecycle persistence
     And I add a Canvas text card containing "Right Canvas note" on the right side
     And I wait for the left Canvas scene to be saved
     And I wait for the right Canvas scene to be saved
+    And I wait for the workspace layout to be persisted
     And I refresh the page
     Then the left Canvas should contain a text card with "Left Canvas note"
     And the right Canvas should contain a text card with "Right Canvas note"

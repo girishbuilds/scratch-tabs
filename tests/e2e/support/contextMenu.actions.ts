@@ -7,6 +7,25 @@ export class ContextMenuActions {
     await this.page.getByRole('menuitem', { name: optionText }).click();
   }
 
+  /**
+   * Selects an entry of Monaco's editor context menu (role=menuitem).
+   */
+  async selectFromEditorContextMenu(optionText: string) {
+    const menuItem = this.page.getByRole('menuitem', { name: optionText, exact: true });
+    await expect(menuItem).toBeVisible();
+    await menuItem.click();
+  }
+
+  async expectEditorContextMenuHasOption(optionText: string) {
+    const menuItem = this.page.getByRole('menuitem', { name: optionText, exact: true });
+    await expect(menuItem).toBeVisible();
+  }
+
+  async expectEditorContextMenuDoesNotHaveOption(optionText: string) {
+    const menuItem = this.page.getByRole('menuitem', { name: optionText, exact: true });
+    await expect(menuItem).not.toBeVisible();
+  }
+
   async selectFromContextMenu(menuItem: string) {
     // Wait for context menu to appear - look for the custom context menu div
     // Use partial class match to support both z-50 (Tab) and z-[100] (Workspace) menus

@@ -71,7 +71,8 @@ export class TabBarActions {
   }
 
   async clickPasteContent() {
-    const button = this.page.locator('button:has-text("Paste Content")');
+    // A second copy lives in the collapsed mobile section; getByRole skips hidden elements
+    const button = this.page.getByRole('button', { name: /Paste Content/ });
     await expect(button).toBeVisible();
     await button.click();
   }

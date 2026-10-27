@@ -77,7 +77,7 @@ Feature: JSON Smart View Tab Management
     Then I should see the JSON Smart View
     And the JSON Smart View should contain "original"
     When I make changes to the JSON in Smart View
-    And I click the Smart View button
+    And I click the Text View button in the status bar
     Then I should not see the JSON Smart View
     And I should see the Monaco editor
     And the active editor content should contain "edited"

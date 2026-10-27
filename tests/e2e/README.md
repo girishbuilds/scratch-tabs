@@ -97,6 +97,29 @@ If the dev server does not respond within **30 seconds**, `BeforeAll` throws an 
 - Run `npm install` to ensure dependencies are installed.
 - Look for `[vite]` prefixed lines in the output for Vite's own error messages.
 
+## Sharding (parallel runs)
+
+Whole-suite runs (`npm run e2e` / `npm run e2e:full` with no feature path) are split across **4 shards** by default. Each shard is a separate `cucumber-js --shard N/M` process that runs a slice of the scenarios.
+
+Why shards don't clash:
+
+- **Own dev server and port.** `run-cucumber.cjs` reserves a distinct free port per shard (passed as `E2E_PORT`), so each shard has its own origin and therefore its own IndexedDB.
+- **Own browser context per scenario.** `hooks.ts` creates a fresh Playwright context for every scenario, so storage is never shared between scenarios either.
+- **Own Vite dep cache.** `VITE_CACHE_DIR` points each shard at `node_modules/.vite-e2e/shard-N` so concurrent servers don't race on `node_modules/.vite`.
+- **Shared OS clipboard (`@clipboard`).** Every browser on the machine shares one system clipboard, so scenarios that copy or paste are tagged `@clipboard` and take a cross-process lock (`support/clipboardLock.ts`) for their duration. Other scenarios keep running in parallel. Tag any new scenario that touches the clipboard.
+- **Serial scenarios (`@serial`).** Scenarios that use Monaco's native right-click menu never open it when other browsers are running, so they are excluded from the shards and run in one process after the shards finish. Tag new scenarios that right-click inside the editor.
+- **Warm-up and CDN cache.** `BeforeAll` loads the app once before any scenario so a cold dev server doesn't eat a scenario's 30s budget. `support/cdnCache.ts` serves Monaco (jsdelivr) and Google Fonts from `node_modules/.cache/scratch-tabs-e2e-cdn`, so page loads don't depend on public CDNs. Delete that folder to refresh it.
+- **Own report.** Each shard writes `reports/cucumber-report-shard-N.html` (`cucumber-report-serial.html` for the serial pass). Vite ignores `reports/` so a finishing shard can't reload another shard's page.
+
+```bash
+E2E_SHARDS=8 npm run e2e            # choose the shard count
+E2E_SHARDS=1 npm run e2e            # no sharding
+npm run e2e:full -- --shards auto   # min(4, cpu cores / 2)
+npm run e2e:full -- tests/e2e/features/undo.feature --shards 2   # shard a targeted run
+```
+
+Runs that name a feature file are not sharded unless you ask. If `BASE_URL` is set, every shard shares that one server (contexts still isolate IndexedDB). Too many shards on a small machine causes timeouts, not extra speed.
+
 ---
 
 ## Commands

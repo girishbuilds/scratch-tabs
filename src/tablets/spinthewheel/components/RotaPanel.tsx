@@ -6,7 +6,7 @@ import {
   ROTA_FREQUENCIES,
   ROTA_ORDERS,
   ROTA_PERIOD_OPTIONS,
-  rotaToText,
+  rotaToTable,
 } from "../utils/rotaModel";
 
 interface RotaPanelProps {
@@ -26,7 +26,8 @@ function formatSlotDate(iso: string): string {
 }
 
 /** Generates a who's-on-when rota from the enabled wheel names. Everything
- *  updates live; Copy puts one "yyyy-mm-dd name" line per period on the clipboard. */
+ *  updates live; Copy puts the rota on the clipboard as a tab-separated table
+ *  (Date/Name columns) so it pastes straight into a spreadsheet or doc. */
 export const RotaPanel: React.FC<RotaPanelProps> = ({ names, config, onChange }) => {
   const [copied, setCopied] = useState(false);
 
@@ -34,7 +35,7 @@ export const RotaPanel: React.FC<RotaPanelProps> = ({ names, config, onChange })
 
   const handleCopy = useCallback(() => {
     navigator.clipboard
-      .writeText(rotaToText(slots))
+      .writeText(rotaToTable(slots))
       .then(() => {
         setCopied(true);
         window.setTimeout(() => setCopied(false), 1500);

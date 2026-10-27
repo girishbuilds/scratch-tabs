@@ -34,6 +34,9 @@ import { Sidebar } from "./Sidebar";
 import { Menu } from "../Icons";
 import { useSidebarStore } from "../../stores/sidebarStore";
 import { useCanvasLifecycleFlush } from "../../hooks/useCanvasLifecycleFlush";
+import { useCanvasSendStore } from "../../stores/canvasSendStore";
+import { useDiffModalStore } from "../../stores/diffModalStore";
+import { SendToCanvasDialog } from "../../features/canvas/components/SendToCanvasDialog";
 
 
 const MainLayout: React.FC = () => {
@@ -52,6 +55,15 @@ const MainLayout: React.FC = () => {
     (state) => ({ splitView: state.splitView }),
     shallow,
   );
+
+  // Pending "send to canvas" request (shared by tab menu and editor menu)
+  const canvasSendSource = useCanvasSendStore((state) => state.source);
+  const canvasSendSide = useCanvasSendStore((state) => state.side);
+
+  // Tab-based diff request (e.g. "Compare with other side" from the editor menu)
+  const storeDiffIsOpen = useDiffModalStore((state) => state.isOpen);
+  const storeDiffLeftTabId = useDiffModalStore((state) => state.leftTabId);
+  const storeDiffRightTabId = useDiffModalStore((state) => state.rightTabId);
 
   // FIX: Use useStoreWithEqualityFn for root store actions
   const { setSplitRatio, handleNewPopulatedTab } = useStoreWithEqualityFn(
@@ -294,6 +306,10 @@ const MainLayout: React.FC = () => {
     setDiffModal(null);
   };
 
+  const handleCloseStoreDiffModal = () => {
+    useDiffModalStore.getState().closeDiffModal();
+  };
+
   const handleOpenSummarizeModal = (tabId: string) => {
     // This find should be fast unless 'tabs' is gigantic
     const tab = useTabsStore.getState().tabs.find((t) => t.id === tabId);
@@ -398,6 +414,20 @@ const MainLayout: React.FC = () => {
           leftTabId={diffModal.leftTabId || ""}
           rightTabId={diffModal.rightTabId || ""}
           onClose={handleCloseDiffModal}
+        />
+      )}
+      {storeDiffIsOpen && storeDiffLeftTabId && storeDiffRightTabId && (
+        <DiffModal
+          leftTabId={storeDiffLeftTabId}
+          rightTabId={storeDiffRightTabId}
+          onClose={handleCloseStoreDiffModal}
+        />
+      )}
+      {canvasSendSource && (
+        <SendToCanvasDialog
+          source={canvasSendSource}
+          side={canvasSendSide}
+          onClose={() => useCanvasSendStore.getState().close()}
         />
       )}
       {summarizeModal && (

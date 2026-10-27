@@ -167,6 +167,18 @@ describe("DataReconcileTablet", () => {
     }))).toMatchObject({ data: { selectedResult: "bNotInA" } });
   });
 
+  it("fills the full width of the tab instead of a centred, width-capped column", () => {
+    const state = DataReconcileTablet.createInitialState({ sourceAId: "a", sourceBId: "b" });
+    render(<>{DataReconcileTablet.render(state, jest.fn())}</>);
+
+    const root = screen.getByTestId("data-reconcile-tablet");
+    const content = root.firstElementChild as HTMLElement;
+
+    expect(content).toHaveClass("w-full");
+    expect(content.className).not.toMatch(/max-w-|mx-auto/);
+    expect(root.className).not.toMatch(/max-w-|mx-auto|sm:p-/);
+  });
+
   it("shows explicit directional result sets and confirms copy for two seconds", async () => {
     jest.useFakeTimers();
     const state = DataReconcileTablet.createInitialState({ sourceAId: "a", sourceBId: "b" });

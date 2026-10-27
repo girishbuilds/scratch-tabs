@@ -17,6 +17,7 @@ echo "🔗 Fixing module imports..."
 find dist/e2e -name '*.cjs' -print0 | while IFS= read -r -d '' file; do
   perl -pi -e 's/require\("\.\/([^"]*)\.actions"\)/require(".\/$1.actions.cjs")/g' "$file"
   perl -pi -e 's/require\("\.\/([^"]*)\.actions\.js"\)/require(".\/$1.actions.cjs")/g' "$file"
+  perl -pi -e 's/require\("\.\/(clipboardLock|cdnCache)(\.js)?"\)/require(".\/$1.cjs")/g' "$file"
 done
 if [[ -f dist/e2e/steps/interaction.steps.cjs ]]; then
   perl -pi -e 's/require\("\.\.\/support\/testIndicator\.utils"\)/require("..\/support\/testIndicator.utils.cjs")/g' dist/e2e/steps/interaction.steps.cjs
@@ -25,6 +26,8 @@ fi
 echo "🧪 Running E2E tests..."
 # If no positional path argument is given, default to all feature files
 if [[ $# -eq 0 ]] || [[ "$1" == --* ]]; then
+  # Whole-suite runs are sharded across parallel processes by default (override with E2E_SHARDS=1)
+  export E2E_SHARDS="${E2E_SHARDS:-4}"
   node run-cucumber.cjs tests/e2e/features/**/*.feature "$@"
 else
   node run-cucumber.cjs "$@"

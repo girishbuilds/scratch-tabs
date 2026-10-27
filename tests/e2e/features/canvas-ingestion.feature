@@ -22,6 +22,7 @@ Feature: Canvas paste, drop, and clipboard ingestion
     When I paste multiple inputs at a known Canvas pointer position
     Then the pasted cards should be deterministically placed and selected
 
+  @clipboard
   Scenario: Copy cut paste and preserve native editing paste
     When I add a Canvas text card containing "Clipboard one"
     And I add a Canvas text card containing "Clipboard two"

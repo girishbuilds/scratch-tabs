@@ -3,6 +3,7 @@ Feature: NDJSON content processing
   Background:
     Given I am on the homepage
 
+  @clipboard
   Scenario: Clean and extract valid JSON from mixed NDJSON content
     When I set clipboard content to:
       """

@@ -196,6 +196,10 @@ export class CanvasActions {
     await activeTab.click({ button: "right" });
   }
 
+  async expectSendToCanvasDialogVisible() {
+    await expect(this.page.getByTestId('send-to-canvas-dialog')).toBeVisible();
+  }
+
   async sendFullTabToNewCanvas() {
     await this.setActiveEditorContent('{"sent":"full tab"}');
     await this.openActiveTabContextMenu();

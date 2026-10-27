@@ -4,6 +4,8 @@ import { E2EWorld } from './world.js';
 import * as net from 'net';
 import * as http from 'http';
 import { spawn, ChildProcess } from 'child_process';
+import { installCdnCache } from './cdnCache.js';
+import { acquireClipboardLock, releaseClipboardLock, CLIPBOARD_LOCK_TIMEOUT_MS } from './clipboardLock.js';
 
 let browser: any;
 let devServer: ChildProcess | null = null;
@@ -59,10 +61,11 @@ function killServer(proc: ChildProcess): Promise<void> {
   });
 }
 
-BeforeAll(async function () {
+BeforeAll({ timeout: 3 * 60 * 1000 }, async function () {
   // Allow opting out of auto-server when BASE_URL is already set (e.g. developer testing against a specific server)
   if (!process.env.BASE_URL) {
-    const port = await findFreePort();
+    // run-cucumber.cjs reserves a distinct port per shard; otherwise pick a free one.
+    const port = process.env.E2E_PORT ? Number(process.env.E2E_PORT) : await findFreePort();
     const baseUrl = `http://localhost:${port}`;
 
     devServer = spawn('npx', ['vite', '--port', String(port), '--strictPort'], {
@@ -98,6 +101,19 @@ BeforeAll(async function () {
   browser = await chromium.launch({
     headless: process.env.HEADED !== 'true'
   });
+
+  // A fresh dev server (and, when sharded, a fresh dep cache) compiles on first request, which can
+  // exceed a scenario's 30s step timeout. Load the app once up front so scenarios hit a warm server.
+  const warmupContext = await browser.newContext();
+  await installCdnCache(warmupContext);
+  try {
+    const warmupPage = await warmupContext.newPage();
+    await warmupPage.goto(process.env.BASE_URL!, { timeout: 2 * 60 * 1000 });
+    await warmupPage.getByText('SCRATCH_TABS').waitFor({ timeout: 2 * 60 * 1000 });
+    await warmupPage.waitForLoadState('networkidle');
+  } finally {
+    await warmupContext.close();
+  }
 });
 
 AfterAll(async function () {
@@ -109,11 +125,21 @@ AfterAll(async function () {
   }
 });
 
+// Defined before the main Before/After so the lock is taken first and released last.
+Before({ tags: '@clipboard', timeout: CLIPBOARD_LOCK_TIMEOUT_MS + 5000 }, async function () {
+  await acquireClipboardLock();
+});
+
+After({ tags: '@clipboard' }, async function () {
+  releaseClipboardLock();
+});
+
 Before(async function () {
   // Create context with clipboard permissions granted
   this.context = await browser.newContext({
     permissions: ['clipboard-read', 'clipboard-write']
   });
+  await installCdnCache(this.context);
   this.page = await this.context.newPage();
   
   // Initialize the action helpers now that page is available

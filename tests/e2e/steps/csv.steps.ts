@@ -142,10 +142,11 @@ CsvThen('the active editor content should reflect the changes made in table view
 
 // Export functionality steps
 CsvThen('I should see export options for {string}, {string}, {string}, and {string}', async function(option1, option2, option3, option4) {
-  await expect(this.page.locator('text=' + option1)).toBeVisible();
-  await expect(this.page.locator('text=' + option2)).toBeVisible();
-  await expect(this.page.locator('text=' + option3)).toBeVisible();
-  await expect(this.page.locator('text=' + option4)).toBeVisible();
+  for (const option of [option1, option2, option3, option4]) {
+    // Scope to the export menu items; a bare text locator also matches the status bar's "CSV / TSV"
+    const exportOption = this.page.locator(`[data-testid="export-option"][data-format="${option.toLowerCase()}"]`);
+    await expect(exportOption).toBeVisible();
+  }
 });
 
 // Column manipulation steps
@@ -157,8 +158,11 @@ CsvWhen('I click the {string} button for the {string} column', async function(bu
 });
 
 CsvThen('I should see a new column added after {string}', async function(columnName) {
-  const newColumn = this.page.locator('[data-testid="new-column"]');
-  await expect(newColumn).toBeVisible();
+  // addColumn() names the inserted column "Column N" and places it right after the clicked one
+  const headers = this.page.locator('[data-testid="column-header"]');
+  const columnHeader = headers.filter({ hasText: columnName }).first();
+  const nextHeader = columnHeader.locator('xpath=following-sibling::*[1]');
+  await expect(nextHeader).toContainText(/Column \d+/);
 });
 
 CsvThen('the table structure should update accordingly', async function() {
@@ -192,7 +196,7 @@ CsvThen('the changes should be reapplied', async function() {
 
 // Data integrity steps
 CsvThen('the quoted values should be preserved correctly', async function() {
-  const quotedValue = this.page.locator('text=HP laptop with "quotes"');
+  const quotedValue = this.page.locator('[data-testid="csv-cell"]').filter({ hasText: 'HP laptop with "quotes"' });
   await expect(quotedValue).toBeVisible();
 });
 
@@ -205,7 +209,8 @@ CsvThen('the active editor content should maintain the original formatting and q
   const content = await this.editor.getMonacoEditorContent();
   
   expect(content).toContain('"Product","Price","Description"');
-  expect(content).toContain('HP laptop with "quotes"');
+  // RFC 4180: embedded quotes stay doubled inside a quoted field
+  expect(content).toContain('"HP laptop with ""quotes"""');
 });
 
 // Performance and malformed data steps

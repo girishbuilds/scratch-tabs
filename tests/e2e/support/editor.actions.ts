@@ -51,6 +51,51 @@ export class EditorActions {
     await domNodeHandle.asElement()?.click({ button: 'right' });
   }
 
+  /**
+   * Right-click directly on the first line of text so that an existing
+   * selection is preserved (Monaco clears the selection when the right-click
+   * lands on empty space).
+   *
+   * The text area is resolved through a locator so that the click always
+   * targets the current DOM node, even when the editor was just re-created
+   * (for example right after the view was split).
+   */
+  async rightClickFirstLineOfEditor(side: 'left' | 'right' = 'left') {
+    const lines = this.page
+      .locator(`[data-editor-pane-side="${side}"] .monaco-editor .view-lines`)
+      .first();
+    await expect(lines).toBeVisible();
+
+    const box = await lines.boundingBox();
+    if (!box) {
+      throw new Error('Could not locate the editor text area');
+    }
+
+    await this.page.mouse.click(box.x + 10, box.y + 8, { button: 'right' });
+  }
+
+  /** Selects the whole content of the editor. */
+  async selectAllTextInEditor(side: 'left' | 'right' = 'left') {
+    const editorInstance = await this.getVisibleEditorInstance(side);
+    await editorInstance.evaluate((e: any) => {
+      const model = e.getModel();
+      if (!model) return;
+      e.setSelection(model.getFullModelRange());
+      e.focus();
+    });
+  }
+
+  /**
+   * Runs one of the editor context menu actions directly, bypassing the
+   * native context menu (more reliable in headless runs).
+   */
+  async runEditorContextMenuAction(actionId: string, side: 'left' | 'right' = 'left') {
+    const editorInstance = await this.getVisibleEditorInstance(side);
+    await editorInstance.evaluate((e: any, id: string) => {
+      e.trigger('e2e', id, null);
+    }, actionId);
+  }
+
   async doubleClickEditor() {
     const editorInstance = await this.getVisibleEditorInstance();
     const domNodeHandle = await editorInstance.evaluateHandle((e: any) => e.getDomNode());
@@ -117,10 +162,14 @@ export class EditorActions {
   }
 
   async expectEditorContainsMarkdown() {
-    const content = await this.getMonacoEditorContent();
     const markdownPatterns = [/^#\s+/m, /\*\*.*\*\*/, /\*.*\*/, /\[.*\]\(.*\)/, /```[\s\S]*```/, /^\s*[-*+]\s+/m];
-    const hasMarkdown = markdownPatterns.some(pattern => pattern.test(content));
-    if (!hasMarkdown) throw new Error(`Editor content does not contain markdown syntax. Content: "${content}"`);
+    await expect.poll(
+      async () => {
+        const content = await this.getMonacoEditorContent();
+        return markdownPatterns.some(pattern => pattern.test(content));
+      },
+      { message: 'Editor content does not contain markdown syntax' },
+    ).toBe(true);
   }
 
   getRichTextEditor(side: 'left' | 'right' = 'left') {
@@ -129,6 +178,11 @@ export class EditorActions {
 
   async expectMonacoEditorVisible() {
     await this.getVisibleEditorInstance();
+  }
+
+  /** Asserts the floating macro toolbar is visible for the active tab. */
+  async expectMacroToolbarVisible() {
+    await expect(this.page.getByText('Macro Controls')).toBeVisible();
   }
 
   async expectFirst10LinesContainJson() {

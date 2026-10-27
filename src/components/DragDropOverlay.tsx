@@ -145,7 +145,11 @@ const DragDropOverlay: React.FC = () => {
 
   const processDroppedItem = useCallback(async (item: DataTransferItem) => {
     const entry = item.webkitGetAsEntry() as FileSystemEntry | null;
-    if (!entry) return [];
+    if (!entry) {
+      // Some drag sources expose no filesystem entry; fall back to the plain file.
+      const file = item.getAsFile();
+      return file ? [file] : [];
+    }
 
     if (entry.isFile) {
       return new Promise<File[]>((resolve, reject) => {

@@ -14,6 +14,7 @@ Feature: Welcome Screen Entry Points
     Then the preview should be visible
     And the URL should contain "welcome"
 
+  @clipboard
   Scenario: Create new tab from the document menu with clipboard content
     When I set clipboard content to "Hello from clipboard"
     And I create a new tab from the document menu and clipboard
@@ -50,11 +51,10 @@ Feature: Welcome Screen Entry Points
     Then the preview should be visible
     And the URL should contain "welcome"
 
-  @wip
   Scenario: Create new tab from file upload
     When I upload file "test-file.txt" with content "File content here"
     Then the "Welcome" tab should exist and not be active
-    And the "test-file.txt" tab should be active
+    And the "test-file" tab should be active
     And the active editor content should be:
       """
       File content here
@@ -76,6 +76,7 @@ Feature: Welcome Screen Entry Points
     Then the preview should be visible
     And the URL should contain "welcome"
 
+  @clipboard
   Scenario: Create new tab from "Paste Content" button
     When I set clipboard content to "Imported clipboard content"
     And I click the "Paste Content" button
@@ -91,11 +92,10 @@ Feature: Welcome Screen Entry Points
     Then the preview should be visible
     And the URL should contain "welcome"
 
-  @wip
   Scenario: Create new tab from drag and drop file
     When I drag file "dragged-file.json" with content '{"key": "value"}' onto the page
     Then the "Welcome" tab should exist and not be active
-    And the "dragged-file.json" tab should be active
+    And the "dragged-file" tab should be active
     And the active editor content should be:
       """
       {"key": "value"}

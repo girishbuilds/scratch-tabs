@@ -11,6 +11,7 @@ Feature: Tab context menu
     And the context menu should not show "Open in..." option
     And the context menu should not show "Transformations" option
 
+  @clipboard
   Scenario: Rename a tab using context menu
     When I create a new tab from the document menu and clipboard
     Then the "Scratch 1" tab should be active
@@ -21,6 +22,7 @@ Feature: Tab context menu
     And I press Enter to confirm rename
     Then the "My Custom Tab" tab should be active
 
+  @clipboard
   Scenario: Copy content using context menu
     When I create a new tab from the document menu and clipboard
     Then the "Scratch 1" tab should be active
@@ -45,6 +47,7 @@ Feature: Tab context menu
     Then the active editor content should contain "#"
     And the status bar language should be "Markdown"
 
+  @clipboard
   Scenario: Duplicate tab using context menu
     When I create a new tab from the document menu and clipboard
     Then the "Scratch 1" tab should be active
@@ -54,6 +57,7 @@ Feature: Tab context menu
     Then the "Scratch 1 (Copy)" tab should be active
     And the active editor content should contain "Original tab content for duplication test"
 
+  @clipboard
   Scenario: Compare with clipboard using context menu
     When I set clipboard content to "Clipboard content for comparison test"
     When I click the icon for "New tab"

@@ -3,6 +3,7 @@ Feature: Performance and Language Detection
   Background:
     Given I am on the homepage
 
+  @clipboard
   Scenario: Handle large JSON file and verify language detection
     When I generate a 1.5MB JSON file and set it to clipboard
     And I create a new tab from the document menu and clipboard

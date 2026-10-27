@@ -10,6 +10,7 @@ Feature: Canvas offline links and click-to-load videos
     When I click the icon for "New tab"
     And I create a new Canvas
 
+  @clipboard
   Scenario: Restore and use an offline baseline link card
     When I paste a normal URL into the Canvas
     And I wait for the Canvas scene to be saved

@@ -4,11 +4,16 @@ import { EditorRange } from "../types";
 import { useAIStore } from "../stores/aiStore";
 import { usePipelineStore } from "../stores/pipelineStore";
 import { useQuickTransformStore } from "../stores/quickTransformStore";
+import { createCaseTransformActions } from "./editorActions/caseTransforms";
+import { createEditorMenuActions } from "./editorActions/menuActions";
+import { useSplitViewContextKeys } from "./editorActions/useSplitViewContextKeys";
+import { useTabletContextActions } from "./editorActions/useTabletContextActions";
 
 interface UseEditorActionsProps {
   editor: Monaco.editor.IStandaloneCodeEditor | null;
   monaco: typeof Monaco | null;
   latestActiveTabRef: React.RefObject<any>;
+  side: "left" | "right";
   isAiReady: boolean;
   isAiLoading: boolean;
   isCodegenReady: boolean;
@@ -44,6 +49,7 @@ export const useEditorActions = ({
   editor,
   monaco,
   latestActiveTabRef,
+  side,
   isAiReady,
   isAiLoading,
   isCodegenReady,
@@ -92,6 +98,12 @@ export const useEditorActions = ({
         y: e.event.browserEvent.clientY,
       };
     });
+
+    // Macro, canvas, copy, download, compare and case transform entries
+    const menuDisposables = [
+      ...createEditorMenuActions({ side, latestActiveTabRef }),
+      ...createCaseTransformActions(),
+    ].map((descriptor) => editor.addAction(descriptor));
 
     // Add Quick Transform context menu action
     quickTransformDisposableRef.current = editor.addAction({
@@ -262,6 +274,7 @@ export const useEditorActions = ({
 
     // Cleanup function
     return () => {
+      menuDisposables.forEach((disposable) => disposable.dispose());
       if (transformationsDisposableRef.current) {
         transformationsDisposableRef.current.dispose();
         transformationsDisposableRef.current = null;
@@ -283,7 +296,10 @@ export const useEditorActions = ({
         aiCodegenDisposableRef.current = null;
       }
     };
-  }, [editor, monaco]);
+  }, [editor, monaco, side]);
+
+  useSplitViewContextKeys(editor, side);
+  useTabletContextActions(editor, side);
 
   // Update context keys when AI state changes
   useEffect(() => {

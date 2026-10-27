@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { ChecksumTablet } from '../ChecksumTablet';
+import ChecksumTabletDefinition, { ChecksumTablet } from '../ChecksumTablet';
 import { ChecksumState } from '../types';
 
 // Mock the hashing utilities
@@ -288,6 +288,33 @@ describe('ChecksumTablet', () => {
           })
         );
       }, { timeout: 1000 });
+    });
+  });
+
+  describe('opening with seeded text', () => {
+    it('creates the initial state from the text payload', () => {
+      const state = ChecksumTabletDefinition.createInitialState({ text: 'from the editor' });
+
+      expect(state.inputText).toBe('from the editor');
+    });
+
+    it('starts empty without a payload', () => {
+      expect(ChecksumTabletDefinition.createInitialState().inputText).toBe('');
+    });
+
+    it('shows the seeded text in the input and counts its characters', () => {
+      const state = ChecksumTabletDefinition.createInitialState({ text: 'from the editor' });
+      render(<ChecksumTablet state={state} onChange={mockOnChange} />);
+
+      expect(screen.getByPlaceholderText(/Type or paste text here/)).toHaveValue('from the editor');
+      expect(screen.getByText('15 characters')).toBeInTheDocument();
+    });
+
+    it('keeps the seeded text through a serialize round trip', () => {
+      const state = ChecksumTabletDefinition.createInitialState({ text: 'from the editor' });
+      const restored = ChecksumTabletDefinition.deserializeState(ChecksumTabletDefinition.serializeState(state));
+
+      expect(restored.inputText).toBe('from the editor');
     });
   });
 });

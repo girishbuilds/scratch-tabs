@@ -104,7 +104,16 @@ export function generateRota(names: string[], config: RotaConfig): RotaSlot[] {
   return dates.map((date, i) => ({ date: toIsoDate(date), name: sequence[i] }));
 }
 
-/** One "date name" line per slot, ready for the clipboard. */
-export function rotaToText(slots: RotaSlot[]): string {
-  return slots.map((slot) => `${slot.date} ${slot.name}`).join("\n");
+/** Tabs and newlines inside a cell would break the column/row structure, so
+ *  they collapse to single spaces. */
+function toCell(value: string): string {
+  return value.replace(/[\t\r\n]+/g, " ").trim();
+}
+
+/** Tab-separated table with a header row, ready for the clipboard. Pasting into
+ *  Sheets/Excel/Notion lands it as two columns - one row per slot. */
+export function rotaToTable(slots: RotaSlot[]): string {
+  const header = "Date\tName";
+  if (slots.length === 0) return header;
+  return [header, ...slots.map((slot) => `${toCell(slot.date)}\t${toCell(slot.name)}`)].join("\n");
 }

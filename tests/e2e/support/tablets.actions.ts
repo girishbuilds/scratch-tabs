@@ -420,6 +420,13 @@ export class TabletsActions {
   }
 
   /**
+   * Check the checksum text input holds the given text
+   */
+  async expectChecksumInputValue(text: string) {
+    await expect(this.page.locator('textarea').first()).toHaveValue(text);
+  }
+
+  /**
    * Check if a calculated hash is visible
    */
   async expectCalculatedHashVisible() {

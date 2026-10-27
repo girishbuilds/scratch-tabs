@@ -52,15 +52,26 @@ describe('RotaPanel', () => {
     expect(onChange).toHaveBeenCalledWith({ startDate: '2026-09-01' });
   });
 
-  it('copies date-then-name lines to the clipboard', async () => {
+  it('copies the rota as a tab-separated table to the clipboard', async () => {
     const writeText = jest.fn().mockResolvedValue(undefined);
     Object.assign(navigator, { clipboard: { writeText } });
     const { getByLabelText } = setup(['Alice', 'Bob'], config({ periods: 4 }));
     fireEvent.click(getByLabelText('Copy rota to clipboard'));
     await Promise.resolve();
     expect(writeText).toHaveBeenCalledWith(
-      '2026-08-03 Alice\n2026-08-10 Bob\n2026-08-17 Alice\n2026-08-24 Bob',
+      'Date\tName\n2026-08-03\tAlice\n2026-08-10\tBob\n2026-08-17\tAlice\n2026-08-24\tBob',
     );
+  });
+
+  it('copies every generated slot, not just the first name', async () => {
+    const writeText = jest.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, { clipboard: { writeText } });
+    const { getAllByTestId, getByLabelText } = setup(['Alice', 'Bob'], config({ periods: 8 }));
+    fireEvent.click(getByLabelText('Copy rota to clipboard'));
+    await Promise.resolve();
+    const rows = writeText.mock.calls[0][0].split('\n');
+    expect(rows[0]).toBe('Date\tName');
+    expect(rows).toHaveLength(getAllByTestId('spinthewheel-rota-slot').length + 1);
   });
 
   it('shows transient copied feedback', async () => {

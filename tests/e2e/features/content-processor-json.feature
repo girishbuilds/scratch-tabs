@@ -3,6 +3,7 @@ Feature: Json content processing
   Background:
     Given I am on the homepage
 
+  @clipboard
   Scenario: Clean and format stringified json
     When I set clipboard content to ""{\"name\":\"John Doe\",\"age\":30,\"isStudent\":false,\"courses\":[{\"id\":1,\"name\":\"History\"},{\"id\":2,\"name\":\"Math\"}]}""
     And I create a new tab from the document menu and clipboard

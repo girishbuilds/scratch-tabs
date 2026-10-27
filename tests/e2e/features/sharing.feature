@@ -21,6 +21,7 @@ Feature: Tab Sharing
     And the shareable URL input should be visible
     And the shareable URL input should contain "#/s/v1/"
 
+  @clipboard
   Scenario: Copy share URL and verify clipboard
     When I click the icon for "New tab"
     And I type "Content to share" into the editor
@@ -39,6 +40,7 @@ Feature: Tab Sharing
     When I close the share modal
     Then the share modal should not be visible
 
+  @clipboard
   Scenario: Open shared tab from link in new browser instance
     When I click the icon for "New tab"
     And I type "This is shared content from the original tab" into the editor
@@ -49,6 +51,7 @@ Feature: Tab Sharing
     And I open the share URL in a new browser instance
     Then the new browser instance should have a tab with content "This is shared content from the original tab"
 
+  @clipboard
   Scenario: Shared tab appears in correct browser tab when app already open
     When I click the icon for "New tab"
     And I type "Content for multi-tab share test" into the editor
@@ -61,6 +64,7 @@ Feature: Tab Sharing
     Then the new browser tab should show the shared content
     And the new browser tab should have a tab with content "Content for multi-tab share test"
 
+  @clipboard
   Scenario: Share JSON content
     When I click the icon for "New tab"
     And I type the following content into the active editor:
@@ -97,6 +101,7 @@ Feature: Tab Sharing
     And I right-click the "Calculator" tab
     Then the context menu should not show "Share" option
 
+  @clipboard
   Scenario: Trim large JSON content before sharing
     When I click the icon for "New tab"
     And I type the following content into the active editor:
@@ -158,6 +163,7 @@ Feature: Tab Sharing
     Then the default trim UI should be visible
     And the modal should show "Shareable URL (Trimmed Content)"
 
+  @clipboard
   Scenario: Manually customize small JSON to exclude sensitive fields
     When I click the icon for "New tab"
     And I type the following content into the active editor:
