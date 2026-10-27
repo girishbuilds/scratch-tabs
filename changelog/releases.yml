@@ -3,8 +3,36 @@ config:
   max_versions: 100  # Maximum number of versions to display
 
 releases:
-  - version: "1.49.0"
+  - version: "1.50.0"
     type: "latest"
+    draft: false
+    date: "2026-10-27"
+    headline: "Editor Right-Click Menu + Data Reconcile Keys"
+    summary: "The editor right-click menu gains more actions, and Data Reconcile gets clearer key column controls."
+    description: "Right-click in the editor to compare tabs, send a selection to Canvas, change case, or open content in a matching tablet. Data Reconcile now shows which key columns are in use and lets you pick your own."
+    categories:
+      - name: "New Features"
+        changes:
+          - "**Editor menu actions:** Macro Recording, Send Selection to Canvas, Copy All Content, and Download"
+          - "**Compare from the editor:** Compare with the other side of a split view or with the previous tab"
+          - "**Case transforms:** UPPERCASE, lowercase, Title Case, camelCase, Pascal Case, snake_case, and kebab-case for the selection"
+          - "**Open in tablet:** Matching tablets appear in the right-click menu based on your content"
+      - name: "Improvements"
+        changes:
+          - "**Data Reconcile keys:** Choose between shared header names and manually paired key columns, with a clear list of the columns in use"
+          - "**Data Reconcile layout:** The tablet now uses the full tab width and wraps on narrow panes"
+          - "**CSV filters:** An Only button on each facet value shows just that value"
+          - "**Spin the Wheel rota:** Copy now produces a Date and Name table that pastes into spreadsheets"
+          - "**Opening files:** Files opened from the welcome screen use their file name as the tab title"
+      - name: "Bug Fixes"
+        changes:
+          - "**Data Reconcile:** Single column CSVs and files ending in a blank line now compare correctly, and only shared columns are checked for changes"
+          - "**CSV detection:** Quoted fields containing doubled quotes are recognized as CSV"
+          - "**Tab links:** Opening a tab URL now works before your first workspace exists"
+          - "**Drag and drop:** Files from sources without a file system entry now open"
+
+  - version: "1.49.0"
+    type: "release"
     draft: false
     date: "2026-09-21"
     headline: "Merge Tabs + CSV Improvements"
