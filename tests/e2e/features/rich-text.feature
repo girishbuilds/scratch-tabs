@@ -43,6 +43,7 @@ Feature: Rich Text Editor
     Then I should see the Rich Text editor is displayed
     And the Rich Text editor should contain the text "This is rich text content"
 
+  @clipboard
   Scenario: Image paste creates rich text tab with proper title and content
     When I set clipboard content to contain an image
     And I create a new tab from the document menu and clipboard
@@ -51,6 +52,7 @@ Feature: Rich Text Editor
     And the Rich Text editor should contain an image
     And I should see the date created text with "now" time
 
+  @clipboard
   Scenario: Plain text to rich text conversion when pasting image
     Given I am on a plain text editor tab
     When I type "This is plain text content" in the Monaco editor
@@ -66,6 +68,7 @@ Feature: Rich Text Editor
     And the Rich Text editor should contain the text "This is plain text content"
     And I should see the date created text with "now" time
 
+  @clipboard
   Scenario: Paste image data into an empty Monaco tab
     Given I am on a plain text editor tab
     When I set clipboard content to contain an image
@@ -77,6 +80,7 @@ Feature: Rich Text Editor
     And the Monaco editor should contain "data:image/png;base64"
     And the status bar language should be "Image"
 
+  @clipboard
   Scenario: Paste image data into a new tab when Monaco has content
     Given I am on a plain text editor tab
     When I type "Keep this content" in the Monaco editor
@@ -89,6 +93,7 @@ Feature: Rich Text Editor
     And the Monaco editor should contain "data:image/png;base64"
     And the status bar language should be "Image"
 
+  @clipboard
   Scenario: Paste a Monaco image into Canvas
     Given I am on a plain text editor tab
     When I set clipboard content to contain an image
@@ -309,6 +314,7 @@ Feature: Rich Text Editor
     Then the cursor should remain after the date created text
     And I should not be able to type above the date created text
 
+  @clipboard
   Scenario: Cursor cannot move above created date with up arrow key after content import
     Given I am on a plain text editor tab
     When I type "Some content to import" in the Monaco editor
@@ -351,6 +357,7 @@ Feature: Rich Text Editor
     And the Rich Text editor should contain "Replacement text"
     And the Rich Text editor should not contain "Some content to select with Ctrl+A"
 
+  @clipboard
   Scenario: Copying content with date created node doesn't duplicate dates when pasted
     Given I am on a plain text editor tab
     When I click the Rich Text toggle in the status bar

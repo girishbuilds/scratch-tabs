@@ -14,6 +14,7 @@ Feature: Welcome Screen Entry Points
     Then the preview should be visible
     And the URL should contain "welcome"
 
+  @clipboard
   Scenario: Create new tab from the document menu with clipboard content
     When I set clipboard content to "Hello from clipboard"
     And I create a new tab from the document menu and clipboard
@@ -75,6 +76,7 @@ Feature: Welcome Screen Entry Points
     Then the preview should be visible
     And the URL should contain "welcome"
 
+  @clipboard
   Scenario: Create new tab from "Paste Content" button
     When I set clipboard content to "Imported clipboard content"
     And I click the "Paste Content" button

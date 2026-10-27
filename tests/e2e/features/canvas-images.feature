@@ -22,6 +22,7 @@ Feature: Canvas image cards
     And I replace the Canvas image
     Then I can open the replacement in the Image Smart View
 
+  @clipboard
   Scenario: Copy an image with durable success feedback
     When I add an image through the Canvas file chooser
     And I copy the Canvas image

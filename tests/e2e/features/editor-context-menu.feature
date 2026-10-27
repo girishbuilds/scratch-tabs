@@ -74,6 +74,7 @@ Feature: Editor context menu
     And I run the "case-uppercase" editor context menu action
     Then the active editor content should be "HELLO WORLD"
 
+  @clipboard
   Scenario: Copy All Content copies the whole document
     When I click the icon for "New tab"
     And I type "hello world" into the editor

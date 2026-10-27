@@ -6,6 +6,7 @@ Feature: Smart View Callout Notification
   Background:
     Given I am on the homepage
 
+  @clipboard
   Scenario: Smart View callout appears for "New tab from clipboard" button
     When I set clipboard content to:
       """
@@ -19,6 +20,7 @@ Feature: Smart View Callout Notification
     And I should see the smart view callout
     And the smart view callout message should contain "Data View"
 
+  @clipboard
   Scenario: Clicking Data View button activates Smart View
     When I set clipboard content to:
       """
@@ -33,6 +35,7 @@ Feature: Smart View Callout Notification
     Then I should not see the smart view callout
     And I should see the JSON Smart View
 
+  @clipboard
   Scenario: Clicking Dismiss button hides callout permanently for that tab
     When I set clipboard content to:
       """
@@ -46,6 +49,7 @@ Feature: Smart View Callout Notification
     When I click the smart view callout dismiss button
     Then I should not see the smart view callout
 
+  @clipboard
   Scenario: Smart View callout auto-dismisses after 15 seconds
     When I set clipboard content to:
       """
@@ -58,6 +62,7 @@ Feature: Smart View Callout Notification
     When I wait for 16 seconds
     Then I should not see the smart view callout
 
+  @clipboard
   Scenario: Smart View callout shows correct format name for CSV
     When I set clipboard content to:
       """

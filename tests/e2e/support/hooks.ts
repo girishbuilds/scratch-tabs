@@ -4,6 +4,7 @@ import { E2EWorld } from './world.js';
 import * as net from 'net';
 import * as http from 'http';
 import { spawn, ChildProcess } from 'child_process';
+import { acquireClipboardLock, releaseClipboardLock, CLIPBOARD_LOCK_TIMEOUT_MS } from './clipboardLock.js';
 
 let browser: any;
 let devServer: ChildProcess | null = null;
@@ -120,6 +121,15 @@ AfterAll(async function () {
     devServer = null;
     console.log('[hooks] Dev server stopped');
   }
+});
+
+// Defined before the main Before/After so the lock is taken first and released last.
+Before({ tags: '@clipboard', timeout: CLIPBOARD_LOCK_TIMEOUT_MS + 5000 }, async function () {
+  await acquireClipboardLock();
+});
+
+After({ tags: '@clipboard' }, async function () {
+  releaseClipboardLock();
 });
 
 Before(async function () {
