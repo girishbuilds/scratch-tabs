@@ -23,6 +23,9 @@ import {
   EyeOff,
   ClipboardPaste,
   ListFilter,
+  ArrowLeft,
+  ArrowRight,
+  Columns,
 } from "lucide-react";
 import * as Papa from "papaparse";
 import { SmartViewProps } from "../../../../views/registry";
@@ -33,6 +36,8 @@ import { CsvToolbar } from "./CsvToolbar";
 import { CsvFilterBar } from "./CsvFilterBar";
 import { ColumnFilterInput } from "./ColumnFilterInput";
 import { CsvSnapshotsPanel } from "./CsvSnapshotsPanel";
+import { CsvAddColumnsPanel } from "./CsvAddColumnsPanel";
+import { useColumnSourceTabs } from "../hooks/useColumnSourceTabs";
 import { FacetFilterPopover } from "./FacetFilterPopover";
 import { CsvFilterPresetsPanel } from "./CsvFilterPresetsPanel";
 import { computeFacetCounts } from "../utils/facets";
@@ -100,6 +105,8 @@ export const CsvTableViewer: React.FC<SmartViewProps> = ({
   const [duplicateGroups, setDuplicateGroups] = useState<DuplicateGroup[]>([]);
   const [showDuplicatesOnly, setShowDuplicatesOnly] = useState(false);
   const [showSnapshotsPanel, setShowSnapshotsPanel] = useState(false);
+  // undefined anchor = append new columns at the end
+  const [addColumnsPanel, setAddColumnsPanel] = useState<{ anchorColumnId?: string } | null>(null);
   const [duplicateSearchPerformed, setDuplicateSearchPerformed] = useState(false);
   const [showFilterRow, setShowFilterRow] = useState(false);
   const [showPresetsPanel, setShowPresetsPanel] = useState(false);
@@ -149,6 +156,8 @@ export const CsvTableViewer: React.FC<SmartViewProps> = ({
   const [maskedColumns, setMaskedColumns] = useState<Set<string>>(new Set());
 
   const csvData = useCsvData(content, onContentChange);
+  const { tabs: columnSourceTabs, loadSource: loadColumnSource } =
+    useColumnSourceTabs(tabId);
   const {
     data,
     columns,
@@ -165,6 +174,8 @@ export const CsvTableViewer: React.FC<SmartViewProps> = ({
     addColumn,
     deleteColumn,
     duplicateColumn,
+    moveColumn,
+    addColumnsFromTable,
     renameColumn,
     canUndo,
     canRedo,
@@ -604,6 +615,32 @@ export const CsvTableViewer: React.FC<SmartViewProps> = ({
   const closeContextMenu = useCallback(() => {
     setContextMenu(null);
   }, []);
+
+  const canMoveContextColumn = useCallback(
+    (direction: -1 | 1) => {
+      if (!contextMenu) return false;
+      const index = columns.findIndex((c) => c.id === contextMenu.columnId);
+      const target = index + direction;
+      return index !== -1 && target >= 0 && target < columns.length;
+    },
+    [contextMenu, columns],
+  );
+
+  const moveContextColumn = useCallback(
+    (direction: -1 | 1) => {
+      if (!contextMenu || !canMoveContextColumn(direction)) return;
+      const index = columns.findIndex((c) => c.id === contextMenu.columnId);
+      moveColumn(contextMenu.columnId, index + direction);
+      setContextMenu(null);
+    },
+    [contextMenu, columns, canMoveContextColumn, moveColumn],
+  );
+
+  const openAddColumnsFromContextMenu = useCallback(() => {
+    if (!contextMenu) return;
+    setAddColumnsPanel({ anchorColumnId: contextMenu.columnId });
+    setContextMenu(null);
+  }, [contextMenu]);
 
   // Quick filters from the right-clicked cell ("Filter by this value", etc.)
   const applyQuickFilter = useCallback(
@@ -1661,6 +1698,10 @@ export const CsvTableViewer: React.FC<SmartViewProps> = ({
         columnCount={columns.length}
         diagnostics={diagnostics}
         isValid={isValid}
+        showAddColumnsPanel={addColumnsPanel !== null}
+        onToggleAddColumnsPanel={() =>
+          setAddColumnsPanel((current) => (current ? null : {}))
+        }
         onReconcileTab={() => tabletActionService.handleAction({
           targetTablet: "datareconcile",
           action: "new-tab",
@@ -1738,6 +1779,19 @@ export const CsvTableViewer: React.FC<SmartViewProps> = ({
           onRestore={restoreSnapshot}
           onDelete={deleteSnapshot}
           onClose={() => setShowSnapshotsPanel(false)}
+        />
+      )}
+
+      {/* Add Columns From Another Tab Panel */}
+      {addColumnsPanel && (
+        <CsvAddColumnsPanel
+          key={addColumnsPanel.anchorColumnId ?? "end"}
+          tabs={columnSourceTabs}
+          columns={columns}
+          anchorColumnId={addColumnsPanel.anchorColumnId}
+          loadSource={loadColumnSource}
+          onApply={addColumnsFromTable}
+          onClose={() => setAddColumnsPanel(null)}
         />
       )}
 
@@ -1974,6 +2028,46 @@ export const CsvTableViewer: React.FC<SmartViewProps> = ({
                       </button>
                     </>
                   )}
+                  <div className="border-t border-base my-1" />
+                </>
+              )}
+              {contextMenu.kind === "column" && (
+                <>
+                  <button
+                    onClick={() => moveContextColumn(-1)}
+                    disabled={!canMoveContextColumn(-1)}
+                    data-testid="move-column-left"
+                    className={`flex items-center w-full px-3 py-2 text-sm text-left transition-colors ${canMoveContextColumn(-1)
+                      ? 'text-main hover:bg-element-hover'
+                      : 'text-muted cursor-not-allowed'
+                      }`}
+                    title="Move this column one position to the left"
+                  >
+                    <ArrowLeft size={14} className="mr-2" />
+                    <span>Move column left</span>
+                  </button>
+                  <button
+                    onClick={() => moveContextColumn(1)}
+                    disabled={!canMoveContextColumn(1)}
+                    data-testid="move-column-right"
+                    className={`flex items-center w-full px-3 py-2 text-sm text-left transition-colors ${canMoveContextColumn(1)
+                      ? 'text-main hover:bg-element-hover'
+                      : 'text-muted cursor-not-allowed'
+                      }`}
+                    title="Move this column one position to the right"
+                  >
+                    <ArrowRight size={14} className="mr-2" />
+                    <span>Move column right</span>
+                  </button>
+                  <button
+                    onClick={openAddColumnsFromContextMenu}
+                    data-testid="add-columns-from-tab"
+                    className="flex items-center w-full px-3 py-2 text-sm text-left transition-colors text-main hover:bg-element-hover"
+                    title="Copy columns from another tab, inserted after this column"
+                  >
+                    <Columns size={14} className="mr-2" />
+                    <span>Add columns from another tab...</span>
+                  </button>
                   <div className="border-t border-base my-1" />
                 </>
               )}

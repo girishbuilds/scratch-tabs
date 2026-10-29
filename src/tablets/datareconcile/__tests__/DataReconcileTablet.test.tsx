@@ -4,19 +4,47 @@ import { TabletState } from "../../types";
 import { ReconcileInput, ReconcileResponse } from "../types";
 import "@testing-library/jest-dom";
 import { DataReconcileTablet } from "../DataReconcileTablet";
+import { reconcileRunner } from "../sharedReconcileRunner";
 
 const mockHandleNewPopulatedTab = jest.fn().mockResolvedValue("new-tab");
 
+type MockWorker = {
+  onmessage: ((event: { data: ReconcileResponse }) => void) | null;
+  onerror: (() => void) | null;
+  postMessage(input: ReconcileInput): void;
+  terminate: jest.Mock;
+};
+
+// Workers answer synchronously unless a test sets `deferWorkers`, which holds the reply until `flushWorkers`.
+let deferWorkers = false;
+let pendingReplies: Array<() => void> = [];
+const createdWorkers: MockWorker[] = [];
+
 jest.mock("../reconcileWorkerClient", () => ({
-  createReconcileWorker: () => ({
-    onmessage: null as ((event: { data: ReconcileResponse }) => void) | null,
-    postMessage(this: { onmessage: ((event: { data: ReconcileResponse }) => void) | null }, input: ReconcileInput) {
-      const { createReconcileResponse } = jest.requireActual<typeof import("../engine")>("../engine");
-      this.onmessage?.({ data: createReconcileResponse(input) });
-    },
-    terminate: jest.fn(),
+  createReconcileWorker: () => {
+    const worker: MockWorker = {
+      onmessage: null,
+      onerror: null,
+      postMessage(input) {
+        const { createReconcileResponse } = jest.requireActual<typeof import("../engine")>("../engine");
+        const reply = () => worker.onmessage?.({ data: createReconcileResponse(input) });
+        if (deferWorkers) pendingReplies.push(reply); else reply();
+      },
+      terminate: jest.fn(),
+    };
+    createdWorkers.push(worker);
+    return worker;
+  },
+}));
+
+jest.mock("@tanstack/react-virtual", () => ({
+  useVirtualizer: ({ count }: { count: number }) => ({
+    getVirtualItems: () => Array.from({ length: count }, (_, index) => ({ index, key: index, start: index * 36, size: 36 })),
+    getTotalSize: () => count * 36,
   }),
 }));
+
+const flushWorkers = () => act(() => { pendingReplies.splice(0).forEach((reply) => reply()); });
 
 const mockTabs = [
   { id: "a", title: "A", content: "same\nonly-a", language: "plaintext", languageLocked: false, workspaceId: "w", dateCreated: 1, lastModified: 1, cursorPosition: { lineNumber: 1, column: 1 } },
@@ -41,6 +69,10 @@ const setCsvSources = () => {
 
 describe("DataReconcileTablet", () => {
   beforeEach(() => {
+    reconcileRunner.clear();
+    deferWorkers = false;
+    pendingReplies = [];
+    createdWorkers.length = 0;
     mockTabs.splice(2);
     mockTabs[0].content = "same\nonly-a";
     mockTabs[1].content = "same\nonly-b";
@@ -215,5 +247,75 @@ describe("DataReconcileTablet", () => {
       content,
       language: "plaintext",
     }));
+  });
+
+  it("previews the selected lines in the virtualized table", async () => {
+    render(<>{DataReconcileTablet.render(DataReconcileTablet.createInitialState({ sourceAId: "a", sourceBId: "b" }), jest.fn())}</>);
+
+    const table = await screen.findByRole("table", { name: "Selected lines" });
+    expect(within(table).getAllByRole("cell").map((cell) => cell.textContent)).toEqual(["A", "1", "same"]);
+  });
+
+  describe("while a large comparison is processing", () => {
+    beforeEach(() => {
+      deferWorkers = true;
+      jest.useFakeTimers();
+    });
+    afterEach(() => jest.useRealTimers());
+
+    it("shows a progress notice only after a short delay, then the results", () => {
+      render(<>{DataReconcileTablet.render(DataReconcileTablet.createInitialState({ sourceAId: "a", sourceBId: "b" }), jest.fn())}</>);
+
+      expect(screen.queryByTestId("reconcile-progress")).not.toBeInTheDocument();
+      act(() => { jest.advanceTimersByTime(150); });
+      expect(screen.getByRole("status")).toHaveTextContent("Comparing sources...");
+      expect(screen.queryByRole("button", { name: /Lines from A also in B/ })).not.toBeInTheDocument();
+
+      flushWorkers();
+
+      expect(screen.queryByTestId("reconcile-progress")).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "1 Lines from A also in B" })).toBeInTheDocument();
+    });
+
+    it("never flashes the notice when the comparison finishes quickly", () => {
+      render(<>{DataReconcileTablet.render(DataReconcileTablet.createInitialState({ sourceAId: "a", sourceBId: "b" }), jest.fn())}</>);
+      act(() => { jest.advanceTimersByTime(100); });
+      flushWorkers();
+      act(() => { jest.advanceTimersByTime(500); });
+
+      expect(screen.queryByTestId("reconcile-progress")).not.toBeInTheDocument();
+    });
+
+    it("keeps the previous results visible but disabled while recomputing", () => {
+      const state = DataReconcileTablet.createInitialState({ sourceAId: "a", sourceBId: "b" });
+      render(<StatefulTablet initialState={state} />);
+      flushWorkers();
+
+      fireEvent.click(screen.getByRole("checkbox", { name: "Ignore case" }));
+      act(() => { jest.advanceTimersByTime(150); });
+
+      expect(screen.getByRole("status")).toBeInTheDocument();
+      const results = screen.getByRole("button", { name: "1 Lines from A also in B" }).closest("[aria-busy]");
+      expect(results).toHaveAttribute("aria-busy", "true");
+      expect(results).toHaveClass("pointer-events-none");
+      flushWorkers();
+      expect(results).toHaveAttribute("aria-busy", "false");
+    });
+
+    it("keeps working through a tab switch and reuses the result on return", () => {
+      const state = DataReconcileTablet.createInitialState({ sourceAId: "a", sourceBId: "b" });
+      const first = render(<>{DataReconcileTablet.render(state, jest.fn())}</>);
+      first.unmount();
+
+      expect(createdWorkers[0].terminate).not.toHaveBeenCalled();
+      flushWorkers();
+
+      deferWorkers = false;
+      render(<>{DataReconcileTablet.render(state, jest.fn())}</>);
+
+      expect(createdWorkers).toHaveLength(1);
+      expect(screen.queryByTestId("reconcile-progress")).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "1 Lines from A also in B" })).toBeInTheDocument();
+    });
   });
 });

@@ -2,6 +2,7 @@ import { ReconcileInput, ReconcileResponse } from "./types";
 
 export interface ReconcileWorkerClient {
   onmessage: ((event: MessageEvent<ReconcileResponse>) => void) | null;
+  onerror: ((event: ErrorEvent) => void) | null;
   postMessage(input: ReconcileInput): void;
   terminate(): void;
 }

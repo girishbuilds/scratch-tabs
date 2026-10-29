@@ -3,8 +3,28 @@ config:
   max_versions: 100  # Maximum number of versions to display
 
 releases:
-  - version: "1.50.0"
+  - version: "1.51.0"
     type: "latest"
+    draft: false
+    date: "2026-10-29"
+    headline: "CSV Add Columns + Faster Data Reconcile"
+    summary: "Copy columns from another tab into a CSV, and Data Reconcile now handles large files smoothly."
+    description: "The CSV view can pull columns in from another tab and reorder columns from the right-click menu. Data Reconcile keeps results while you switch tabs and shows progress on large comparisons."
+    categories:
+      - name: "New Features"
+        changes:
+          - "**Add columns from another tab:** Copy columns from any open tab into a CSV, matched by row position or by a key column"
+          - "**Insert position:** Place new columns after any existing column or at the end"
+          - "**Move columns:** Move a column left or right from its right-click menu"
+      - name: "Improvements"
+        changes:
+          - "**Data Reconcile progress:** A progress message shows while a large comparison runs"
+          - "**Data Reconcile results:** Results are kept when you switch tabs, so returning does not recompute"
+          - "**Data Reconcile preview:** Large result lists scroll smoothly"
+          - "**Key suggestions:** Matching key columns are suggested automatically"
+
+  - version: "1.50.0"
+    type: "release"
     draft: false
     date: "2026-10-27"
     headline: "Editor Right-Click Menu + Data Reconcile Keys"
