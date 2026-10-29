@@ -1,20 +1,23 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Check, Copy, Database, Plus, Trash2 } from "../../components/Icons";
 import { useRootStore } from "../../stores/rootStore";
 import { useTabsStore } from "../../stores/tabsStore";
 import { Tablet, TabletState } from "../types";
-import { DataReconcilePayload, DataReconcileStateData, ReconcileInput, ReconcileResult } from "./types";
-import { createReconcileWorker } from "./reconcileWorkerClient";
+import { DataReconcilePayload, DataReconcileStateData, ReconcileInput } from "./types";
+import { useReconciliation } from "./useReconciliation";
+import { useDelayedFlag } from "./useDelayedFlag";
+import { ReconcileProgress } from "./ReconcileProgress";
+import { ReconcilePreviewTable } from "./ReconcilePreviewTable";
 
 type ResultKind = DataReconcileStateData["selectedResult"];
+
+const PROGRESS_DELAY_MS = 150;
 
 const defaultOptions = (csvMode = false) => ({
   mode: csvMode ? "csv" as const : "line" as const,
   normalization: { trim: true, ignoreCase: false, collapseWhitespace: false },
   scopeA: { kind: "all" as const }, scopeB: { kind: "all" as const }, keyMode: "auto" as const, keyPairs: [],
 });
-
-const emptyResult: ReconcileResult = { inBoth: [], changed: [], onlyA: [], onlyB: [] };
 
 const legacyResultKinds: Record<string, ResultKind> = {
   inBoth: "aInB",
@@ -28,22 +31,6 @@ const normalizeResultKind = (value: unknown): ResultKind => {
   }
   return typeof value === "string" ? legacyResultKinds[value] ?? "aInB" : "aInB";
 };
-
-function useReconciliation(input: ReconcileInput | null) {
-  const [result, setResult] = useState<ReconcileResult>(emptyResult);
-  const [error, setError] = useState<string | null>(null);
-  useEffect(() => {
-    if (!input) { setResult(emptyResult); setError(null); return; }
-    const worker = createReconcileWorker();
-    worker.onmessage = ({ data }) => {
-      setError(data.error ?? null);
-      setResult(data.result ?? { ...emptyResult, headers: data.headers });
-    };
-    worker.postMessage(input);
-    return () => worker.terminate();
-  }, [input]);
-  return { result, error };
-}
 
 const ResultButton: React.FC<{ label: string; count: number; active: boolean; onClick: () => void }> = ({ label, count, active, onClick }) => (
   <button onClick={onClick} aria-pressed={active} className={`min-w-[9rem] flex-1 rounded border px-3 py-2 text-left ${active ? "border-accent bg-surface-secondary" : "border-base bg-surface"}`}>
@@ -60,7 +47,8 @@ const DataReconcileUI: React.FC<{ state: TabletState; onChange: (state: TabletSt
   const sourceA = tabs.find((tab) => tab.id === data.sourceAId);
   const sourceB = tabs.find((tab) => tab.id === data.sourceBId);
   const input = useMemo<ReconcileInput | null>(() => sourceA && sourceB ? { a: sourceA.content ?? "", b: sourceB.content ?? "", options: data.options } : null, [sourceA, sourceB, data.options]);
-  const { result, error } = useReconciliation(input);
+  const { result, error, hasResponse, isProcessing } = useReconciliation(input);
+  const showProgress = useDelayedFlag(isProcessing, PROGRESS_DELAY_MS);
   const update = (patch: Partial<DataReconcileStateData>) => onChange({ ...state, data: { ...data, ...patch } });
   const updateOptions = (patch: Partial<DataReconcileStateData["options"]>) => update({ options: { ...data.options, ...patch } });
   const aHeaders = input ? result.headers?.a ?? [] : [];
@@ -78,13 +66,13 @@ const DataReconcileUI: React.FC<{ state: TabletState; onChange: (state: TabletSt
     keyMode: "manual",
     keyPairs: automaticKeyPairs.length ? automaticKeyPairs : aHeaders.length && bHeaders.length ? [nextKeyPair([])] : [],
   });
-  const selections: Record<ResultKind, { label: string; rows: typeof result.onlyA; source: "A" | "B"; count: number }> = {
+  const selections = useMemo<Record<ResultKind, { label: string; rows: typeof result.onlyA; source: "A" | "B"; count: number }>>(() => ({
     aInB: { label: "Lines from A also in B", rows: result.inBoth.map((pair) => pair.a), source: "A", count: result.inBoth.length },
     aNotInB: { label: "Lines from A not in B", rows: result.onlyA, source: "A", count: result.onlyA.length },
     bInA: { label: "Lines from B also in A", rows: result.inBoth.map((pair) => pair.b), source: "B", count: result.inBoth.length },
     bNotInA: { label: "Lines from B not in A", rows: result.onlyB, source: "B", count: result.onlyB.length },
     changed: { label: "A rows changed in B", rows: result.changed.map((item) => item.a), source: "A", count: result.changed.length },
-  };
+  }), [result]);
   const selectedKind = normalizeResultKind(data.selectedResult);
   const selectedResult = selections[selectedKind];
   const selectedRows = selectedResult.rows;
@@ -163,9 +151,9 @@ const DataReconcileUI: React.FC<{ state: TabletState; onChange: (state: TabletSt
     </div>}
     <div className="mt-4 flex flex-wrap gap-3">{(["A", "B"] as const).map((side) => { const scope = side === "A" ? data.options.scopeA : data.options.scopeB; const pattern = side === "A" ? scopePatterns.a : scopePatterns.b; return <div key={side} className="min-w-0 flex-1 basis-64"><label className="block text-sm">Scope {side}<select value={scope.kind} onChange={(e) => { const kind = e.target.value as typeof scope.kind; updateOptions(side === "A" ? { scopeA: { kind, pattern: kind === "all" ? undefined : pattern } } : { scopeB: { kind, pattern: kind === "all" ? undefined : pattern } }); }} className="mt-1 block w-full rounded border border-base bg-canvas p-2"><option value="all">All rows</option><option value="matching">Rows matching a regex</option><option value="not-matching">Rows not matching a regex</option></select></label>{scope.kind !== "all" && <input aria-label={`Scope ${side} regex`} value={pattern} onChange={(e) => { const next = e.target.value; setScopePatterns((current) => ({ ...current, [side.toLowerCase()]: next })); updateOptions(side === "A" ? { scopeA: { ...scope, pattern: next } } : { scopeB: { ...scope, pattern: next } }); }} className="mt-1 w-full rounded border border-base bg-canvas p-2" placeholder="Regular expression" />}</div>; })}</div></section>
     {!input && <p className="mt-5 text-secondary">Choose two source tabs to reconcile their lines.</p>}{error && <p role="alert" className="mt-4 text-danger">{error}</p>}
-    {input && !error && <><p className="mt-5 text-sm text-secondary">Choose a set to preview its original source lines, then extract exactly those lines to a new tab.</p><div className="mt-3 flex flex-wrap gap-2"><ResultButton label={selections.aInB.label} count={selections.aInB.count} active={selectedKind === "aInB"} onClick={() => update({ selectedResult: "aInB" })} /><ResultButton label={selections.aNotInB.label} count={selections.aNotInB.count} active={selectedKind === "aNotInB"} onClick={() => update({ selectedResult: "aNotInB" })} /><ResultButton label={selections.bInA.label} count={selections.bInA.count} active={selectedKind === "bInA"} onClick={() => update({ selectedResult: "bInA" })} /><ResultButton label={selections.bNotInA.label} count={selections.bNotInA.count} active={selectedKind === "bNotInA"} onClick={() => update({ selectedResult: "bNotInA" })} />{data.options.mode === "csv" && <ResultButton label={selections.changed.label} count={selections.changed.count} active={selectedKind === "changed"} onClick={() => update({ selectedResult: "changed" })} />}</div>
+    {showProgress && <ReconcileProgress />}{input && !error && hasResponse && <div aria-busy={isProcessing} className={isProcessing ? "pointer-events-none opacity-60" : undefined}><p className="mt-5 text-sm text-secondary">Choose a set to preview its original source lines, then extract exactly those lines to a new tab.</p><div className="mt-3 flex flex-wrap gap-2"><ResultButton label={selections.aInB.label} count={selections.aInB.count} active={selectedKind === "aInB"} onClick={() => update({ selectedResult: "aInB" })} /><ResultButton label={selections.aNotInB.label} count={selections.aNotInB.count} active={selectedKind === "aNotInB"} onClick={() => update({ selectedResult: "aNotInB" })} /><ResultButton label={selections.bInA.label} count={selections.bInA.count} active={selectedKind === "bInA"} onClick={() => update({ selectedResult: "bInA" })} /><ResultButton label={selections.bNotInA.label} count={selections.bNotInA.count} active={selectedKind === "bNotInA"} onClick={() => update({ selectedResult: "bNotInA" })} />{data.options.mode === "csv" && <ResultButton label={selections.changed.label} count={selections.changed.count} active={selectedKind === "changed"} onClick={() => update({ selectedResult: "changed" })} />}</div>
     <div className="mt-4 flex flex-wrap gap-2"><button onClick={createOutput} disabled={selectedRows.length === 0} className="rounded border border-base px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50">Open selected lines in new tab</button><button onClick={copyOutput} disabled={selectedRows.length === 0} className={`rounded border border-base px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50 ${copied ? "text-success" : ""}`}>{copied ? <Check size={14} className="mr-1 inline" /> : <Copy size={14} className="mr-1 inline" />}{copied ? "Copied" : "Copy selected lines"}</button></div>
-    <div className="mt-4 overflow-x-auto rounded border border-base"><table className="w-full text-sm"><thead className="bg-surface-secondary text-left"><tr><th className="p-2">Source</th><th className="p-2">Row</th><th className="p-2">Preview</th></tr></thead><tbody>{selectedRows.map((row) => <tr key={`${row.source}-${row.rowNumber}`} className="border-t border-base"><td className="p-2">{row.source}</td><td className="p-2">{row.rowNumber}</td><td className="max-w-0 truncate p-2 font-mono">{row.text}</td></tr>)}</tbody></table></div></>}</div></div>;
+    <ReconcilePreviewTable rows={selectedRows} /></div>}</div></div>;
 };
 
 function createState(payload?: DataReconcilePayload): TabletState { return { type: "datareconcile", data: { sourceAId: payload?.sourceAId, sourceBId: payload?.sourceBId, options: defaultOptions(payload?.csvMode), selectedResult: "aInB" } }; }

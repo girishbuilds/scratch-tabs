@@ -15,12 +15,38 @@ export interface Release {
   categories: ReleaseCategory[];
 }
 
-export const APP_VERSION = '1.50.0';
+export const APP_VERSION = '1.51.0';
 
 export const RELEASES: Release[] = [
   {
-    "version": "1.50.0",
+    "version": "1.51.0",
     "type": "latest",
+    "date": "2026-10-29",
+    "headline": "CSV Add Columns + Faster Data Reconcile",
+    "summary": "Copy columns from another tab into a CSV, and Data Reconcile now handles large files smoothly.",
+    "categories": [
+      {
+        "name": "New Features",
+        "changes": [
+          "**Add columns from another tab:** Copy columns from any open tab into a CSV, matched by row position or by a key column",
+          "**Insert position:** Place new columns after any existing column or at the end",
+          "**Move columns:** Move a column left or right from its right-click menu"
+        ]
+      },
+      {
+        "name": "Improvements",
+        "changes": [
+          "**Data Reconcile progress:** A progress message shows while a large comparison runs",
+          "**Data Reconcile results:** Results are kept when you switch tabs, so returning does not recompute",
+          "**Data Reconcile preview:** Large result lists scroll smoothly",
+          "**Key suggestions:** Matching key columns are suggested automatically"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "1.50.0",
+    "type": "release",
     "date": "2026-10-27",
     "headline": "Editor Right-Click Menu + Data Reconcile Keys",
     "summary": "The editor right-click menu gains more actions, and Data Reconcile gets clearer key column controls.",

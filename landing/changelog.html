@@ -130,43 +130,47 @@
     <div class="container mx-auto px-6">
       <div class="max-w-4xl mx-auto">
 
-        <!-- Version 1.50.0 -->
+        <!-- Version 1.51.0 -->
         <div class="changelog-entry latest">
           <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2">
             <div class="flex items-center gap-3">
-              <h2 class="text-2xl font-bold text-white">V1.50.0</h2>
+              <h2 class="text-2xl font-bold text-white">V1.51.0</h2>
               <span class="badge latest">LATEST</span>
             </div>
-            <span class="text-gray-500 text-xs font-mono">10/27/2026</span>
+            <span class="text-gray-500 text-xs font-mono">10/29/2026</span>
           </div>
-          <h3 class="text-lg font-bold text-emerald-500 mb-4 font-mono">EDITOR RIGHT-CLICK MENU + DATA RECONCILE KEYS</h3>
+          <h3 class="text-lg font-bold text-emerald-500 mb-4 font-mono">CSV ADD COLUMNS + FASTER DATA RECONCILE</h3>
           <div class="changelog-content text-gray-400 text-sm leading-relaxed">
-            <p class="mb-4">Right-click in the editor to compare tabs, send a selection to Canvas, change case, or open content in a matching tablet. Data Reconcile now shows which key columns are in use and lets you pick your own.</p>
+            <p class="mb-4">The CSV view can pull columns in from another tab and reorder columns from the right-click menu. Data Reconcile keeps results while you switch tabs and shows progress on large comparisons.</p>
 
             <h4 class="text-white text-xs font-mono uppercase tracking-widest mb-3"># new_features</h4>
             <ul class="space-y-2 mb-6">
-              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Editor menu actions:</strong> Macro Recording, Send Selection to Canvas, Copy All Content, and Download</span></li>
-              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Compare from the editor:</strong> Compare with the other side of a split view or with the previous tab</span></li>
-              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Case transforms:</strong> UPPERCASE, lowercase, Title Case, camelCase, Pascal Case, snake_case, and kebab-case for the selection</span></li>
-              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Open in tablet:</strong> Matching tablets appear in the right-click menu based on your content</span></li>
+              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Add columns from another tab:</strong> Copy columns from any open tab into a CSV, matched by row position or by a key column</span></li>
+              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Insert position:</strong> Place new columns after any existing column or at the end</span></li>
+              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Move columns:</strong> Move a column left or right from its right-click menu</span></li>
             </ul>
 
             <h4 class="text-white text-xs font-mono uppercase tracking-widest mb-3"># improvements</h4>
             <ul class="space-y-2 mb-6">
-              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Data Reconcile keys:</strong> Choose between shared header names and manually paired key columns, with a clear list of the columns in use</span></li>
-              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Data Reconcile layout:</strong> The tablet now uses the full tab width and wraps on narrow panes</span></li>
-              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>CSV filters:</strong> An Only button on each facet value shows just that value</span></li>
-              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Spin the Wheel rota:</strong> Copy now produces a Date and Name table that pastes into spreadsheets</span></li>
-              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Opening files:</strong> Files opened from the welcome screen use their file name as the tab title</span></li>
+              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Data Reconcile progress:</strong> A progress message shows while a large comparison runs</span></li>
+              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Data Reconcile results:</strong> Results are kept when you switch tabs, so returning does not recompute</span></li>
+              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Data Reconcile preview:</strong> Large result lists scroll smoothly</span></li>
+              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Key suggestions:</strong> Matching key columns are suggested automatically</span></li>
             </ul>
-
-            <h4 class="text-white text-xs font-mono uppercase tracking-widest mb-3"># bug_fixes</h4>
-            <ul class="space-y-2 mb-6">
-              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Data Reconcile:</strong> Single column CSVs and files ending in a blank line now compare correctly, and only shared columns are checked for changes</span></li>
-              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>CSV detection:</strong> Quoted fields containing doubled quotes are recognized as CSV</span></li>
-              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Tab links:</strong> Opening a tab URL now works before your first workspace exists</span></li>
-              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Drag and drop:</strong> Files from sources without a file system entry now open</span></li>
-            </ul>
+          </div>
+        </div>
+        <!-- Version 1.50.0 -->
+        <div class="changelog-entry release">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2">
+            <div class="flex items-center gap-3">
+              <h2 class="text-xl font-bold text-white uppercase">V1.50.0</h2>
+              <span class="badge release">RELEASE</span>
+            </div>
+            <span class="text-gray-500 text-xs font-mono">10/27/2026</span>
+          </div>
+          <h3 class="text-lg font-bold text-gray-400 mb-4 font-mono">EDITOR RIGHT-CLICK MENU + DATA RECONCILE KEYS</h3>
+          <div class="changelog-content text-gray-400 text-sm leading-relaxed">
+            <p>The editor right-click menu gains more actions, and Data Reconcile gets clearer key column controls.</p>
           </div>
         </div>
         <!-- Version 1.49.0 -->
@@ -1022,7 +1026,7 @@
       <div class="flex flex-col md:flex-row justify-between items-center gap-8">
         <div class="flex items-center space-x-3">
           <img src="https://scratchtabs.b-cdn.net/favicon-gray.svg" alt="Scratch Tabs" class="logo-size" />
-          <span class="text-gray-400 font-mono text-sm">SCRATCH_TABS // v1.50.0</span>
+          <span class="text-gray-400 font-mono text-sm">SCRATCH_TABS // v1.51.0</span>
         </div>
 
         <div class="flex space-x-8">

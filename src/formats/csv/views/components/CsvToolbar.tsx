@@ -16,6 +16,7 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
+  Columns,
 } from "lucide-react";
 import { CsvDiagnostic, CsvSnapshot } from "../types";
 
@@ -72,6 +73,10 @@ interface CsvToolbarProps {
   exportVisibleRowsOnly: boolean;
   onToggleExportVisibleRowsOnly: (value: boolean) => void;
 
+  // Add columns from another tab
+  showAddColumnsPanel: boolean;
+  onToggleAddColumnsPanel: () => void;
+
   // Header management
   onPromoteFirstRowToHeader: () => void;
   onDemoteHeaderToFirstRow: () => void;
@@ -120,6 +125,8 @@ export const CsvToolbar: React.FC<CsvToolbarProps> = ({
   visibleRowCount,
   exportVisibleRowsOnly,
   onToggleExportVisibleRowsOnly,
+  showAddColumnsPanel,
+  onToggleAddColumnsPanel,
   onPromoteFirstRowToHeader,
   onDemoteHeaderToFirstRow,
   currentDelimiter,
@@ -276,6 +283,16 @@ export const CsvToolbar: React.FC<CsvToolbarProps> = ({
         )}
 
         <div className="w-px h-6 bg-element shrink-0" />
+
+        <button
+          onClick={onToggleAddColumnsPanel}
+          title="Add columns from another tab"
+          className={`flex items-center space-x-1 px-3 py-2 rounded shrink-0 ${showAddColumnsPanel ? "bg-primary/20 text-primary" : "hover:bg-element-hover"}`}
+          data-testid="csv-add-columns-from-tab"
+        >
+          <Columns size={16} />
+          <span className="text-sm whitespace-nowrap">Add columns</span>
+        </button>
 
         <button
           onClick={onReconcileTab}

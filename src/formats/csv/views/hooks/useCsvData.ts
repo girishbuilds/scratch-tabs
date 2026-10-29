@@ -15,6 +15,14 @@ import {
   ColumnFilter,
   FilterMatchMode,
 } from "../utils/filtering";
+import { detectDelimiter } from "../utils/delimiter";
+import {
+  AddColumnsOptions,
+  ColumnSource,
+  addColumnsFromTable as addColumnsFromTableState,
+  duplicateColumn as duplicateColumnState,
+  moveColumn as moveColumnState,
+} from "../utils/columnOperations";
 
 export interface UseCsvDataReturn {
   // Data state
@@ -37,6 +45,8 @@ export interface UseCsvDataReturn {
   addColumn: (index?: number, name?: string) => void;
   deleteColumn: (columnId: string) => void;
   duplicateColumn: (columnId: string) => void;
+  moveColumn: (columnId: string, toIndex: number) => void;
+  addColumnsFromTable: (source: ColumnSource, options: AddColumnsOptions) => void;
   renameColumn: (columnId: string, newName: string) => void;
   insertAndShift: (cellIdentifiers: Array<{rowId: string, columnId: string}>) => void;
   promoteFirstRowToHeader: () => void;
@@ -113,23 +123,7 @@ export const useCsvData = (
   const delimiter = useMemo(() => {
     if (providedDelimiter) return providedDelimiter;
 
-    // Auto-detect from content
-    const firstLine = content.split('\n')[0] || '';
-    const tabCount = (firstLine.match(/\t/g) || []).length;
-    const commaCount = (firstLine.match(/,/g) || []).length;
-    const semicolonCount = (firstLine.match(/;/g) || []).length;
-    const pipeCount = (firstLine.match(/\|/g) || []).length;
-
-    // Find delimiter with highest count
-    const counts = [
-      { delimiter: '\t', count: tabCount },
-      { delimiter: ',', count: commaCount },
-      { delimiter: ';', count: semicolonCount },
-      { delimiter: '|', count: pipeCount },
-    ];
-
-    const detected = counts.reduce((max, curr) => curr.count > max.count ? curr : max);
-    return detected.count > 0 ? detected.delimiter : ',';
+    return detectDelimiter(content);
   }, [content, providedDelimiter]);
 
   // Core state
@@ -616,37 +610,36 @@ export const useCsvData = (
     [csvState, saveToHistory, syncToContent],
   );
 
-  const duplicateColumn = useCallback(
-    (columnId: string) => {
-      const columnIndex = csvState.columns.findIndex(
-        (col) => col.id === columnId,
-      );
-      if (columnIndex === -1) return;
-
-      const originalColumn = csvState.columns[columnIndex];
-      const duplicatedColumn: CsvColumn = {
-        id: `col_${Date.now()}_${Math.random()}`,
-        name: `${originalColumn.name} Copy`,
-        type: originalColumn.type,
-        index: columnIndex + 1,
-      };
-
-      const newColumns = [...csvState.columns];
-      newColumns.splice(columnIndex + 1, 0, duplicatedColumn); // Insert after original column
-
-      const newData = csvState.data.map((row) => {
-        const newCells = [...row.cells];
-        const originalCell = row.cells[columnIndex];
-        newCells.splice(columnIndex + 1, 0, { ...originalCell }); // Duplicate cell content
-        return { ...row, cells: newCells };
-      });
-
-      const newState = { columns: newColumns, data: newData };
+  // Applies a pure column operation; no-ops (same state reference) skip history and sync.
+  const commitColumnOperation = useCallback(
+    (operation: (state: CsvState) => CsvState) => {
+      const newState = operation(csvState);
+      if (newState === csvState) return;
       setCsvState(newState);
       saveToHistory(newState);
       syncToContent(newState);
     },
     [csvState, saveToHistory, syncToContent],
+  );
+
+  const duplicateColumn = useCallback(
+    (columnId: string) =>
+      commitColumnOperation((state) => duplicateColumnState(state, columnId)),
+    [commitColumnOperation],
+  );
+
+  const moveColumn = useCallback(
+    (columnId: string, toIndex: number) =>
+      commitColumnOperation((state) => moveColumnState(state, columnId, toIndex)),
+    [commitColumnOperation],
+  );
+
+  const addColumnsFromTable = useCallback(
+    (source: ColumnSource, options: AddColumnsOptions) =>
+      commitColumnOperation((state) =>
+        addColumnsFromTableState(state, source, options),
+      ),
+    [commitColumnOperation],
   );
 
   const renameColumn = useCallback(
@@ -1201,6 +1194,8 @@ export const useCsvData = (
     addColumn,
     deleteColumn,
     duplicateColumn,
+    moveColumn,
+    addColumnsFromTable,
     renameColumn,
     insertAndShift,
     promoteFirstRowToHeader,
