@@ -1,8 +1,10 @@
 import React from "react";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import { WelcomeScreen } from "../WelcomeScreen";
 import { useRootStore } from "../../../stores";
+import { toolService } from "../../../services/toolService";
+import { APP_VERSION } from "../../../data/releases";
 
 jest.mock("../../../stores", () => ({
   useRootStore: jest.fn(),
@@ -18,6 +20,10 @@ jest.mock("../../ToolSelector", () => ({
 
 jest.mock("../../../services/toolService", () => ({
   toolService: { executeTool: jest.fn() },
+}));
+
+jest.mock("../../../features/import-export/ImportExportService", () => ({
+  ImportExportService: jest.fn(),
 }));
 
 describe("WelcomeScreen", () => {
@@ -66,6 +72,62 @@ describe("WelcomeScreen", () => {
     fireEvent.click(screen.getByRole("button", { name: /new scratch tab/i }));
 
     expect(handleNewTab).toHaveBeenCalledWith(false);
-    expect(screen.getByRole("button", { name: /format json/i })).toHaveClass("md:p-6");
+    expect(screen.getByRole("button", { name: /try a smart view/i })).toHaveClass("md:p-6");
+  });
+
+  it("makes New Scratch Tab the only filled primary action", () => {
+    renderWelcomeScreen();
+
+    expect(screen.getByText("Create tab")).toHaveClass("bg-primary");
+    expect(screen.getByText("Try example")).not.toHaveClass("bg-primary");
+  });
+
+  it("opens the tool selector from the dev tools row", () => {
+    jest.useFakeTimers();
+    renderWelcomeScreen();
+
+    fireEvent.click(screen.getByRole("button", { name: /40\+ dev tools/i }));
+    act(() => {
+      jest.advanceTimersByTime(50);
+    });
+
+    expect(screen.getByTestId("tool-selector")).toBeInTheDocument();
+    jest.useRealTimers();
+  });
+
+  it("opens a featured tool directly from its chip", async () => {
+    renderWelcomeScreen();
+
+    fireEvent.click(screen.getByRole("button", { name: "JWT" }));
+
+    await waitFor(() =>
+      expect(toolService.executeTool).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "jwt", type: "tablet" }),
+        expect.objectContaining({ side: "left" }),
+      ),
+    );
+    expect(screen.queryByTestId("tool-selector")).not.toBeInTheDocument();
+  });
+
+  it("shows the paste/drop hint and keeps the version out of the hero", () => {
+    renderWelcomeScreen();
+
+    expect(screen.getByTestId("paste-drop-hint")).toBeInTheDocument();
+    expect(screen.getByText(`// v${APP_VERSION}`)).toBeInTheDocument();
+  });
+
+  it("keeps secondary entry points compact, without descriptions", () => {
+    renderWelcomeScreen();
+
+    expect(screen.queryByText("From your computer")).not.toBeInTheDocument();
+    expect(screen.queryByText("Load .scratch file")).not.toBeInTheDocument();
+  });
+
+  it("keeps the secondary entry points", () => {
+    renderWelcomeScreen();
+
+    ["Open File", "Paste Content", "Import Workspace"].forEach((name) => {
+      expect(screen.getAllByRole("button", { name: new RegExp(name, "i") }).length).toBeGreaterThan(0);
+    });
   });
 });

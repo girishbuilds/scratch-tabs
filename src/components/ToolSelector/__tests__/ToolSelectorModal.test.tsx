@@ -25,7 +25,7 @@ describe('ToolSelectorModal', () => {
         jest.clearAllMocks();
     });
 
-    it('renders recent items in grid by default', async () => {
+    it('renders recent items as chips by default', async () => {
         render(<ToolSelectorModal onSelect={mockOnSelect} onClose={mockOnClose} />);
 
         await waitFor(() => {
@@ -73,11 +73,10 @@ describe('ToolSelectorModal', () => {
     it('handles keyboard navigation', async () => {
         render(<ToolSelectorModal onSelect={mockOnSelect} onClose={mockOnClose} />);
 
-        // Wait for focused state to appear on the card (grid variant uses border-secondary)
+        // Wait for focused state to appear on the chip
         await waitFor(() => {
             const card = screen.getByText('Recent Tablet').closest('button');
-            expect(card?.className).toContain('border-secondary');
-            expect(card?.className).toContain('shadow-md');
+            expect(card?.className).toContain('border-primary/60');
         });
 
         const input = screen.getByPlaceholderText(/what do you want to do/i);
@@ -111,7 +110,7 @@ describe('ToolSelectorModal', () => {
         });
     });
 
-    it('handles left/right arrow navigation in grid layout', async () => {
+    it('handles left/right arrow navigation in the recent chips', async () => {
         // Mock multiple recent items to test horizontal navigation
         (toolService.getRecentItems as jest.Mock).mockResolvedValueOnce([
             { id: 'recent1', type: 'tablet', label: 'Item 1', icon: () => null },
@@ -123,7 +122,7 @@ describe('ToolSelectorModal', () => {
 
         await waitFor(() => {
             const card = screen.getByText('Item 1').closest('button');
-            expect(card?.className).toContain('border-secondary');
+            expect(card?.className).toContain('border-primary/60');
         });
 
         const input = screen.getByPlaceholderText(/what do you want to do/i);
@@ -135,7 +134,7 @@ describe('ToolSelectorModal', () => {
 
         await waitFor(() => {
             const card2 = screen.getByText('Item 2').closest('button');
-            expect(card2?.className).toContain('border-secondary');
+            expect(card2?.className).toContain('border-primary/60');
         });
 
         // Press left arrow - should move back to Item 1
@@ -145,11 +144,11 @@ describe('ToolSelectorModal', () => {
 
         await waitFor(() => {
             const card1 = screen.getByText('Item 1').closest('button');
-            expect(card1?.className).toContain('border-secondary');
+            expect(card1?.className).toContain('border-primary/60');
         });
     });
 
-    it('handles down arrow navigation in grid layout (moves by columns)', async () => {
+    it('handles down arrow navigation in the recent chips (moves by columns)', async () => {
         // Mock 10 items to fill 2 rows (5 columns per row)
         const items = Array.from({ length: 10 }, (_, i) => ({
             id: `recent${i + 1}`,
@@ -163,7 +162,7 @@ describe('ToolSelectorModal', () => {
 
         await waitFor(() => {
             const card = screen.getByText('Item 1').closest('button');
-            expect(card?.className).toContain('border-secondary');
+            expect(card?.className).toContain('border-primary/60');
         });
 
         const input = screen.getByPlaceholderText(/what do you want to do/i);
@@ -175,11 +174,11 @@ describe('ToolSelectorModal', () => {
 
         await waitFor(() => {
             const card6 = screen.getByText('Item 6').closest('button');
-            expect(card6?.className).toContain('border-secondary');
+            expect(card6?.className).toContain('border-primary/60');
         });
     });
 
-    it('handles navigation between grid and list sections', async () => {
+    it('handles navigation between the recent chips and list sections', async () => {
         // Mock recent items (grid) and search results (list)
         (toolService.getRecentItems as jest.Mock).mockResolvedValueOnce([
             { id: 'recent1', type: 'tablet', label: 'Recent Item', icon: () => null },
@@ -194,7 +193,7 @@ describe('ToolSelectorModal', () => {
 
         await waitFor(() => {
             const card = screen.getByText('Recent Item').closest('button');
-            expect(card?.className).toContain('border-secondary');
+            expect(card?.className).toContain('border-primary/60');
         });
 
         const input = screen.getByPlaceholderText(/what do you want to do/i);
@@ -206,8 +205,8 @@ describe('ToolSelectorModal', () => {
 
         await waitFor(() => {
             const tabletCard = screen.getByText('Tablet Item').closest('button');
-            // List items use border-l-primary (updated polish)
-            expect(tabletCard?.className).toContain('border-l-primary');
+            // Focused rows show an inset primary bar
+            expect(tabletCard?.className).toContain('inset_2px_0_0_0');
         });
     });
 
@@ -227,7 +226,7 @@ describe('ToolSelectorModal', () => {
         });
 
         const initialCard = screen.getByText('Search Result').closest('button');
-        expect(initialCard?.className).toContain('border-l-primary');
+        expect(initialCard?.className).toContain('inset_2px_0_0_0');
 
         // Press right arrow - should not change selection in list view
         await act(async () => {
@@ -236,6 +235,65 @@ describe('ToolSelectorModal', () => {
 
         // Selection should remain the same
         const stillSelected = screen.getByText('Search Result').closest('button');
-        expect(stillSelected?.className).toContain('border-l-primary');
+        expect(stillSelected?.className).toContain('inset_2px_0_0_0');
+    });
+
+    it('does not claim left/right keys in a single-column list so the caret keeps working', async () => {
+        const user = userEvent.setup();
+        render(<ToolSelectorModal onSelect={mockOnSelect} onClose={mockOnClose} />);
+        const input = await screen.findByPlaceholderText(/what do you want to do/i);
+
+        await act(async () => {
+            await user.type(input, 'test');
+        });
+        await screen.findByText('Search Result');
+
+        let notPrevented = true;
+        await act(async () => {
+            notPrevented = fireEvent.keyDown(input, { key: 'ArrowLeft', code: 'ArrowLeft' });
+        });
+
+        expect(notPrevented).toBe(true);
+    });
+
+    it('closes on escape even when nothing matches', async () => {
+        (toolService.getRecentItems as jest.Mock).mockResolvedValueOnce([]);
+        (toolService.search as jest.Mock).mockResolvedValueOnce({ tablets: [], smartViews: [], formats: [] });
+        render(<ToolSelectorModal onSelect={mockOnSelect} onClose={mockOnClose} initialSearch="zzz" />);
+
+        const input = await screen.findByPlaceholderText(/what do you want to do/i);
+        await screen.findByText(/no tools match your search/i);
+
+        await act(async () => {
+            fireEvent.keyDown(input, { key: 'Escape', code: 'Escape' });
+        });
+
+        expect(mockOnClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows section headings with counts and lays formats out in two columns', async () => {
+        (toolService.search as jest.Mock).mockResolvedValueOnce({
+            tablets: [{ id: 't1', type: 'tablet', label: 'Tablet One', description: 'About tablet one', icon: () => null }],
+            smartViews: [],
+            formats: [
+                { id: 'f1', type: 'format', label: 'Format One', description: 'Create new Format One tab', icon: () => null },
+                { id: 'f2', type: 'format', label: 'Format Two', description: 'Create new Format Two tab', icon: () => null },
+            ],
+        });
+        render(<ToolSelectorModal onSelect={mockOnSelect} onClose={mockOnClose} />);
+
+        const formatsHeading = await screen.findByRole('heading', { name: /formats/i });
+        expect(formatsHeading).toHaveTextContent('Formats2');
+        expect(formatsHeading.nextElementSibling).toHaveClass('grid-cols-2');
+        // Tablets keep their description, formats drop the generated one
+        expect(screen.getByText('About tablet one')).toBeInTheDocument();
+        expect(screen.queryByText('Create new Format One tab')).toBeNull();
+    });
+
+    it('has no placeholder footer text', async () => {
+        render(<ToolSelectorModal onSelect={mockOnSelect} onClose={mockOnClose} />);
+        await screen.findByText('Recent Tablet');
+
+        expect(screen.queryByText(/quick actions area/i)).toBeNull();
     });
 });

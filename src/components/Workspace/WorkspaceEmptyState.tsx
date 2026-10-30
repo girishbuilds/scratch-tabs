@@ -6,6 +6,9 @@ import { EmptyStateActionCard } from "./EmptyStateActionCard";
 import { useFileImport } from "../../hooks/useFileImport";
 import { ToolSelectorModal } from "../ToolSelector";
 import { toolService, ToolItem } from "../../services/toolService";
+import { DevToolsRow } from "../Welcome/DevToolsRow";
+import { Kbd } from "../Welcome/Kbd";
+import { PasteDropHint } from "../Welcome/PasteDropHint";
 
 /**
  * WorkspaceEmptyState
@@ -132,10 +135,10 @@ export const WorkspaceEmptyState: React.FC = () => {
       <h2 className="text-xl font-semibold text-main mb-2">
         {workspaceName} is empty
       </h2>
-      <p className="text-sm text-muted mb-8 text-center max-w-md">
-        This workspace is ready for your content. Drag and drop files here, or
-        use one of the actions below.
+      <p className="text-sm text-muted mb-4 text-center max-w-md">
+        This workspace is ready for your content. Choose an action below.
       </p>
+      <PasteDropHint />
 
       {/* Action Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 w-full max-w-4xl">
@@ -173,17 +176,18 @@ export const WorkspaceEmptyState: React.FC = () => {
         />
       </div>
 
+      {/* Dev Tools */}
+      <div className="w-full max-w-4xl mt-4">
+        <DevToolsRow onBrowseAll={handleOpenToolSelector} onSelectTool={handleToolSelect} />
+      </div>
+
       {/* Keyboard Hints */}
-      <div className="mt-12 text-xs text-muted font-mono flex flex-col sm:flex-row gap-4 text-center">
+      <div className="mt-12 text-xs text-secondary flex flex-col sm:flex-row gap-4 text-center">
         <span>
-          <kbd className="bg-surface border border-base px-1 rounded">
-            Double Click
-          </kbd>{" "}
-          to create tab
+          <Kbd>Double Click</Kbd> to create tab
         </span>
         <span>
-          <kbd className="bg-surface border border-base px-1 rounded">/</kbd>{" "}
-          for tablet tools
+          <Kbd>/</Kbd> for dev tools
         </span>
       </div>
       </div>
