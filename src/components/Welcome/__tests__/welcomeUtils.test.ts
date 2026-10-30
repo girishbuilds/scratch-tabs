@@ -5,7 +5,12 @@ import {
   readClipboardText,
   getJSONDemoContent,
   DEMO_JSON_CONTENT,
+  FEATURED_TOOLS,
+  getPasteShortcutLabel,
+  getWelcomeShortcuts,
+  isMacPlatform,
 } from '../utils/welcomeUtils';
+import { tabletMetadata } from '../../../tablets/tabletMetadata';
 
 describe('welcomeUtils', () => {
   describe('isJSONLike', () => {
@@ -210,6 +215,51 @@ describe('welcomeUtils', () => {
 
     it('should provide next steps guidance', () => {
       expect(DEMO_JSON_CONTENT.nextSteps).toBeTruthy();
+    });
+  });
+
+  describe('platform shortcuts', () => {
+    const mockPlatform = (platform: string) =>
+      jest.spyOn(window.navigator, 'platform', 'get').mockReturnValue(platform);
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it('detects macOS', () => {
+      mockPlatform('MacIntel');
+      expect(isMacPlatform()).toBe(true);
+    });
+
+    it('does not treat other platforms as macOS', () => {
+      mockPlatform('Win32');
+      expect(isMacPlatform()).toBe(false);
+    });
+
+    it('shows the Command key for paste on macOS', () => {
+      mockPlatform('MacIntel');
+      expect(getPasteShortcutLabel()).toBe('⌘V');
+    });
+
+    it('shows Ctrl+V for paste elsewhere', () => {
+      mockPlatform('Linux x86_64');
+      expect(getPasteShortcutLabel()).toBe('Ctrl+V');
+    });
+
+    it('does not repeat the paste shortcut in the shortcut list', () => {
+      const labels = getWelcomeShortcuts().map((shortcut) => shortcut.label);
+      expect(labels.some((label) => /paste/i.test(label))).toBe(false);
+      expect(labels).toEqual(['to create tab', 'for dev tools', 'to navigate']);
+    });
+  });
+
+  describe('FEATURED_TOOLS', () => {
+    it('only references tablets that exist', () => {
+      const tabletIds = tabletMetadata.map((tablet) => tablet.id);
+      FEATURED_TOOLS.forEach((tool) => {
+        expect(tool.type).toBe('tablet');
+        expect(tabletIds).toContain(tool.id);
+      });
     });
   });
 });

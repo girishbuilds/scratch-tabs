@@ -1,18 +1,19 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { WorkspaceEmptyState } from '../WorkspaceEmptyState';
 import { useRootStore } from '../../../stores/rootStore';
 import { useWorkspaceStore } from '../../../stores/workspaceStore';
 import { useFileImport } from '../../../hooks/useFileImport';
+import { toolService } from '../../../services/toolService';
 
 // Mock the stores
 jest.mock('../../../stores/rootStore');
 jest.mock('../../../stores/workspaceStore');
 jest.mock('../../../hooks/useFileImport');
 jest.mock('../../ToolSelector', () => ({
-  ToolSelectorModal: ({ isOpen, onClose }: any) =>
-    isOpen ? <div data-testid="tool-selector-modal" onClick={onClose}>Tool Selector</div> : null
+  ToolSelectorModal: ({ onClose }: any) =>
+    <div data-testid="tool-selector-modal" onClick={onClose}>Tool Selector</div>
 }));
 jest.mock('../../../services/toolService', () => ({
   toolService: {
@@ -112,7 +113,14 @@ describe('WorkspaceEmptyState', () => {
       render(<WorkspaceEmptyState />);
 
       expect(screen.getByText(/Double Click/i)).toBeInTheDocument();
-      expect(screen.getByText(/for tablet tools/i)).toBeInTheDocument();
+      expect(screen.getByText(/for dev tools/i)).toBeInTheDocument();
+    });
+
+    it('should render the paste/drop hint and dev tools row', () => {
+      render(<WorkspaceEmptyState />);
+
+      expect(screen.getByTestId('paste-drop-hint')).toBeInTheDocument();
+      expect(screen.getByTestId('dev-tools-row')).toBeInTheDocument();
     });
 
     it('should render the folder icon', () => {
@@ -151,6 +159,28 @@ describe('WorkspaceEmptyState', () => {
       fireEvent.click(screen.getByTestId('new-canvas-action'));
 
       expect(mockHandleNewCanvas).toHaveBeenCalledWith(false);
+    });
+
+    it('should open a featured tool directly from the dev tools row', async () => {
+      render(<WorkspaceEmptyState />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'JWT' }));
+
+      await waitFor(() => expect(toolService.executeTool).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'jwt' }),
+        expect.objectContaining({ activeWorkspaceId: 'workspace-1' }),
+      ));
+    });
+
+    it('should open the tool selector from the more chip', () => {
+      jest.useFakeTimers();
+      render(<WorkspaceEmptyState />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Browse all tools' }));
+      act(() => { jest.advanceTimersByTime(50); });
+
+      expect(screen.getByTestId('tool-selector-modal')).toBeInTheDocument();
+      jest.useRealTimers();
     });
 
     it('should call openFileDialog when clicking Open File action', () => {
@@ -199,11 +229,12 @@ describe('WorkspaceEmptyState', () => {
       expect(heading).toHaveTextContent('My Project is empty');
     });
 
-    it('should have clickable buttons', () => {
+    it('should keep the four action cards as buttons', () => {
       render(<WorkspaceEmptyState />);
 
-      const buttons = screen.getAllByRole('button');
-      expect(buttons).toHaveLength(4);
+      for (const id of ['new-tab-action', 'new-canvas-action', 'paste-action', 'open-file-action']) {
+        expect(screen.getByTestId(id).tagName).toBe('BUTTON');
+      }
     });
   });
 });

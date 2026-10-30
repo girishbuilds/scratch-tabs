@@ -3,9 +3,11 @@
  * Following SRP - each function has a single responsibility
  */
 
+import type { ToolItem } from "../../../services/toolService";
+
 /**
  * Demo JSON content with instructions for Smart View
- * Displayed when user clicks "Format JSON" without JSON in clipboard
+ * Displayed when user clicks "Try a Smart View" without JSON in clipboard
  */
 export const DEMO_JSON_CONTENT = {
   "welcome": "Smart View Demo",
@@ -28,6 +30,51 @@ export const DEMO_JSON_CONTENT = {
   "toggle": "Click the 3 dots at the bottom of the page to toggle back to raw editor",
   "nextSteps": "Try pasting your own JSON to see Smart View in action!"
 };
+
+/**
+ * Dev tools surfaced as one-click chips on the welcome screen.
+ * Each opens its tablet directly, skipping the tool selector.
+ */
+export const FEATURED_TOOLS: ToolItem[] = [
+  { id: "jwt", type: "tablet", label: "JWT" },
+  { id: "regex", type: "tablet", label: "Regex" },
+  { id: "base64", type: "tablet", label: "Base64" },
+  { id: "uuid", type: "tablet", label: "UUID" },
+  { id: "restclient", type: "tablet", label: "REST" },
+];
+
+export interface WelcomeShortcut {
+  keys: string[];
+  label: string;
+}
+
+/**
+ * Detects macOS so shortcut hints show the key people actually press
+ */
+export function isMacPlatform(): boolean {
+  return typeof navigator !== "undefined" && navigator.platform.toUpperCase().indexOf("MAC") >= 0;
+}
+
+/**
+ * Gets the platform-appropriate paste shortcut label
+ *
+ * @returns "⌘V" on macOS, "Ctrl+V" elsewhere
+ */
+export function getPasteShortcutLabel(): string {
+  return isMacPlatform() ? "⌘V" : "Ctrl+V";
+}
+
+/**
+ * Gets the keyboard shortcuts advertised on the welcome screen.
+ * Paste is omitted because the paste/drop hint already covers it.
+ */
+export function getWelcomeShortcuts(): WelcomeShortcut[] {
+  return [
+    { keys: ["Double Click"], label: "to create tab" },
+    { keys: ["/"], label: "for dev tools" },
+    { keys: ["Ctrl+Shift+-", "Ctrl+Shift+="], label: "to navigate" },
+  ];
+}
 
 /**
  * Checks if text appears to be JSON-like content
