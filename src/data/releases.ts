@@ -15,12 +15,34 @@ export interface Release {
   categories: ReleaseCategory[];
 }
 
-export const APP_VERSION = '1.51.0';
+export const APP_VERSION = '1.52.0';
 
 export const RELEASES: Release[] = [
   {
-    "version": "1.51.0",
+    "version": "1.52.0",
     "type": "latest",
+    "date": "2026-10-31",
+    "headline": "Smarter Image Paste",
+    "summary": "Pasting spreadsheet cells now pastes the values instead of opening the image dialog.",
+    "categories": [
+      {
+        "name": "Improvements",
+        "changes": [
+          "**Image paste preview:** The dialog shows a thumbnail with the image size and type",
+          "**Image paste shortcuts:** Press Enter for Canvas or 1 to 3 to pick an option, with Canvas listed first"
+        ]
+      },
+      {
+        "name": "Bug Fixes",
+        "changes": [
+          "**Spreadsheet paste:** Copied Excel and Numbers cells paste as values instead of offering to paste an image"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "1.51.0",
+    "type": "release",
     "date": "2026-10-29",
     "headline": "CSV Add Columns + Faster Data Reconcile",
     "summary": "Copy columns from another tab into a CSV, and Data Reconcile now handles large files smoothly.",
