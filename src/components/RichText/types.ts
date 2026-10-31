@@ -16,6 +16,7 @@ export interface UpgradeConfirmationModalProps {
   isOpen: boolean;
   onCancel: () => void;
   isCurrentTabEmpty: boolean;
+  imageDataUrl?: string | null;
   onPasteAsDataUrl: () => void | Promise<void>;
   onPasteInRichText: () => void | Promise<void>;
   onPasteInCanvas: () => void | Promise<void>;
