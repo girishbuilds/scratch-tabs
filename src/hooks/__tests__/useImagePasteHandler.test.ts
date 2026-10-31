@@ -275,4 +275,93 @@ describe("useImagePasteHandler", () => {
     expect(mockSetPendingImageData).not.toHaveBeenCalled();
     expect(mockOnShowUpgradeModal).not.toHaveBeenCalled();
   });
+
+  describe("when the clipboard carries text", () => {
+    const mountAndPaste = (clipboardData: unknown) => {
+      renderHook(() =>
+        useImagePasteHandler({
+          containerRef: mockContainerRef,
+          editorRef: mockEditorRef,
+          activeTab: createMockTab(),
+          setPendingImageData: mockSetPendingImageData,
+          setPendingImageCursorPosition: mockSetPendingImageCursorPosition,
+          onShowUpgradeModal: mockOnShowUpgradeModal,
+        })
+      );
+
+      const pasteEvent = new Event("paste", { bubbles: true, cancelable: true });
+      Object.defineProperty(pasteEvent, "clipboardData", {
+        value: clipboardData,
+        writable: false,
+      });
+      mockContainer.dispatchEvent(pasteEvent);
+      return pasteEvent;
+    };
+
+    const pngFile = new File(["png"], "cells.png", { type: "image/png" });
+
+    it("leaves spreadsheet cells (TSV + html table + png render) to native paste", () => {
+      const readAsDataURL = jest.fn();
+      jest
+        .spyOn(global, "FileReader")
+        .mockImplementation(() => ({ readAsDataURL }) as unknown as FileReader);
+
+      const event = mountAndPaste({
+        items: [
+          { kind: "string", type: "text/plain", getAsFile: () => null },
+          { kind: "string", type: "text/html", getAsFile: () => null },
+          { kind: "file", type: "image/png", getAsFile: () => pngFile },
+        ],
+        getData: (type: string) =>
+          type === "text/plain"
+            ? "Region\tQ1\nEMEA\t120"
+            : type === "text/html"
+              ? "<table><tr><td>Region</td></tr></table>"
+              : "",
+      });
+
+      expect(event.defaultPrevented).toBe(false);
+      expect(readAsDataURL).not.toHaveBeenCalled();
+      expect(mockSetPendingImageData).not.toHaveBeenCalled();
+      expect(mockOnShowUpgradeModal).not.toHaveBeenCalled();
+    });
+
+    it("leaves text whose html embeds a data URL image to native paste", () => {
+      const event = mountAndPaste({
+        items: [],
+        getData: (type: string) =>
+          type === "text/plain"
+            ? "Signed, Jo"
+            : type === "text/html"
+              ? '<p>Signed, Jo</p><img src="data:image/png;base64,abc">'
+              : "",
+      });
+
+      expect(event.defaultPrevented).toBe(false);
+      expect(mockSetPendingImageData).not.toHaveBeenCalled();
+      expect(mockOnShowUpgradeModal).not.toHaveBeenCalled();
+    });
+
+    it("still intercepts an image-only clipboard and prevents the native paste", () => {
+      const mockFileReader = { readAsDataURL: jest.fn(), onload: null };
+      jest
+        .spyOn(global, "FileReader")
+        .mockImplementation(() => mockFileReader as unknown as FileReader);
+
+      const event = mountAndPaste({
+        items: [{ kind: "file", type: "image/png", getAsFile: () => pngFile }],
+        getData: () => "",
+      });
+
+      expect(event.defaultPrevented).toBe(true);
+      expect(mockFileReader.readAsDataURL).toHaveBeenCalledWith(pngFile);
+    });
+
+    it("ignores events that carry no clipboard data", () => {
+      const event = mountAndPaste(null);
+
+      expect(event.defaultPrevented).toBe(false);
+      expect(mockOnShowUpgradeModal).not.toHaveBeenCalled();
+    });
+  });
 });
