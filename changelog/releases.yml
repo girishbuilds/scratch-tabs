@@ -3,8 +3,24 @@ config:
   max_versions: 100  # Maximum number of versions to display
 
 releases:
-  - version: "1.51.0"
+  - version: "1.52.0"
     type: "latest"
+    draft: false
+    date: "2026-10-31"
+    headline: "Smarter Image Paste"
+    summary: "Pasting spreadsheet cells now pastes the values instead of opening the image dialog."
+    description: "Copying cells from Excel or Numbers now pastes as text in text tabs, Rich Text tabs, and new tabs. The image paste dialog now previews the image and can be driven from the keyboard."
+    categories:
+      - name: "Improvements"
+        changes:
+          - "**Image paste preview:** The dialog shows a thumbnail with the image size and type"
+          - "**Image paste shortcuts:** Press Enter for Canvas or 1 to 3 to pick an option, with Canvas listed first"
+      - name: "Bug Fixes"
+        changes:
+          - "**Spreadsheet paste:** Copied Excel and Numbers cells paste as values instead of offering to paste an image"
+
+  - version: "1.51.0"
+    type: "release"
     draft: false
     date: "2026-10-29"
     headline: "CSV Add Columns + Faster Data Reconcile"

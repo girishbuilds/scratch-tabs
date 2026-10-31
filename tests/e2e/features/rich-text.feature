@@ -69,6 +69,13 @@ Feature: Rich Text Editor
     And I should see the date created text with "now" time
 
   @clipboard
+  Scenario: Pasting spreadsheet cells does not offer image options
+    Given I am on a plain text editor tab
+    When I set clipboard content to spreadsheet cells with an image render
+    And I paste into the editor
+    Then the image paste modal should not be visible
+
+  @clipboard
   Scenario: Paste image data into an empty Monaco tab
     Given I am on a plain text editor tab
     When I set clipboard content to contain an image

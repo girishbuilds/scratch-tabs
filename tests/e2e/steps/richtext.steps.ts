@@ -154,6 +154,23 @@ When('I set clipboard content to contain an image', async function () {
   }, base64Image);
 });
 
+When('I set clipboard content to spreadsheet cells with an image render', async function () {
+  // Excel and Numbers put the TSV text, an html table and a PNG render of the cells on the clipboard
+  const base64Image = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==';
+
+  await this.page.evaluate(async (imageData) => {
+    const imageBlob = await (await fetch(imageData)).blob();
+
+    await navigator.clipboard.write([
+      new ClipboardItem({
+        'text/plain': new Blob(['Region\tQ1\nEMEA\t120'], { type: 'text/plain' }),
+        'text/html': new Blob(['<table><tr><td>Region</td><td>Q1</td></tr></table>'], { type: 'text/html' }),
+        'image/png': imageBlob,
+      }),
+    ]);
+  }, base64Image);
+});
+
 When('I paste into the editor', async function () {
   // Focus the Monaco editor
   const editor = this.page.locator('[data-editor-pane-side="left"] .monaco-editor textarea');
@@ -225,6 +242,11 @@ When('I click {string} in the modal', async function (buttonText: string) {
   const button = modal.getByRole('button', { name: buttonText });
   await expect(button).toBeVisible();
   await button.click();
+});
+
+Then('the image paste modal should not be visible', async function () {
+  const modal = this.page.locator('[data-testid="rich-text-upgrade-modal"]');
+  await expect(modal).toHaveCount(0);
 });
 
 Then('the modal should be dismissed', async function () {

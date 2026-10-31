@@ -130,33 +130,43 @@
     <div class="container mx-auto px-6">
       <div class="max-w-4xl mx-auto">
 
-        <!-- Version 1.51.0 -->
+        <!-- Version 1.52.0 -->
         <div class="changelog-entry latest">
           <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2">
             <div class="flex items-center gap-3">
-              <h2 class="text-2xl font-bold text-white">V1.51.0</h2>
+              <h2 class="text-2xl font-bold text-white">V1.52.0</h2>
               <span class="badge latest">LATEST</span>
             </div>
-            <span class="text-gray-500 text-xs font-mono">10/29/2026</span>
+            <span class="text-gray-500 text-xs font-mono">10/31/2026</span>
           </div>
-          <h3 class="text-lg font-bold text-emerald-500 mb-4 font-mono">CSV ADD COLUMNS + FASTER DATA RECONCILE</h3>
+          <h3 class="text-lg font-bold text-emerald-500 mb-4 font-mono">SMARTER IMAGE PASTE</h3>
           <div class="changelog-content text-gray-400 text-sm leading-relaxed">
-            <p class="mb-4">The CSV view can pull columns in from another tab and reorder columns from the right-click menu. Data Reconcile keeps results while you switch tabs and shows progress on large comparisons.</p>
-
-            <h4 class="text-white text-xs font-mono uppercase tracking-widest mb-3"># new_features</h4>
-            <ul class="space-y-2 mb-6">
-              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Add columns from another tab:</strong> Copy columns from any open tab into a CSV, matched by row position or by a key column</span></li>
-              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Insert position:</strong> Place new columns after any existing column or at the end</span></li>
-              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Move columns:</strong> Move a column left or right from its right-click menu</span></li>
-            </ul>
+            <p class="mb-4">Copying cells from Excel or Numbers now pastes as text in text tabs, Rich Text tabs, and new tabs. The image paste dialog now previews the image and can be driven from the keyboard.</p>
 
             <h4 class="text-white text-xs font-mono uppercase tracking-widest mb-3"># improvements</h4>
             <ul class="space-y-2 mb-6">
-              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Data Reconcile progress:</strong> A progress message shows while a large comparison runs</span></li>
-              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Data Reconcile results:</strong> Results are kept when you switch tabs, so returning does not recompute</span></li>
-              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Data Reconcile preview:</strong> Large result lists scroll smoothly</span></li>
-              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Key suggestions:</strong> Matching key columns are suggested automatically</span></li>
+              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Image paste preview:</strong> The dialog shows a thumbnail with the image size and type</span></li>
+              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Image paste shortcuts:</strong> Press Enter for Canvas or 1 to 3 to pick an option, with Canvas listed first</span></li>
             </ul>
+
+            <h4 class="text-white text-xs font-mono uppercase tracking-widest mb-3"># bug_fixes</h4>
+            <ul class="space-y-2 mb-6">
+              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Spreadsheet paste:</strong> Copied Excel and Numbers cells paste as values instead of offering to paste an image</span></li>
+            </ul>
+          </div>
+        </div>
+        <!-- Version 1.51.0 -->
+        <div class="changelog-entry release">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2">
+            <div class="flex items-center gap-3">
+              <h2 class="text-xl font-bold text-white uppercase">V1.51.0</h2>
+              <span class="badge release">RELEASE</span>
+            </div>
+            <span class="text-gray-500 text-xs font-mono">10/29/2026</span>
+          </div>
+          <h3 class="text-lg font-bold text-gray-400 mb-4 font-mono">CSV ADD COLUMNS + FASTER DATA RECONCILE</h3>
+          <div class="changelog-content text-gray-400 text-sm leading-relaxed">
+            <p>Copy columns from another tab into a CSV, and Data Reconcile now handles large files smoothly.</p>
           </div>
         </div>
         <!-- Version 1.50.0 -->
@@ -1026,7 +1036,7 @@
       <div class="flex flex-col md:flex-row justify-between items-center gap-8">
         <div class="flex items-center space-x-3">
           <img src="https://scratchtabs.b-cdn.net/favicon-gray.svg" alt="Scratch Tabs" class="logo-size" />
-          <span class="text-gray-400 font-mono text-sm">SCRATCH_TABS // v1.51.0</span>
+          <span class="text-gray-400 font-mono text-sm">SCRATCH_TABS // v1.52.0</span>
         </div>
 
         <div class="flex space-x-8">

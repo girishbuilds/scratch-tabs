@@ -1,6 +1,7 @@
 import { useEffect, RefObject } from "react";
 import type * as Monaco from "monaco-editor/esm/vs/editor/editor.api";
 import type { Tab } from "../types";
+import { classifyClipboardPaste } from "../utils/clipboardPaste";
 
 interface UseImagePasteHandlerParams {
   /** Reference to the container element to attach paste listener */
@@ -21,7 +22,7 @@ interface UseImagePasteHandlerParams {
 
 /**
  * Hook that handles image paste detection in the Monaco editor container.
- * When an image is pasted:
+ * When an image-only clipboard is pasted (text on the clipboard always wins):
  * 1. Prevents default paste behavior
  * 2. Captures cursor position
  * 3. Converts image to data URL
@@ -42,13 +43,18 @@ export function useImagePasteHandler({
     if (!container || !activeTab || activeTab.isRich) return;
 
     const handlePaste = (event: ClipboardEvent) => {
-      const items = event.clipboardData?.items;
-      if (!items) {
+      if (!event.clipboardData) return;
+
+      // Text (even with an incidental image, e.g. Excel cells) is left to Monaco
+      const content = classifyClipboardPaste(event.clipboardData);
+      if (content.kind !== "image-file" && content.kind !== "image-data-url") {
         return;
       }
 
-      const cursorPosition = editorRef.current?.getPosition() ?? null;
+      event.preventDefault();
+      event.stopPropagation();
 
+      const cursorPosition = editorRef.current?.getPosition() ?? null;
       const triggerImageModal = (dataUrl: string) => {
         setPendingImageData(dataUrl);
         if (cursorPosition) {
@@ -57,36 +63,14 @@ export function useImagePasteHandler({
         onShowUpgradeModal();
       };
 
-      // Direct image item (e.g. screenshot from OS clipboard)
-      for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-        if (item.type.startsWith("image/")) {
-          event.preventDefault();
-          event.stopPropagation();
-          const file = item.getAsFile();
-          if (file) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-              const dataUrl = e.target?.result as string;
-              triggerImageModal(dataUrl);
-            };
-            reader.readAsDataURL(file);
-          }
-          return;
-        }
+      if (content.kind === "image-data-url") {
+        triggerImageModal(content.dataUrl);
+        return;
       }
 
-      // HTML clipboard item containing an embedded image data URL
-      // (e.g. an image copied from the rich text editor — TipTap serialises as text/html)
-      const html = event.clipboardData?.getData("text/html") ?? "";
-      if (html) {
-        const match = html.match(/src=["'](data:image\/[^"']+)["']/);
-        if (match) {
-          event.preventDefault();
-          event.stopPropagation();
-          triggerImageModal(match[1]);
-        }
-      }
+      const reader = new FileReader();
+      reader.onload = (e) => triggerImageModal(e.target?.result as string);
+      reader.readAsDataURL(content.file);
     };
 
     container.addEventListener("paste", handlePaste, true);

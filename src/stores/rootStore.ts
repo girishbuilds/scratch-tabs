@@ -20,6 +20,7 @@ import { contentProcessingService } from "../services/contentProcessing";
 import { navigationService } from "../services/navigationService";
 import { SidebarTabInfo } from "../types";
 import { getTabContentKind } from "../utils/tabContentKind";
+import { readImageOnlyDataUrl } from "../utils/clipboardPaste";
 import { tabDocumentAdapterResolver } from "../services/tabDocumentAdapter";
 
 const _updateStoredTabAccessed = (
@@ -112,26 +113,10 @@ interface RootStore {
 }
 
 /**
- * Extracts image data from clipboard if present
+ * Extracts image data from clipboard when the clipboard carries no text
  */
-const _extractImageFromClipboard = async (): Promise<string | null> => {
-  const clipboardItems = await navigator.clipboard.read();
-
-  for (const clipboardItem of clipboardItems) {
-    for (const type of clipboardItem.types) {
-      if (type.startsWith('image/')) {
-        const imageBlob = await clipboardItem.getType(type);
-        return new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.readAsDataURL(imageBlob);
-        });
-      }
-    }
-  }
-
-  return null;
-};
+const _extractImageFromClipboard = async (): Promise<string | null> =>
+  readImageOnlyDataUrl(await navigator.clipboard.read());
 
 /**
  * Helper to broadcast tab metadata updates for inactive workspaces

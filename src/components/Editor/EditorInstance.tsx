@@ -53,7 +53,11 @@ export const EditorInstance: React.FC<EditorInstanceProps> = ({
   // State to track mounted editor for hooks that need to react to editor availability
   const [mountedEditor, setMountedEditor] = useState<Monaco.editor.IStandaloneCodeEditor | null>(null);
   const { setActiveEditor } = useActiveEditorStore();
-  const { setPendingImageData, setPendingImageCursorPosition } = useClipboardStore();
+  const {
+    pendingImageData,
+    setPendingImageData,
+    setPendingImageCursorPosition,
+  } = useClipboardStore();
 
   // Smart View Callout Widget refs
   const calloutWidgetRef = useRef<Monaco.editor.IOverlayWidget | null>(null);
@@ -730,6 +734,7 @@ export const EditorInstance: React.FC<EditorInstanceProps> = ({
       <UpgradeConfirmationModal
         isOpen={showUpgradeModal}
         isCurrentTabEmpty={isCurrentTabEmpty}
+        imageDataUrl={pendingImageData}
         onPasteAsDataUrl={handlePasteAsDataUrl}
         onPasteInRichText={handlePasteInRichText}
         onPasteInCanvas={handlePasteInCanvas}
