@@ -159,25 +159,39 @@ export function createScratchpadStore(deps: ScratchpadDeps) {
       undoLastAdd: async () => {
         const notice = get().notice;
         if (!notice) return;
-        await repository.remove(notice.addedIds);
-        const removed = new Set(notice.addedIds);
-        set((state) => ({
-          items: state.items.filter((item) => !removed.has(item.id)),
-          notice: null,
-        }));
+        try {
+          await repository.remove(notice.addedIds);
+          const removed = new Set(notice.addedIds);
+          set((state) => ({
+            items: state.items.filter((item) => !removed.has(item.id)),
+            notice: null,
+            error: null,
+          }));
+        } catch (error) {
+          set({ error: errorMessage(error, "Could not undo") });
+        }
       },
 
       remove: async (id) => {
-        await repository.remove([id]);
-        set((state) => ({
-          items: state.items.filter((item) => item.id !== id),
-          notice: null,
-        }));
+        try {
+          await repository.remove([id]);
+          set((state) => ({
+            items: state.items.filter((item) => item.id !== id),
+            notice: null,
+            error: null,
+          }));
+        } catch (error) {
+          set({ error: errorMessage(error, "Could not delete the entry") });
+        }
       },
 
       clearAll: async () => {
-        await repository.clear();
-        set({ items: [], notice: null });
+        try {
+          await repository.clear();
+          set({ items: [], notice: null, error: null });
+        } catch (error) {
+          set({ error: errorMessage(error, "Could not delete the entries") });
+        }
       },
 
       setQuery: (query) => set({ query }),
@@ -188,8 +202,12 @@ export function createScratchpadStore(deps: ScratchpadDeps) {
         const item = get().items.find((candidate) => candidate.id === id);
         if (!item) return;
         const pinned = !item.pinned;
-        await gateway.setPinned(id, pinned);
-        set(replaceItem({ ...item, pinned }));
+        try {
+          await gateway.setPinned(id, pinned);
+          set(replaceItem({ ...item, pinned }));
+        } catch (error) {
+          set({ error: errorMessage(error, "Could not update the entry") });
+        }
       },
 
       markNotSecret: async (id, secretIndex) => {

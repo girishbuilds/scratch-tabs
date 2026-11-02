@@ -12,15 +12,30 @@ export function useExpiringValue<T>(
 ) {
   const [value, setValue] = useState<T | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Bumped whenever the value must be discarded, so a load still in flight
+  // cannot put plaintext back after a hide, blur or unmount.
+  const generation = useRef(0);
 
   const hide = useCallback(() => {
+    generation.current += 1;
     if (timer.current) clearTimeout(timer.current);
     timer.current = null;
     setValue(null);
   }, []);
 
   const show = useCallback(async () => {
-    const loaded = await load();
+    const requested = ++generation.current;
+    const invalidate = () => {
+      generation.current += 1;
+    };
+    window.addEventListener("blur", invalidate);
+    let loaded: T;
+    try {
+      loaded = await load();
+    } finally {
+      window.removeEventListener("blur", invalidate);
+    }
+    if (generation.current !== requested) return;
     setValue(loaded);
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(hide, ttlMs);
@@ -39,6 +54,7 @@ export function useExpiringValue<T>(
 
   useEffect(
     () => () => {
+      generation.current += 1;
       if (timer.current) clearTimeout(timer.current);
     },
     [],

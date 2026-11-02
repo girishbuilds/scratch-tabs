@@ -179,6 +179,58 @@ describe("scratchpadStore", () => {
     });
   });
 
+  describe("storage failures", () => {
+    const disk = () => new Error("disk full");
+
+    it("surfaces an error and keeps the entry when delete fails", async () => {
+      const { state, repository } = await setup();
+      await state().addFromText(FIXTURES.mvn);
+      jest.spyOn(repository, "remove").mockRejectedValueOnce(disk());
+      await state().remove(state().items[0].id);
+      expect(state().error).toBe("disk full");
+      expect(state().items).toHaveLength(1);
+    });
+
+    it("surfaces an error and keeps the notice when undo fails", async () => {
+      const { state, repository } = await setup();
+      await state().addFromText(FIXTURES.mvn);
+      jest.spyOn(repository, "remove").mockRejectedValueOnce(disk());
+      await state().undoLastAdd();
+      expect(state().error).toBe("disk full");
+      expect(state().items).toHaveLength(1);
+      expect(state().notice).not.toBeNull();
+    });
+
+    it("surfaces an error and keeps the entries when clear all fails", async () => {
+      const { state, repository } = await setup();
+      await state().addFromText(FIXTURES.mvn);
+      jest.spyOn(repository, "clear").mockRejectedValueOnce(disk());
+      await state().clearAll();
+      expect(state().error).toBe("disk full");
+      expect(state().items).toHaveLength(1);
+    });
+
+    it("surfaces an error and leaves the pin unchanged when pinning fails", async () => {
+      const { state, repository } = await setup();
+      await state().addFromText(FIXTURES.mvn);
+      jest.spyOn(repository, "putMany").mockRejectedValueOnce(disk());
+      await state().togglePin(state().items[0].id);
+      expect(state().error).toBe("disk full");
+      expect(state().items[0].pinned).toBe(false);
+    });
+
+    it("clears the error after a later successful delete", async () => {
+      const { state, repository } = await setup();
+      await state().addFromText(FIXTURES.mvn);
+      const id = state().items[0].id;
+      jest.spyOn(repository, "remove").mockRejectedValueOnce(disk());
+      await state().remove(id);
+      await state().remove(id);
+      expect(state().error).toBeNull();
+      expect(state().items).toHaveLength(0);
+    });
+  });
+
   describe("revealSecrets / getCopyText", () => {
     it("decrypts secret values on demand", async () => {
       const { state } = await setup();

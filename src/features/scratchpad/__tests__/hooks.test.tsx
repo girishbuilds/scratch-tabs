@@ -262,6 +262,69 @@ describe("useExpiringValue", () => {
     expect(jest.getTimerCount()).toBe(0);
   });
 
+  describe("while a load is still in flight", () => {
+    const deferred = () => {
+      let resolve!: (value: string) => void;
+      const promise = new Promise<string>((r) => (resolve = r));
+      return { promise, resolve };
+    };
+
+    it("does not show the value if it was hidden before the load finished", async () => {
+      const d = deferred();
+      const { result } = setup(jest.fn().mockReturnValue(d.promise));
+      let shown!: Promise<void>;
+      act(() => {
+        shown = result.current.show();
+      });
+      act(() => result.current.hide());
+      await act(async () => {
+        d.resolve("plain");
+        await shown;
+      });
+      expect(result.current.value).toBeNull();
+      expect(jest.getTimerCount()).toBe(0);
+    });
+
+    it("does not show the value if the window lost focus before the load finished", async () => {
+      const d = deferred();
+      const { result } = setup(jest.fn().mockReturnValue(d.promise));
+      let shown!: Promise<void>;
+      act(() => {
+        shown = result.current.show();
+      });
+      act(() => void window.dispatchEvent(new Event("blur")));
+      await act(async () => {
+        d.resolve("plain");
+        await shown;
+      });
+      expect(result.current.value).toBeNull();
+      expect(jest.getTimerCount()).toBe(0);
+    });
+
+    it("does not start a timer or set state if unmounted before the load finished", async () => {
+      const d = deferred();
+      const { result, unmount } = setup(jest.fn().mockReturnValue(d.promise));
+      let shown!: Promise<void>;
+      act(() => {
+        shown = result.current.show();
+      });
+      unmount();
+      d.resolve("plain");
+      await shown;
+      expect(jest.getTimerCount()).toBe(0);
+    });
+
+    it("stops listening for blur once the load fails", async () => {
+      const spy = jest.spyOn(window, "removeEventListener");
+      const { result } = setup(jest.fn().mockRejectedValue(new Error("nope")));
+      await act(async () => {
+        await expect(result.current.show()).rejects.toThrow("nope");
+      });
+      expect(spy).toHaveBeenCalledWith("blur", expect.any(Function));
+      spy.mockRestore();
+    });
+  });
+
   it("does not leave a timer or listener behind on unmount", async () => {
     const { result, unmount } = setup();
     await act(() => result.current.show());

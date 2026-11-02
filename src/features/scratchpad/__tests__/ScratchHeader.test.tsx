@@ -21,15 +21,15 @@ function renderHeader(props: Partial<React.ComponentProps<typeof ScratchHeader>>
 }
 
 describe("ScratchHeader", () => {
-  it("is titled Global Scratchpad", () => {
+  it("is titled Scratch Drawer", () => {
     renderHeader();
-    expect(screen.getByRole("heading", { name: /Global Scratchpad/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Scratch Drawer/ })).toBeInTheDocument();
   });
 
-  it("explains what the scratchpad is when the info icon is hovered", () => {
+  it("explains what the drawer is when the info icon is hovered", () => {
     renderHeader();
     expect(screen.queryByTestId("scratch-info-panel")).toBeNull();
-    fireEvent.focus(screen.getByLabelText("About the Global Scratchpad"));
+    fireEvent.focus(screen.getByLabelText("About the Scratch Drawer"));
     const panel = screen.getByTestId("scratch-info-panel");
     expect(panel).toHaveTextContent(/commands, links, notes and keys/i);
     expect(panel).toHaveTextContent(/hidden and encrypted in this browser/i);

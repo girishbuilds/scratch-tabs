@@ -28,8 +28,8 @@ export const ScratchHeader: React.FC<ScratchHeaderProps> = ({
 }) => (
   <header className="relative flex items-center justify-between border-b border-base bg-surface-raised px-3 py-2">
     <h2 className="flex items-center gap-1.5 text-sm font-semibold text-main">
-      Global Scratchpad
-      <ScratchInfoTip label="About the Global Scratchpad">
+      Scratch Drawer
+      <ScratchInfoTip label="About the Scratch Drawer">
         <p className="mb-2">
           A place for things you reach for often: commands, links, notes and keys. It is
           there in every tab. Open it from the toolbar or with Cmd/Ctrl+Shift+Y.
