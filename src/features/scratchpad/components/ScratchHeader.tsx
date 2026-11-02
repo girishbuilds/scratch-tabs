@@ -1,5 +1,6 @@
 import React from "react";
-import { ClipboardX, Presentation, ShieldCheck, Trash2, X } from "lucide-react";
+import { ClipboardX, Presentation, Trash2, X } from "lucide-react";
+import { ScratchInfoTip } from "./ScratchInfoTip";
 import { ScratchMenu, ScratchMenuItem } from "./ScratchMenu";
 import { iconButton } from "./styles";
 
@@ -25,12 +26,25 @@ export const ScratchHeader: React.FC<ScratchHeaderProps> = ({
   onClearAll,
   onClose,
 }) => (
-  <header className="flex items-center justify-between border-b border-base bg-surface-raised px-3 py-2">
+  <header className="relative flex items-center justify-between border-b border-base bg-surface-raised px-3 py-2">
     <h2 className="flex items-center gap-1.5 text-sm font-semibold text-main">
-      Scratch
-      <span title="Entries are encrypted before they are stored in this browser">
-        <ShieldCheck size={14} className="text-secondary" aria-label="Encrypted" />
-      </span>
+      Global Scratchpad
+      <ScratchInfoTip label="About the Global Scratchpad">
+        <p className="mb-2">
+          A place for things you reach for often: commands, links, notes and keys. It is
+          there in every tab. Open it from the toolbar or with Cmd/Ctrl+Shift+Y.
+        </p>
+        <ul className="list-disc space-y-1 pl-4">
+          <li>Paste text and it is split into entries.</li>
+          <li>Click an entry to copy it.</li>
+          <li>Keys, tokens and passwords are hidden and encrypted in this browser.</li>
+          <li>Entries are not part of your tabs, search, exports or sharing.</li>
+        </ul>
+        <p className="mt-2">
+          The encryption key is kept in this browser too. It stops casual viewing, but not
+          someone who can open your browser profile.
+        </p>
+      </ScratchInfoTip>
     </h2>
     <div className="flex items-center gap-0.5">
       <button

@@ -21,9 +21,24 @@ function renderHeader(props: Partial<React.ComponentProps<typeof ScratchHeader>>
 }
 
 describe("ScratchHeader", () => {
-  it("states that entries are encrypted", () => {
+  it("is titled Global Scratchpad", () => {
     renderHeader();
-    expect(screen.getByLabelText("Encrypted")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Global Scratchpad/ })).toBeInTheDocument();
+  });
+
+  it("explains what the scratchpad is when the info icon is hovered", () => {
+    renderHeader();
+    expect(screen.queryByTestId("scratch-info-panel")).toBeNull();
+    fireEvent.focus(screen.getByLabelText("About the Global Scratchpad"));
+    const panel = screen.getByTestId("scratch-info-panel");
+    expect(panel).toHaveTextContent(/commands, links, notes and keys/i);
+    expect(panel).toHaveTextContent(/hidden and encrypted in this browser/i);
+    expect(panel).toHaveTextContent(/not someone who can open your browser profile/i);
+  });
+
+  it("no longer shows a shield icon", () => {
+    renderHeader();
+    expect(screen.queryByLabelText("Encrypted")).toBeNull();
   });
 
   it("toggles presenting mode and reflects it", () => {
