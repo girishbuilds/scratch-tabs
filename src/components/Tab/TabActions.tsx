@@ -4,7 +4,7 @@ import { ScratchToggleButton } from "../../features/scratchpad";
 
 interface TabActionsProps {
   side?: "left" | "right";
-  /** Show the Scratch drawer toggle (once per window, not once per split pane). */
+  /** Show the Global Scratchpad toggle (once per window, not once per split pane). */
   showScratch?: boolean;
   onShowTabletSelector: () => void;
   newTabButtonRef?: React.RefObject<HTMLButtonElement>;

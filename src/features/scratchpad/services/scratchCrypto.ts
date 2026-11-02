@@ -1,7 +1,7 @@
 import type { ScratchPayload } from "../types";
 
 /**
- * AES-GCM helpers for Scratch Drawer entries.
+ * AES-GCM helpers for Global Scratchpad entries.
  *
  * Threat model (tier 0): the key is a random, non-extractable CryptoKey kept in
  * IndexedDB next to the ciphertext. This keeps plaintext out of DevTools,

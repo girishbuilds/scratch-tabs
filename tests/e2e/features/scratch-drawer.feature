@@ -1,4 +1,4 @@
-Feature: Scratch drawer
+Feature: Global Scratchpad
 
   Quick capture of commands, links and secrets. Secrets are masked in the UI
   and encrypted before they reach IndexedDB. All keys below are random keyboard
@@ -8,7 +8,7 @@ Feature: Scratch drawer
     Given I am on the homepage
 
   Scenario: Pasting a scratch pad masks the keys but keeps commands readable
-    When I open the Scratch drawer from the toolbar
+    When I open the Global Scratchpad from the toolbar
     And I paste into Scratch:
       """
       UAT key: 3knd8dsuhds89hds-ds8hdshds-ds98hds
@@ -24,7 +24,7 @@ Feature: Scratch drawer
     And Scratch should not show "8d8sd89hsdh8-sdc0shc-sdcsdc-cdsc" anywhere
 
   Scenario: A secret is only shown when revealed
-    When I open the Scratch drawer from the toolbar
+    When I open the Global Scratchpad from the toolbar
     And I paste into Scratch:
       """
       UAT key: 3knd8dsuhds89hds-ds8hdshds-ds98hds
@@ -33,7 +33,7 @@ Feature: Scratch drawer
     Then the revealed Scratch secret should be "3knd8dsuhds89hds-ds8hdshds-ds98hds"
 
   Scenario: Entries are encrypted at rest and survive a reload
-    When I open the Scratch drawer from the toolbar
+    When I open the Global Scratchpad from the toolbar
     And I paste into Scratch:
       """
       UAT key: 3knd8dsuhds89hds-ds8hdshds-ds98hds
@@ -43,7 +43,7 @@ Feature: Scratch drawer
       """
     Then IndexedDB should hold 3 Scratch entries without "3knd8dsuhds89hds" or "mvn -B -ntp" in readable form
     When I reload the page
-    And I open the Scratch drawer from the toolbar
+    And I open the Global Scratchpad from the toolbar
     Then Scratch should list 3 entries
     And Scratch should mask 2 secrets
     And Scratch should show "mvn -B -ntp -fae -T 1C clean verify"
@@ -51,7 +51,7 @@ Feature: Scratch drawer
     Then the revealed Scratch secret should be "3knd8dsuhds89hds-ds8hdshds-ds98hds"
 
   Scenario: Deleting an entry removes it
-    When I open the Scratch drawer from the toolbar
+    When I open the Global Scratchpad from the toolbar
     And I paste into Scratch:
       """
       mvn -B -ntp -fae -T 1C clean verify
@@ -59,11 +59,11 @@ Feature: Scratch drawer
     And I delete the Scratch entry containing "mvn -B"
     Then Scratch should list 0 entries
 
-  Scenario: The keyboard shortcut and Escape toggle the drawer
+  Scenario: The keyboard shortcut and Escape toggle the Global Scratchpad
     When I press the Scratch shortcut
-    Then the Scratch drawer should be visible
-    When I close the Scratch drawer with Escape
-    Then the Scratch drawer should be hidden
+    Then the Global Scratchpad should be visible
+    When I close the Global Scratchpad with Escape
+    Then the Global Scratchpad should be hidden
 
   Scenario: In split view the Scratch toggle moves to the right pane
     When I click the icon for "New tab"
@@ -73,11 +73,11 @@ Feature: Scratch drawer
     And I select "Split Right" from the context menu
     Then I should be in split view mode
     And the Scratch toggle should be in the right pane only
-    When I open the Scratch drawer from the toolbar
-    Then the Scratch drawer should be visible
+    When I open the Global Scratchpad from the toolbar
+    Then the Global Scratchpad should be visible
 
   Scenario: Search finds entries by visible text but never by a secret
-    When I open the Scratch drawer from the toolbar
+    When I open the Global Scratchpad from the toolbar
     And I paste into Scratch:
       """
       UAT key: 3knd8dsuhds89hds-ds8hdshds-ds98hds
@@ -90,7 +90,7 @@ Feature: Scratch drawer
     Then Scratch should list 0 entries
 
   Scenario: A pinned entry stays at the top
-    When I open the Scratch drawer from the toolbar
+    When I open the Global Scratchpad from the toolbar
     And I paste into Scratch:
       """
       TODO: Make allow list include notes header
@@ -104,7 +104,7 @@ Feature: Scratch drawer
     Then the first Scratch entry should contain "TODO"
 
   Scenario: A false positive can be unmasked
-    When I open the Scratch drawer from the toolbar
+    When I open the Global Scratchpad from the toolbar
     And I paste into Scratch:
       """
       UAT key: 3knd8dsuhds89hds-ds8hdshds-ds98hds
@@ -114,7 +114,7 @@ Feature: Scratch drawer
     And Scratch should show "3knd8dsuhds89hds-ds8hdshds-ds98hds"
 
   Scenario: Text the detector missed can be selected and masked
-    When I open the Scratch drawer from the toolbar
+    When I open the Global Scratchpad from the toolbar
     And I paste into Scratch:
       """
       deploy pw is plainword now
@@ -125,7 +125,7 @@ Feature: Scratch drawer
     And Scratch should not show "plainword" anywhere
 
   Scenario: Presenting mode removes the ways to reveal a secret
-    When I open the Scratch drawer from the toolbar
+    When I open the Global Scratchpad from the toolbar
     And I paste into Scratch:
       """
       UAT key: 3knd8dsuhds89hds-ds8hdshds-ds98hds
@@ -138,7 +138,7 @@ Feature: Scratch drawer
     Then the revealed Scratch secret should be "3knd8dsuhds89hds-ds8hdshds-ds98hds"
 
   Scenario: Clear all removes every entry after confirmation
-    When I open the Scratch drawer from the toolbar
+    When I open the Global Scratchpad from the toolbar
     And I paste into Scratch:
       """
       mvn -B -ntp -fae -T 1C clean verify
@@ -150,7 +150,7 @@ Feature: Scratch drawer
     Then Scratch should list 0 entries
 
   Scenario: Clicking an entry copies it and ticks its icon
-    When I open the Scratch drawer from the toolbar
+    When I open the Global Scratchpad from the toolbar
     And I paste into Scratch:
       """
       mvn -B -ntp -fae -T 1C clean verify
@@ -160,10 +160,10 @@ Feature: Scratch drawer
     Then the Scratch entry "mvn -B" should show it was copied
     And the Scratch entry "mvn -B" should not show it was copied
 
-  Scenario: The drawer can be widened and reset
-    When I open the Scratch drawer from the toolbar
-    Then the Scratch drawer should be 380 pixels wide
-    When I drag the Scratch drawer edge 200 pixels to the left
-    Then the Scratch drawer should be wider than 500 pixels
-    When I double-click the Scratch drawer edge
-    Then the Scratch drawer should be 380 pixels wide
+  Scenario: The Global Scratchpad can be widened and reset
+    When I open the Global Scratchpad from the toolbar
+    Then the Global Scratchpad should be 380 pixels wide
+    When I drag the Global Scratchpad edge 200 pixels to the left
+    Then the Global Scratchpad should be wider than 500 pixels
+    When I double-click the Global Scratchpad edge
+    Then the Global Scratchpad should be 380 pixels wide

@@ -22,13 +22,13 @@ export const RELEASES: Release[] = [
     "version": "1.53.0",
     "type": "latest",
     "date": "2026-11-02",
-    "headline": "Scratch Drawer",
-    "summary": "A quick-capture drawer for commands, links and keys, with secrets masked and encrypted.",
+    "headline": "Global Scratchpad",
+    "summary": "A quick-capture scratchpad for commands, links and keys, with secrets masked and encrypted.",
     "categories": [
       {
         "name": "New Features",
         "changes": [
-          "**Scratch drawer:** Paste text to save it as entries, one per command, link or note",
+          "**Global Scratchpad:** Paste text to save it as entries, one per command, link or note",
           "**Masked secrets:** Keys, tokens and passwords are detected, hidden and encrypted at rest",
           "**Click to copy:** Click an entry to copy it. Click a masked secret to copy only that value",
           "**Reveal:** Show a secret for 10 seconds. It hides again when you switch windows",
@@ -41,7 +41,7 @@ export const RELEASES: Release[] = [
         "name": "Improvements",
         "changes": [
           "**Clipboard clearing:** The clipboard is cleared 30 seconds after you copy a secret. You can turn this off",
-          "**Resizable width:** Drag the drawer edge to resize it. Double-click the edge to reset",
+          "**Resizable width:** Drag the panel edge to resize it. Double-click the edge to reset",
           "**Hover actions:** Row actions appear on hover, with extra actions in a menu",
           "**Clear all:** Delete every entry after a confirmation"
         ]

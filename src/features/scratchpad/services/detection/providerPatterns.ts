@@ -3,7 +3,7 @@ import { spansFromRegex } from "./spanUtils";
 
 /**
  * Well-known credential formats. Group 1 (or the whole match) is the secret.
- * Maintained locally for the Scratch drawer; intentionally independent of any
+ * Maintained locally for the Global Scratchpad; intentionally independent of any
  * tablet.
  */
 export const PROVIDER_PATTERNS: ReadonlyArray<{ id: string; regex: RegExp }> = [

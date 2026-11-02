@@ -3,7 +3,7 @@ const { When, Then } = require('@cucumber/cucumber');
 export { }; // Make this file a module to avoid global scope conflicts
 
 // Doc strings keep multi-line pastes readable in the feature file.
-When('I open the Scratch drawer from the toolbar', async function () {
+When('I open the Global Scratchpad from the toolbar', async function () {
   await this.scratchDrawer.openFromToolbar();
 });
 
@@ -23,7 +23,7 @@ When('I delete the Scratch entry containing {string}', async function (text: str
   await this.scratchDrawer.deleteEntryContaining(text);
 });
 
-When('I close the Scratch drawer with Escape', async function () {
+When('I close the Global Scratchpad with Escape', async function () {
   await this.scratchDrawer.close();
 });
 
@@ -62,11 +62,11 @@ When('I click the text of the Scratch entry {string}', async function (text: str
   await this.scratchDrawer.clickEntryText(text);
 });
 
-When('I drag the Scratch drawer edge {int} pixels to the left', async function (px: number) {
+When('I drag the Global Scratchpad edge {int} pixels to the left', async function (px: number) {
   await this.scratchDrawer.dragResizeHandleBy(-px);
 });
 
-When('I double-click the Scratch drawer edge', async function () {
+When('I double-click the Global Scratchpad edge', async function () {
   await this.scratchDrawer.resetWidthByDoubleClick();
 });
 
@@ -78,11 +78,11 @@ Then('the Scratch entry {string} should not show it was copied', async function 
   await this.scratchDrawer.expectEntryNotCopied(text);
 });
 
-Then('the Scratch drawer should be wider than {int} pixels', async function (px: number) {
+Then('the Global Scratchpad should be wider than {int} pixels', async function (px: number) {
   await this.scratchDrawer.expectDrawerWiderThan(px);
 });
 
-Then('the Scratch drawer should be {int} pixels wide', async function (px: number) {
+Then('the Global Scratchpad should be {int} pixels wide', async function (px: number) {
   await this.scratchDrawer.expectDrawerWidth(px);
 });
 
@@ -94,7 +94,7 @@ Then('Scratch should offer no reveal or mask controls', async function () {
   await this.scratchDrawer.expectNoRevealControls();
 });
 
-Then('the Scratch drawer should be {word}', async function (state: string) {
+Then('the Global Scratchpad should be {word}', async function (state: string) {
   await this.scratchDrawer.expectDrawerVisible(state === 'visible');
 });
 

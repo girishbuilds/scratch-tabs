@@ -138,7 +138,7 @@ export class ScratchTabsDB extends Dexie {
       canvasSessions: "tabId, updatedAt",
     });
 
-    // Version 8: Scratch Drawer. Encrypted entries and their key live in
+    // Version 8: Global Scratchpad. Encrypted entries and their key live in
     // dedicated tables so no tab/workspace code path (search, export, share,
     // broadcast) can read them.
     this.version(8).stores({

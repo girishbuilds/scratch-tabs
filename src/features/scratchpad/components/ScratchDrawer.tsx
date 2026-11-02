@@ -61,7 +61,7 @@ export const ScratchDrawer: React.FC = () => {
     <aside
       data-testid="scratch-drawer"
       role="complementary"
-      aria-label="Scratch Drawer"
+      aria-label="Global Scratchpad"
       style={{ width: resize.width }}
       className={`fixed bottom-0 right-0 top-8 z-40 flex max-w-full flex-col border-l border-base bg-surface-secondary shadow-xl ${
         resize.isDragging ? "select-none" : ""

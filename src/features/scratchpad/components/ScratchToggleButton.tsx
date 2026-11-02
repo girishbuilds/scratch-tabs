@@ -12,7 +12,7 @@ export const ScratchToggleButton: React.FC<ScratchToggleButtonProps> = ({ classN
     <button
       type="button"
       className={className}
-      title="Scratch (Cmd/Ctrl+Shift+Y)"
+      title="Global Scratchpad (Cmd/Ctrl+Shift+Y)"
       aria-pressed={isOpen}
       data-testid="icon-scratch"
       onClick={() => void useScratchpadStore.getState().toggle()}

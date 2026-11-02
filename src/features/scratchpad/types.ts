@@ -1,5 +1,5 @@
 /**
- * Scratch Drawer types.
+ * Global Scratchpad types.
  *
  * Persisted records only ever hold ciphertext. The in-memory view model
  * (`ScratchEntryView`) never contains secret values: secret spans are

@@ -47,7 +47,7 @@ describe("WelcomeScreen", () => {
       </BrowserRouter>,
     );
 
-  it("offers the Scratch drawer toggle in its toolbar", () => {
+  it("offers the Global Scratchpad toggle in its toolbar", () => {
     renderWelcomeScreen();
     expect(screen.getByTestId("tab-actions")).toHaveAttribute("data-show-scratch", "true");
   });
