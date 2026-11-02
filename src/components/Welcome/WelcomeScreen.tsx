@@ -123,6 +123,7 @@ export const WelcomeScreen: React.FC = () => {
       {/* Tab Actions Bar */}
       <div className="flex justify-end bg-surface h-8">
         <TabActions
+          showScratch
           onShowTabletSelector={() => setShowToolSelector(true)}
         />
       </div>

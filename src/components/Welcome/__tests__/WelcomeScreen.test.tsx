@@ -11,7 +11,9 @@ jest.mock("../../../stores", () => ({
 }));
 
 jest.mock("../../Tab/TabActions", () => ({
-  TabActions: () => <div data-testid="tab-actions" />,
+  TabActions: ({ showScratch }: { showScratch?: boolean }) => (
+    <div data-testid="tab-actions" data-show-scratch={String(Boolean(showScratch))} />
+  ),
 }));
 
 jest.mock("../../ToolSelector", () => ({
@@ -44,6 +46,11 @@ describe("WelcomeScreen", () => {
         <WelcomeScreen />
       </BrowserRouter>,
     );
+
+  it("offers the Scratch drawer toggle in its toolbar", () => {
+    renderWelcomeScreen();
+    expect(screen.getByTestId("tab-actions")).toHaveAttribute("data-show-scratch", "true");
+  });
 
   it("uses a dedicated scroll container for the welcome content", () => {
     renderWelcomeScreen();

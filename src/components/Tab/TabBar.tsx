@@ -130,6 +130,9 @@ export const TabBar: React.FC<TabBarProps> = ({
   );
 
   const isRightSide = side === "right";
+  // Window-level controls (menu, Scratch toggle) live on the right pane when
+  // split, otherwise on the only pane.
+  const showWindowControls = isRightSide ? splitView.isSplit : !splitView.isSplit;
   const tabIds = isRightSide ? splitView.rightTabs : splitView.leftTabs;
 
   const tabsKey = tabIds.join("-");
@@ -723,13 +726,12 @@ export const TabBar: React.FC<TabBarProps> = ({
         <div className="flex items-center space-x-1 pr-2">
           <TabActions
             side={side}
+            showScratch={showWindowControls}
             onShowTabletSelector={() => setShowToolSelector(!showToolSelector)}
             newTabButtonRef={newTabButtonRef}
           />
           {/* Only show WorkspaceSwitcher and HamburgerMenu on the right side when split, or on the left when not split */}
-          {(isRightSide ? splitView.isSplit : !splitView.isSplit) && (
-            <HamburgerMenu />
-          )}
+          {showWindowControls && <HamburgerMenu />}
         </div>
       </div>
 
