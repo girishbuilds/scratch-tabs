@@ -17,6 +17,9 @@ export class InMemoryScratchRepository implements ScratchRepository {
   async remove(ids: string[]): Promise<void> {
     ids.forEach((id) => this.records.delete(id));
   }
+  async clear(): Promise<void> {
+    this.records.clear();
+  }
 }
 
 export const newTestKey = (): Promise<CryptoKey> =>
@@ -59,6 +62,7 @@ export function createFakeScratchDb() {
       get: jest.fn(async (id: string) => entries.get(id)),
       bulkPut: jest.fn(async (rs: ScratchEntryRecord[]) => rs.forEach((r) => entries.set(r.id, r))),
       bulkDelete: jest.fn(async (ids: string[]) => ids.forEach((id) => entries.delete(id))),
+      clear: jest.fn(async () => entries.clear()),
     },
     scratchKeys: {
       get: jest.fn(async (id: string) => keys.get(id)),

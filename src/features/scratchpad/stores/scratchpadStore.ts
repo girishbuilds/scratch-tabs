@@ -1,7 +1,10 @@
 import { create } from "zustand";
 import type { ScratchListItem } from "../types";
 import { getPrimaryCopyText, getSecretValues } from "../services/blockSegmenter";
+import { sortEntries } from "../services/entryOrdering";
+import { createEntryGateway } from "../services/entryGateway";
 import { createPayloads } from "../services/ingestText";
+import { markRangeAsSecret, unmarkSecrets } from "../services/payloadEdits";
 import {
   openEntry,
   sealEntry,
@@ -9,7 +12,14 @@ import {
   toUnreadableView,
 } from "../services/scratchEntryCodec";
 import type { ScratchRepository } from "../services/scratchPersistence";
-import type { ScratchEntryRecord } from "../types";
+
+/** Thrown by anything that would expose plaintext while presenting. */
+export class PresentingModeError extends Error {
+  constructor() {
+    super("Hidden while presenting");
+    this.name = "PresentingModeError";
+  }
+}
 
 export interface ScratchpadDeps {
   repository: ScratchRepository;
@@ -31,6 +41,10 @@ export interface ScratchpadState {
   items: ScratchListItem[];
   notice: ScratchNotice | null;
   error: string | null;
+  /** Search text. Matched against non-secret text only. */
+  query: string;
+  /** Screen-share mode: nothing can be revealed or shown as plaintext. */
+  isPresenting: boolean;
 
   open: () => Promise<void>;
   close: () => void;
@@ -38,14 +52,23 @@ export interface ScratchpadState {
   addFromText: (raw: string) => Promise<void>;
   undoLastAdd: () => Promise<void>;
   remove: (id: string) => Promise<void>;
+  clearAll: () => Promise<void>;
+  setQuery: (query: string) => void;
+  setPresenting: (presenting: boolean) => void;
+  togglePin: (id: string) => Promise<void>;
+  /** Unmasks one false positive. */
+  markNotSecret: (id: string, secretIndex: number) => Promise<void>;
+  /** Masks a range the detectors missed. */
+  maskRange: (id: string, start: number, end: number) => Promise<void>;
   /** Decrypts and returns the secret values of an entry. Never stored in state. */
   revealSecrets: (id: string) => Promise<string[]>;
+  /** Decrypts one secret to copy it without revealing it. Allowed while presenting. */
+  getSecretValue: (id: string, secretIndex: number) => Promise<string>;
+  /** Decrypts the whole entry text for select-to-mask. */
+  getEditableText: (id: string) => Promise<string>;
   /** Decrypts and returns the text the primary Copy button should copy. */
   getCopyText: (id: string) => Promise<string>;
 }
-
-const byNewestThenBlockOrder = (a: ScratchListItem, b: ScratchListItem) =>
-  b.createdAt - a.createdAt || a.batchIndex - b.batchIndex;
 
 const errorMessage = (error: unknown, fallback: string): string =>
   error instanceof Error ? error.message : fallback;
@@ -55,13 +78,17 @@ export function createScratchpadStore(deps: ScratchpadDeps) {
   const now = deps.now ?? Date.now;
   const newId = deps.newId ?? (() => crypto.randomUUID());
 
-  const findRecord = async (id: string): Promise<ScratchEntryRecord> => {
-    const record = await repository.get(id);
-    if (!record) throw new Error("Entry not found");
-    return record;
-  };
+  const gateway = createEntryGateway({ repository, getKey, now });
+
+  const replaceItem = (item: ScratchListItem) => (state: ScratchpadState) => ({
+    items: sortEntries(state.items.map((current) => (current.id === item.id ? item : current))),
+  });
 
   return create<ScratchpadState>((set, get) => {
+    const assertNotPresenting = () => {
+      if (get().isPresenting) throw new PresentingModeError();
+    };
+
     const load = async () => {
       set({ status: "loading", error: null });
       try {
@@ -76,7 +103,7 @@ export function createScratchpadStore(deps: ScratchpadDeps) {
             }
           }),
         );
-        set({ items: items.sort(byNewestThenBlockOrder), status: "ready" });
+        set({ items: sortEntries(items), status: "ready" });
       } catch (error) {
         set({ status: "error", error: errorMessage(error, "Could not load Scratch") });
       }
@@ -88,13 +115,15 @@ export function createScratchpadStore(deps: ScratchpadDeps) {
       items: [],
       notice: null,
       error: null,
+      query: "",
+      isPresenting: false,
 
       open: async () => {
         set({ isOpen: true });
         await load();
       },
 
-      close: () => set({ isOpen: false, notice: null, error: null }),
+      close: () => set({ isOpen: false, notice: null, error: null, query: "" }),
 
       toggle: async () => {
         if (get().isOpen) get().close();
@@ -115,7 +144,7 @@ export function createScratchpadStore(deps: ScratchpadDeps) {
           await repository.putMany(records);
           const views = records.map((record, i) => toEntryView(record, payloads[i]));
           set((state) => ({
-            items: [...views, ...state.items].sort(byNewestThenBlockOrder),
+            items: sortEntries([...views, ...state.items]),
             notice: {
               addedIds: records.map((r) => r.id),
               maskedCount: payloads.filter((p) => p.secrets.length > 0).length,
@@ -146,15 +175,51 @@ export function createScratchpadStore(deps: ScratchpadDeps) {
         }));
       },
 
-      revealSecrets: async (id) => {
-        const payload = await openEntry(await getKey(), await findRecord(id));
-        return getSecretValues(payload);
+      clearAll: async () => {
+        await repository.clear();
+        set({ items: [], notice: null });
       },
 
-      getCopyText: async (id) => {
-        const payload = await openEntry(await getKey(), await findRecord(id));
-        return getPrimaryCopyText(payload);
+      setQuery: (query) => set({ query }),
+
+      setPresenting: (isPresenting) => set({ isPresenting }),
+
+      togglePin: async (id) => {
+        const item = get().items.find((candidate) => candidate.id === id);
+        if (!item) return;
+        const pinned = !item.pinned;
+        await gateway.setPinned(id, pinned);
+        set(replaceItem({ ...item, pinned }));
       },
+
+      markNotSecret: async (id, secretIndex) => {
+        const view = await gateway.edit(id, (payload) => unmarkSecrets(payload, [secretIndex]));
+        set(replaceItem(view));
+      },
+
+      maskRange: async (id, start, end) => {
+        assertNotPresenting();
+        const view = await gateway.edit(id, (payload) => markRangeAsSecret(payload, { start, end }));
+        set(replaceItem(view));
+      },
+
+      revealSecrets: async (id) => {
+        assertNotPresenting();
+        return getSecretValues(await gateway.readPayload(id));
+      },
+
+      getSecretValue: async (id, secretIndex) => {
+        const value = getSecretValues(await gateway.readPayload(id))[secretIndex];
+        if (value === undefined) throw new Error("Secret not found");
+        return value;
+      },
+
+      getEditableText: async (id) => {
+        assertNotPresenting();
+        return (await gateway.readPayload(id)).text;
+      },
+
+      getCopyText: async (id) => getPrimaryCopyText(await gateway.readPayload(id)),
     };
   });
 }

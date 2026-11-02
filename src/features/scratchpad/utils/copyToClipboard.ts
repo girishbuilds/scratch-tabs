@@ -7,3 +7,6 @@ export async function copyToClipboard(text: string): Promise<boolean> {
     return false;
   }
 }
+
+/** Empties the clipboard. Returns false if the browser refuses (e.g. page not focused). */
+export const clearClipboard = (): Promise<boolean> => copyToClipboard("");

@@ -30,6 +30,8 @@ export interface ScratchEntryRecord {
   updatedAt: number;
   /** Position of the block within the paste that created it (ties on createdAt). */
   batchIndex: number;
+  /** Plaintext on purpose: pinning is organisational metadata, not content. */
+  pinned?: boolean;
   iv: Uint8Array;
   ct: Uint8Array;
 }
@@ -53,6 +55,7 @@ export interface ScratchEntryView {
   segments: ScratchSegment[];
   createdAt: number;
   batchIndex: number;
+  pinned: boolean;
   secretCount: number;
 }
 
@@ -62,6 +65,7 @@ export interface ScratchUnreadableView {
   kind: "unreadable";
   createdAt: number;
   batchIndex: number;
+  pinned: boolean;
 }
 
 export type ScratchListItem = ScratchEntryView | ScratchUnreadableView;

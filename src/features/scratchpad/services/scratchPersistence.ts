@@ -6,6 +6,8 @@ export interface ScratchRepository {
   get(id: string): Promise<ScratchEntryRecord | undefined>;
   putMany(records: ScratchEntryRecord[]): Promise<void>;
   remove(ids: string[]): Promise<void>;
+  /** Deletes every entry. The encryption key is left alone. */
+  clear(): Promise<void>;
 }
 
 /** The slice of the Dexie database this feature needs (keeps it testable). */
@@ -15,6 +17,7 @@ export interface ScratchDb {
     get(id: string): Promise<ScratchEntryRecord | undefined>;
     bulkPut(records: ScratchEntryRecord[]): Promise<unknown>;
     bulkDelete(ids: string[]): Promise<void>;
+    clear(): Promise<void>;
   };
   scratchKeys: {
     get(id: string): Promise<ScratchKeyRecord | undefined>;
@@ -48,6 +51,10 @@ export class DexieScratchRepository implements ScratchRepository {
   async remove(ids: string[]): Promise<void> {
     if (ids.length === 0) return;
     await this.db.scratchEntries.bulkDelete(ids);
+  }
+
+  clear(): Promise<void> {
+    return this.db.scratchEntries.clear();
   }
 }
 

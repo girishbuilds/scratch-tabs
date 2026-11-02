@@ -33,6 +33,17 @@ export async function sealEntry(
   };
 }
 
+/** Re-encrypts an edited payload in place, keeping id, creation time and pin. */
+export async function resealEntry(
+  key: CryptoKey,
+  record: ScratchEntryRecord,
+  payload: ScratchPayload,
+  now: number,
+): Promise<ScratchEntryRecord> {
+  const { iv, ct } = await encryptPayload(key, record.id, payload);
+  return { ...record, updatedAt: now, iv, ct };
+}
+
 export function openEntry(
   key: CryptoKey,
   record: ScratchEntryRecord,
@@ -51,6 +62,7 @@ export function toEntryView(
     segments: buildSegments(payload),
     createdAt: record.createdAt,
     batchIndex: record.batchIndex,
+    pinned: record.pinned === true,
     secretCount: payload.secrets.length,
   };
 }
@@ -61,5 +73,6 @@ export function toUnreadableView(record: ScratchEntryRecord): ScratchUnreadableV
     kind: "unreadable",
     createdAt: record.createdAt,
     batchIndex: record.batchIndex,
+    pinned: record.pinned === true,
   };
 }

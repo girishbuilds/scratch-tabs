@@ -78,9 +78,110 @@ export class ScratchDrawerActions {
   }
 
   async deleteEntryContaining(text: string) {
-    const row = this.page.getByTestId('scratch-entry').filter({ hasText: text });
+    const row = this.entryContaining(text);
+    await row.getByTestId('scratch-more').click();
     await row.getByTestId('scratch-delete').click();
     await row.getByTestId('scratch-delete').click();
+  }
+
+  private entryContaining(text: string) {
+    return this.page.getByTestId('scratch-entry').filter({ hasText: text });
+  }
+
+  async search(text: string) {
+    await this.page.getByTestId('scratch-search').fill(text);
+  }
+
+  async pinEntryContaining(text: string) {
+    await this.entryContaining(text).getByTestId('scratch-pin').click();
+  }
+
+  async expectFirstEntryContains(text: string) {
+    await expect(this.page.getByTestId('scratch-entry').first()).toContainText(text);
+  }
+
+  async unmaskFirstSecret() {
+    await this.page.getByTestId('scratch-reveal').first().click();
+    await this.page.getByTestId('scratch-not-secret').first().click();
+  }
+
+  async setPresenting(on: boolean) {
+    const button = this.page.getByTestId('scratch-presenting');
+    if ((await button.getAttribute('aria-pressed')) !== String(on)) await button.click();
+  }
+
+  async expectNoRevealControls() {
+    await expect(this.page.getByTestId('scratch-reveal')).toHaveCount(0);
+    await this.page.getByTestId('scratch-more').first().click();
+    await expect(this.page.getByTestId('scratch-mask-mode')).toHaveCount(0);
+  }
+
+  async clearAll() {
+    await this.page.getByTestId('scratch-settings').click();
+    await this.page.getByTestId('scratch-clear-all').click();
+    await this.page
+      .getByTestId('confirmation-dialog')
+      .getByRole('button', { name: 'Delete all' })
+      .click();
+  }
+
+  /** Selects `selected` inside the raw-text editor of the entry containing `entryText`, then masks it. */
+  async maskTextInEntry(entryText: string, selected: string) {
+    const row = this.entryContaining(entryText);
+    await row.getByTestId('scratch-more').click();
+    await row.getByTestId('scratch-mask-mode').click();
+    await row.getByTestId('scratch-mask-text').evaluate((el, value) => {
+      const area = el as HTMLTextAreaElement;
+      const start = area.value.indexOf(value);
+      // React only reports selection changes for the focused element.
+      area.focus();
+      area.setSelectionRange(start, start + value.length);
+      document.dispatchEvent(new Event('selectionchange'));
+    }, selected);
+    await row.getByTestId('scratch-mask-selection').click();
+  }
+
+  /** Clicks the text of the entry itself, away from any control. */
+  async clickEntryText(text: string) {
+    await this.entryContaining(text).locator('div.font-mono').click();
+  }
+
+  async expectEntryCopied(text: string) {
+    await expect(this.entryContaining(text).getByTestId('scratch-copied-tick')).toBeVisible();
+  }
+
+  async expectEntryNotCopied(text: string) {
+    await expect(this.entryContaining(text).getByTestId('scratch-copied-tick')).toHaveCount(0);
+  }
+
+  async drawerWidth(): Promise<number> {
+    const box = await this.drawer.boundingBox();
+    expect(box).not.toBeNull();
+    return box!.width;
+  }
+
+  async dragResizeHandleBy(deltaX: number) {
+    const handle = this.page.getByTestId('scratch-resize');
+    const box = await handle.boundingBox();
+    expect(box).not.toBeNull();
+    const x = box!.x + box!.width / 2;
+    const y = box!.y + box!.height / 2;
+    await this.page.mouse.move(x, y);
+    await this.page.mouse.down();
+    await this.page.mouse.move(x + deltaX, y, { steps: 5 });
+    await this.page.mouse.up();
+  }
+
+  async resetWidthByDoubleClick() {
+    await this.page.getByTestId('scratch-resize').dblclick();
+  }
+
+  async expectDrawerWiderThan(px: number) {
+    await expect.poll(() => this.drawerWidth()).toBeGreaterThan(px);
+  }
+
+  async expectDrawerWidth(px: number) {
+    await expect.poll(() => this.drawerWidth()).toBe(px);
   }
 
   async close() {

@@ -1,5 +1,6 @@
 import {
   openEntry,
+  resealEntry,
   sealEntry,
   toEntryView,
   toUnreadableView,
@@ -59,6 +60,33 @@ describe("scratchEntryCodec", () => {
       kind: "unreadable",
       createdAt: 1000,
       batchIndex: 2,
+      pinned: false,
+    });
+  });
+
+  it("carries the pin state into both kinds of view", async () => {
+    const record = { ...(await sealEntry(await newTestKey(), meta, payload)), pinned: true };
+    expect(toEntryView(record, payload).pinned).toBe(true);
+    expect(toUnreadableView(record).pinned).toBe(true);
+  });
+
+  describe("resealEntry", () => {
+    const edited = buildPayload("Prod-Key: plain", []);
+
+    it("replaces the ciphertext but keeps id, creation time, order and pin", async () => {
+      const key = await newTestKey();
+      const original = { ...(await sealEntry(key, meta, payload)), pinned: true };
+      const updated = await resealEntry(key, original, edited, 9000);
+      expect(updated).toMatchObject({ id: "e1", createdAt: 1000, batchIndex: 2, pinned: true, updatedAt: 9000 });
+      expect(updated.ct).not.toEqual(original.ct);
+      expect(await openEntry(key, updated)).toEqual(edited);
+    });
+
+    it("uses a fresh IV for every encryption", async () => {
+      const key = await newTestKey();
+      const original = await sealEntry(key, meta, payload);
+      const updated = await resealEntry(key, original, payload, 2);
+      expect(updated.iv).not.toEqual(original.iv);
     });
   });
 });

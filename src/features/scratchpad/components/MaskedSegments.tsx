@@ -11,6 +11,8 @@ interface MaskedSegmentsProps {
   revealed?: string[] | null;
   /** If provided, each mask is a button that copies that one secret. */
   onCopySecret?: (index: number) => Promise<boolean>;
+  /** If provided, a revealed secret offers "Not a secret" to unmask a false positive. */
+  onNotSecret?: (index: number) => void;
 }
 
 /**
@@ -22,6 +24,7 @@ export const MaskedSegments: React.FC<MaskedSegmentsProps> = ({
   segments,
   revealed,
   onCopySecret,
+  onNotSecret,
 }) => {
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [showCopied, flashCopied] = useTransientFlag();
@@ -41,9 +44,23 @@ export const MaskedSegments: React.FC<MaskedSegmentsProps> = ({
         const value = revealed?.[segment.index];
         if (value !== undefined) {
           return (
-            <span key={i} data-testid="scratch-secret-revealed" className="text-warning">
-              {value}
-            </span>
+            <React.Fragment key={i}>
+              <span data-testid="scratch-secret-revealed" className="text-warning">
+                {value}
+              </span>
+              {onNotSecret && (
+                <button
+                  type="button"
+                  data-testid="scratch-not-secret"
+                  aria-label="Not a secret"
+                  title="Not a secret: stop masking this"
+                  className="ml-1 rounded px-1 font-sans text-[10px] text-secondary underline hover:text-main"
+                  onClick={() => onNotSecret(segment.index)}
+                >
+                  not a secret
+                </button>
+              )}
+            </React.Fragment>
           );
         }
 

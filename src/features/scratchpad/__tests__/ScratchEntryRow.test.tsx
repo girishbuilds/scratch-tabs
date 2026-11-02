@@ -1,147 +1,131 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { ScratchEntryRow } from "../components/ScratchEntryRow";
-import { MASK_TEXT } from "../components/MaskedSegments";
-import type { ScratchEntryView, ScratchListItem } from "../types";
-import * as clipboard from "../utils/copyToClipboard";
+import type { ScratchListItem } from "../types";
+import { createActions, plainEntry } from "../testing/entryFixtures";
 
-const secretEntry: ScratchEntryView = {
-  id: "e1",
-  kind: "secret",
-  copyTarget: "value",
-  createdAt: 1,
-  batchIndex: 0,
-  secretCount: 1,
-  segments: [
-    { type: "text", text: "UAT key: " },
-    { type: "secret", index: 0 },
-  ],
-};
-const plainEntry: ScratchEntryView = {
-  id: "e2",
-  kind: "command",
-  copyTarget: "all",
-  createdAt: 1,
-  batchIndex: 0,
-  secretCount: 0,
-  segments: [{ type: "text", text: "mvn clean verify" }],
-};
-
-function renderRow(item: ScratchListItem, overrides: Partial<React.ComponentProps<typeof ScratchEntryRow>> = {}) {
-  const props = {
-    item,
-    onRemove: jest.fn(),
-    loadSecrets: jest.fn().mockResolvedValue(["3knd8dsuhds89hds"]),
-    loadCopyText: jest.fn().mockResolvedValue("copied-text"),
-    ...overrides,
-  };
-  render(<ul><ScratchEntryRow {...props} /></ul>);
-  return props;
+function renderRow(item: ScratchListItem, presenting = false) {
+  const actions = createActions();
+  render(
+    <ul>
+      <ScratchEntryRow item={item} actions={actions} presenting={presenting} />
+    </ul>,
+  );
+  return actions;
 }
 
+const openMenu = () => fireEvent.click(screen.getByTestId("scratch-more"));
+
 describe("ScratchEntryRow", () => {
-  afterEach(() => jest.restoreAllMocks());
-
-  it("shows masked secrets and the kind", () => {
-    renderRow(secretEntry);
-    expect(screen.getByTestId("scratch-entry")).toHaveAttribute("data-kind", "secret");
-    expect(screen.getByTestId("scratch-entry").textContent).toContain(`UAT key: ${MASK_TEXT}`);
+  it("exposes the entry kind and pin state to tests and assistive tech", () => {
+    renderRow({ ...plainEntry, pinned: true });
+    const row = screen.getByTestId("scratch-entry");
+    expect(row).toHaveAttribute("data-kind", "command");
+    expect(row).toHaveAttribute("data-pinned", "true");
   });
 
-  it("offers a reveal control only when the entry has secrets", () => {
-    renderRow(plainEntry);
-    expect(screen.queryByTestId("scratch-reveal")).toBeNull();
-  });
-
-  it("reveals the decrypted value on demand and hides it again", async () => {
-    const { loadSecrets } = renderRow(secretEntry);
-    fireEvent.click(screen.getByTestId("scratch-reveal"));
-    expect(await screen.findByTestId("scratch-secret-revealed")).toHaveTextContent("3knd8dsuhds89hds");
-    expect(loadSecrets).toHaveBeenCalledWith("e1");
-    expect(screen.getByLabelText("Hide secret")).toBeInTheDocument();
-
-    fireEvent.click(screen.getByTestId("scratch-reveal"));
-    await waitFor(() => expect(screen.queryByTestId("scratch-secret-revealed")).toBeNull());
-    expect(screen.getByTestId("scratch-entry").textContent).not.toContain("3knd8dsuhds89hds");
-  });
-
-  it("copies the primary text without revealing the secret", async () => {
-    const write = jest.spyOn(clipboard, "copyToClipboard").mockResolvedValue(true);
-    const { loadCopyText } = renderRow(secretEntry);
-    await act(async () => {
-      fireEvent.click(screen.getByTestId("scratch-copy"));
+  describe("toolbar", () => {
+    it("is hidden at rest and revealed on hover or focus", () => {
+      renderRow(plainEntry);
+      const toolbar = screen.getByTestId("scratch-toolbar");
+      expect(toolbar).toHaveClass("opacity-0", "group-hover:opacity-100", "focus-within:opacity-100");
     });
-    expect(loadCopyText).toHaveBeenCalledWith("e1");
-    expect(write).toHaveBeenCalledWith("copied-text");
-    expect(screen.queryByTestId("scratch-secret-revealed")).toBeNull();
-  });
 
-  it("says what the copy button copies", () => {
-    renderRow(secretEntry);
-    expect(screen.getByTestId("scratch-copy")).toHaveAttribute("aria-label", "Copy value");
-  });
-
-  it("says it copies the whole entry when it is not just a labelled value", () => {
-    renderRow(plainEntry);
-    expect(screen.getByTestId("scratch-copy")).toHaveAttribute("aria-label", "Copy entry");
-  });
-
-  it("copies only the clicked secret, without revealing it", async () => {
-    const write = jest.spyOn(clipboard, "copyToClipboard").mockResolvedValue(true);
-    const { loadSecrets } = renderRow(secretEntry, {
-      loadSecrets: jest.fn().mockResolvedValue(["3knd8dsuhds89hds"]),
+    it("stays visible while its menu is open", () => {
+      renderRow(plainEntry);
+      openMenu();
+      expect(screen.getByTestId("scratch-toolbar")).toHaveClass("opacity-100");
+      expect(screen.getByTestId("scratch-toolbar")).not.toHaveClass("opacity-0");
     });
-    await act(async () => {
-      fireEvent.click(screen.getByTestId("scratch-mask"));
+
+    it("keeps Mask text and Delete out of the toolbar until the menu is opened", () => {
+      renderRow(plainEntry);
+      expect(screen.queryByTestId("scratch-delete")).toBeNull();
+      expect(screen.queryByTestId("scratch-mask-mode")).toBeNull();
+      openMenu();
+      expect(screen.getByTestId("scratch-delete")).toBeInTheDocument();
+      expect(screen.getByTestId("scratch-mask-mode")).toBeInTheDocument();
     });
-    expect(loadSecrets).toHaveBeenCalledWith("e1");
-    expect(write).toHaveBeenCalledWith("3knd8dsuhds89hds");
-    expect(screen.queryByTestId("scratch-secret-revealed")).toBeNull();
   });
 
-  it("does not copy anything if the secret can no longer be read", async () => {
-    const write = jest.spyOn(clipboard, "copyToClipboard").mockResolvedValue(true);
-    renderRow(secretEntry, { loadSecrets: jest.fn().mockResolvedValue([]) });
-    await act(async () => {
-      fireEvent.click(screen.getByTestId("scratch-mask"));
+  describe("delete", () => {
+    it("requires a second click", () => {
+      const actions = renderRow(plainEntry);
+      openMenu();
+      const item = screen.getByTestId("scratch-delete");
+      fireEvent.click(item);
+      expect(actions.remove).not.toHaveBeenCalled();
+      expect(item).toHaveAttribute("aria-label", "Confirm delete");
+      expect(item).toHaveTextContent("Click again to delete");
+      fireEvent.click(item);
+      expect(actions.remove).toHaveBeenCalledWith("e2");
     });
-    expect(write).not.toHaveBeenCalled();
-  });
 
-  it("does not flash copied feedback when the clipboard write fails", async () => {
-    jest.spyOn(clipboard, "copyToClipboard").mockResolvedValue(false);
-    renderRow(plainEntry);
-    await act(async () => {
-      fireEvent.click(screen.getByTestId("scratch-copy"));
+    it("forgets a pending confirmation when the menu closes", () => {
+      const actions = renderRow(plainEntry);
+      openMenu();
+      fireEvent.click(screen.getByTestId("scratch-delete"));
+      openMenu();
+      openMenu();
+      const item = screen.getByTestId("scratch-delete");
+      expect(item).toHaveAttribute("aria-label", "Delete entry");
+      fireEvent.click(item);
+      expect(actions.remove).not.toHaveBeenCalled();
     });
-    expect(screen.getByTestId("scratch-copy").querySelector("svg.lucide-check")).toBeNull();
   });
 
-  it("requires a second click to delete", () => {
-    const { onRemove } = renderRow(plainEntry);
-    const button = screen.getByTestId("scratch-delete");
-    fireEvent.click(button);
-    expect(onRemove).not.toHaveBeenCalled();
-    expect(button).toHaveAttribute("aria-label", "Confirm delete");
-    fireEvent.click(button);
-    expect(onRemove).toHaveBeenCalledWith("e2");
+  describe("pinning", () => {
+    it("offers to pin an unpinned entry and shows no marker", () => {
+      const actions = renderRow(plainEntry);
+      const button = screen.getByTestId("scratch-pin");
+      expect(button).toHaveAttribute("aria-label", "Pin entry");
+      expect(button).toHaveAttribute("aria-pressed", "false");
+      expect(screen.queryByTestId("scratch-pinned-marker")).toBeNull();
+      fireEvent.click(button);
+      expect(actions.togglePin).toHaveBeenCalledWith("e2");
+    });
+
+    it("offers to unpin a pinned entry and keeps a marker visible at rest", () => {
+      renderRow({ ...plainEntry, pinned: true });
+      const button = screen.getByTestId("scratch-pin");
+      expect(button).toHaveAttribute("aria-label", "Unpin entry");
+      expect(button).toHaveAttribute("aria-pressed", "true");
+      expect(screen.getByTestId("scratch-pinned-marker")).toBeInTheDocument();
+    });
   });
 
-  it("cancels a pending delete when the button loses focus", () => {
-    const { onRemove } = renderRow(plainEntry);
-    const button = screen.getByTestId("scratch-delete");
-    fireEvent.click(button);
-    fireEvent.blur(button);
-    expect(button).toHaveAttribute("aria-label", "Delete entry");
-    fireEvent.click(button);
-    expect(onRemove).not.toHaveBeenCalled();
-  });
+  describe("unreadable entries", () => {
+    const unreadable: ScratchListItem = {
+      id: "bad",
+      kind: "unreadable",
+      createdAt: 1,
+      batchIndex: 0,
+      pinned: false,
+    };
 
-  it("explains unreadable entries and still allows deleting them", () => {
-    const { onRemove } = renderRow({ id: "bad", kind: "unreadable", createdAt: 1, batchIndex: 0 });
-    expect(screen.getByText(/can no longer be decrypted/i)).toBeInTheDocument();
-    expect(screen.queryByTestId("scratch-copy")).toBeNull();
-    fireEvent.click(screen.getByTestId("scratch-delete"));
-    fireEvent.click(screen.getByTestId("scratch-delete"));
-    expect(onRemove).toHaveBeenCalledWith("bad");
+    it("explains why and offers no copy, reveal or mask", () => {
+      renderRow(unreadable);
+      expect(screen.getByText(/can no longer be decrypted/i)).toBeInTheDocument();
+      expect(screen.queryByTestId("scratch-copy")).toBeNull();
+      expect(screen.queryByTestId("scratch-reveal")).toBeNull();
+      openMenu();
+      expect(screen.queryByTestId("scratch-mask-mode")).toBeNull();
+    });
+
+    it("does not copy when clicked", () => {
+      const actions = renderRow(unreadable);
+      fireEvent.click(screen.getByTestId("scratch-entry"));
+      expect(actions.getCopyText).not.toHaveBeenCalled();
+      expect(screen.getByTestId("scratch-entry")).not.toHaveAttribute("title");
+    });
+
+    it("can still be pinned and deleted", () => {
+      const actions = renderRow(unreadable);
+      fireEvent.click(screen.getByTestId("scratch-pin"));
+      expect(actions.togglePin).toHaveBeenCalledWith("bad");
+      openMenu();
+      fireEvent.click(screen.getByTestId("scratch-delete"));
+      fireEvent.click(screen.getByTestId("scratch-delete"));
+      expect(actions.remove).toHaveBeenCalledWith("bad");
+    });
   });
 });

@@ -28,6 +28,16 @@ describe("DexieScratchRepository", () => {
     expect((await repo.list()).map((r) => r.id)).toEqual(["b"]);
   });
 
+  it("clears every entry but leaves the key alone", async () => {
+    const { db, keys } = createFakeScratchDb();
+    const repo = new DexieScratchRepository(db);
+    keys.set(SCRATCH_KEY_ID, { id: SCRATCH_KEY_ID, key: await newTestKey() });
+    await repo.putMany([record("a"), record("b")]);
+    await repo.clear();
+    expect(await repo.list()).toEqual([]);
+    expect(keys.has(SCRATCH_KEY_ID)).toBe(true);
+  });
+
   it("skips the database for empty batches", async () => {
     const { db } = createFakeScratchDb();
     const repo = new DexieScratchRepository(db);

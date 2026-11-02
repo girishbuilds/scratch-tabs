@@ -1,4 +1,4 @@
-import { createScratchpadStore } from "../stores/scratchpadStore";
+import { PresentingModeError, createScratchpadStore } from "../stores/scratchpadStore";
 import {
   FIXTURES,
   InMemoryScratchRepository,
@@ -21,6 +21,8 @@ async function setup(options: { getKey?: () => Promise<CryptoKey>; start?: numbe
   return { store, repository, key, state: () => store.getState() };
 }
 
+/** One entry (an indented line continues the previous one) holding two secrets. */
+const TWO_SECRETS = `${FIXTURES.uatKeyLine}\n  ${FIXTURES.prodKeyLine}`;
 const PASTE = `${FIXTURES.uatKeyLine}\n${FIXTURES.prodKeyLine}\n\n${FIXTURES.mvn}`;
 
 describe("scratchpadStore", () => {
@@ -201,6 +203,210 @@ describe("scratchpadStore", () => {
       const { state } = await setup();
       await expect(state().revealSecrets("nope")).rejects.toThrow("Entry not found");
       await expect(state().getCopyText("nope")).rejects.toThrow("Entry not found");
+    });
+  });
+
+  describe("clearAll", () => {
+    it("deletes every entry from storage and state", async () => {
+      const { state, repository } = await setup();
+      await state().addFromText(PASTE);
+      await state().clearAll();
+      expect(state().items).toEqual([]);
+      expect(repository.records.size).toBe(0);
+      expect(state().notice).toBeNull();
+    });
+  });
+
+  describe("togglePin", () => {
+    it("pins an entry above newer ones and persists it as plaintext metadata", async () => {
+      const { state, repository } = await setup();
+      await state().addFromText(FIXTURES.todo);
+      await state().addFromText(FIXTURES.mvn);
+      expect(state().items[0].id).toBe("id-2");
+      await state().togglePin("id-1");
+      expect(state().items.map((i) => [i.id, i.pinned])).toEqual([["id-1", true], ["id-2", false]]);
+      expect(repository.records.get("id-1")?.pinned).toBe(true);
+    });
+
+    it("unpins on the second toggle and returns to chronological order", async () => {
+      const { state, repository } = await setup();
+      await state().addFromText(FIXTURES.todo);
+      await state().addFromText(FIXTURES.mvn);
+      await state().togglePin("id-1");
+      await state().togglePin("id-1");
+      expect(state().items.map((i) => i.id)).toEqual(["id-2", "id-1"]);
+      expect(repository.records.get("id-1")?.pinned).toBe(false);
+    });
+
+    it("keeps pins across reloads", async () => {
+      const { state } = await setup();
+      await state().addFromText(FIXTURES.todo);
+      await state().addFromText(FIXTURES.mvn);
+      await state().togglePin("id-1");
+      state().close();
+      await state().open();
+      expect(state().items[0]).toMatchObject({ id: "id-1", pinned: true });
+    });
+
+    it("does not touch the secrets of a pinned entry", async () => {
+      const { state } = await setup();
+      await state().addFromText(FIXTURES.uatKeyLine);
+      await state().togglePin("id-1");
+      expect(await state().revealSecrets("id-1")).toEqual([FIXTURES.uatKeyValue]);
+    });
+
+    it("ignores an unknown id", async () => {
+      const { state, repository } = await setup();
+      const put = jest.spyOn(repository, "putMany");
+      await state().togglePin("nope");
+      expect(put).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("markNotSecret", () => {
+    it("unmasks a false positive in state and in storage", async () => {
+      const { state, key, repository } = await setup();
+      await state().addFromText(FIXTURES.uatKeyLine);
+      await state().markNotSecret("id-1", 0);
+      expect(state().items[0]).toMatchObject({ kind: "note", secretCount: 0 });
+      expect(await state().revealSecrets("id-1")).toEqual([]);
+      const { openEntry } = await import("../services/scratchEntryCodec");
+      const stored = await openEntry(key, repository.records.get("id-1")!);
+      expect(stored.text).toBe(FIXTURES.uatKeyLine);
+      expect(stored.secrets).toEqual([]);
+    });
+
+    it("only unmasks the chosen secret", async () => {
+      const { state } = await setup();
+      await state().addFromText(TWO_SECRETS);
+      expect(await state().revealSecrets("id-1")).toEqual([FIXTURES.uatKeyValue, FIXTURES.prodKeyValue]);
+      await state().markNotSecret("id-1", 0);
+      expect(await state().revealSecrets("id-1")).toEqual([FIXTURES.prodKeyValue]);
+    });
+
+    it("keeps the entry's place in the list and its pin", async () => {
+      const { state } = await setup();
+      await state().addFromText(FIXTURES.uatKeyLine);
+      await state().addFromText(FIXTURES.mvn);
+      await state().togglePin("id-1");
+      await state().markNotSecret("id-1", 0);
+      expect(state().items[0]).toMatchObject({ id: "id-1", pinned: true });
+    });
+
+    it("never puts the value into state", async () => {
+      const { state } = await setup();
+      await state().addFromText(TWO_SECRETS);
+      await state().markNotSecret("id-1", 0);
+      expect(JSON.stringify(state().items)).not.toContain(FIXTURES.prodKeyValue);
+    });
+
+    it("rejects for an unknown entry", async () => {
+      const { state } = await setup();
+      await expect(state().markNotSecret("nope", 0)).rejects.toThrow("Entry not found");
+    });
+  });
+
+  describe("maskRange", () => {
+    const text = "deploy pw is plainword now";
+    const start = text.indexOf("plainword");
+
+    it("masks a range the detectors missed", async () => {
+      const { state } = await setup();
+      await state().addFromText(text);
+      expect(state().items[0]).toMatchObject({ kind: "note", secretCount: 0 });
+      await state().maskRange("id-1", start, start + "plainword".length);
+      expect(state().items[0]).toMatchObject({ kind: "secret", secretCount: 1 });
+      expect(await state().revealSecrets("id-1")).toEqual(["plainword"]);
+      expect(JSON.stringify(state().items)).not.toContain("plainword");
+    });
+
+    it("is blocked while presenting", async () => {
+      const { state } = await setup();
+      await state().addFromText(text);
+      state().setPresenting(true);
+      await expect(state().maskRange("id-1", start, start + 3)).rejects.toBeInstanceOf(PresentingModeError);
+      expect(state().items[0].kind).toBe("note");
+    });
+
+    it("rejects for an unknown entry", async () => {
+      const { state } = await setup();
+      await expect(state().maskRange("nope", 0, 1)).rejects.toThrow("Entry not found");
+    });
+  });
+
+  describe("getSecretValue", () => {
+    it("decrypts one secret by index", async () => {
+      const { state } = await setup();
+      await state().addFromText(`${FIXTURES.uatKeyLine}`);
+      expect(await state().getSecretValue("id-1", 0)).toBe(FIXTURES.uatKeyValue);
+    });
+
+    it("rejects for an index that does not exist", async () => {
+      const { state } = await setup();
+      await state().addFromText(FIXTURES.uatKeyLine);
+      await expect(state().getSecretValue("id-1", 5)).rejects.toThrow("Secret not found");
+    });
+
+    it("still works while presenting, so a secret can be copied without being shown", async () => {
+      const { state } = await setup();
+      await state().addFromText(FIXTURES.uatKeyLine);
+      state().setPresenting(true);
+      expect(await state().getSecretValue("id-1", 0)).toBe(FIXTURES.uatKeyValue);
+      expect(await state().getCopyText("id-1")).toBe(FIXTURES.uatKeyValue);
+    });
+  });
+
+  describe("getEditableText", () => {
+    it("returns the full plaintext of an entry", async () => {
+      const { state } = await setup();
+      await state().addFromText(FIXTURES.uatKeyLine);
+      expect(await state().getEditableText("id-1")).toBe(FIXTURES.uatKeyLine);
+    });
+  });
+
+  describe("presenting mode", () => {
+    it("is off by default and can be toggled", async () => {
+      const { state } = await setup();
+      expect(state().isPresenting).toBe(false);
+      state().setPresenting(true);
+      expect(state().isPresenting).toBe(true);
+      state().setPresenting(false);
+      expect(state().isPresenting).toBe(false);
+    });
+
+    it("refuses to reveal secrets or return plaintext text", async () => {
+      const { state } = await setup();
+      await state().addFromText(FIXTURES.uatKeyLine);
+      state().setPresenting(true);
+      await expect(state().revealSecrets("id-1")).rejects.toBeInstanceOf(PresentingModeError);
+      await expect(state().getEditableText("id-1")).rejects.toThrow("Hidden while presenting");
+    });
+
+    it("allows revealing again once presenting stops", async () => {
+      const { state } = await setup();
+      await state().addFromText(FIXTURES.uatKeyLine);
+      state().setPresenting(true);
+      state().setPresenting(false);
+      expect(await state().revealSecrets("id-1")).toEqual([FIXTURES.uatKeyValue]);
+    });
+
+    it("stays on when the drawer is closed and reopened", async () => {
+      const { state } = await setup();
+      state().setPresenting(true);
+      state().close();
+      await state().open();
+      expect(state().isPresenting).toBe(true);
+    });
+  });
+
+  describe("search query", () => {
+    it("starts empty, can be set, and is cleared on close", async () => {
+      const { state } = await setup();
+      expect(state().query).toBe("");
+      state().setQuery("mvn");
+      expect(state().query).toBe("mvn");
+      state().close();
+      expect(state().query).toBe("");
     });
   });
 

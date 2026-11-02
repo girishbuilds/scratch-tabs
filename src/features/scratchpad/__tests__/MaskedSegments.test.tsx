@@ -94,3 +94,24 @@ describe("MaskedSegments click-to-copy", () => {
     expect(screen.getAllByTestId("scratch-secret-revealed")).toHaveLength(2);
   });
 });
+
+describe("MaskedSegments not-a-secret", () => {
+  it("offers it next to a revealed secret only when a handler is provided", () => {
+    const { rerender } = render(<MaskedSegments segments={segments} revealed={["abc", "def"]} />);
+    expect(screen.queryByTestId("scratch-not-secret")).toBeNull();
+    rerender(<MaskedSegments segments={segments} revealed={["abc", "def"]} onNotSecret={jest.fn()} />);
+    expect(screen.getAllByTestId("scratch-not-secret")).toHaveLength(2);
+  });
+
+  it("does not offer it while a secret is masked", () => {
+    render(<MaskedSegments segments={segments} onNotSecret={jest.fn()} />);
+    expect(screen.queryByTestId("scratch-not-secret")).toBeNull();
+  });
+
+  it("reports which secret was unmasked", () => {
+    const onNotSecret = jest.fn();
+    render(<MaskedSegments segments={segments} revealed={["abc", "def"]} onNotSecret={onNotSecret} />);
+    fireEvent.click(screen.getAllByTestId("scratch-not-secret")[1]);
+    expect(onNotSecret).toHaveBeenCalledWith(1);
+  });
+});

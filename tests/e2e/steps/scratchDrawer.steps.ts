@@ -31,6 +31,69 @@ When('I reload the page', async function () {
   await this.scratchDrawer.reload();
 });
 
+When('I search Scratch for {string}', async function (text: string) {
+  await this.scratchDrawer.search(text);
+});
+
+When('I pin the Scratch entry containing {string}', async function (text: string) {
+  await this.scratchDrawer.pinEntryContaining(text);
+});
+
+When('I mark the first Scratch secret as not a secret', async function () {
+  await this.scratchDrawer.unmaskFirstSecret();
+});
+
+When('I turn Scratch presenting mode {word}', async function (state: string) {
+  await this.scratchDrawer.setPresenting(state === 'on');
+});
+
+When('I clear all Scratch entries', async function () {
+  await this.scratchDrawer.clearAll();
+});
+
+When(
+  'I mask {string} in the Scratch entry containing {string}',
+  async function (selected: string, entryText: string) {
+    await this.scratchDrawer.maskTextInEntry(entryText, selected);
+  },
+);
+
+When('I click the text of the Scratch entry {string}', async function (text: string) {
+  await this.scratchDrawer.clickEntryText(text);
+});
+
+When('I drag the Scratch drawer edge {int} pixels to the left', async function (px: number) {
+  await this.scratchDrawer.dragResizeHandleBy(-px);
+});
+
+When('I double-click the Scratch drawer edge', async function () {
+  await this.scratchDrawer.resetWidthByDoubleClick();
+});
+
+Then('the Scratch entry {string} should show it was copied', async function (text: string) {
+  await this.scratchDrawer.expectEntryCopied(text);
+});
+
+Then('the Scratch entry {string} should not show it was copied', async function (text: string) {
+  await this.scratchDrawer.expectEntryNotCopied(text);
+});
+
+Then('the Scratch drawer should be wider than {int} pixels', async function (px: number) {
+  await this.scratchDrawer.expectDrawerWiderThan(px);
+});
+
+Then('the Scratch drawer should be {int} pixels wide', async function (px: number) {
+  await this.scratchDrawer.expectDrawerWidth(px);
+});
+
+Then('the first Scratch entry should contain {string}', async function (text: string) {
+  await this.scratchDrawer.expectFirstEntryContains(text);
+});
+
+Then('Scratch should offer no reveal or mask controls', async function () {
+  await this.scratchDrawer.expectNoRevealControls();
+});
+
 Then('the Scratch drawer should be {word}', async function (state: string) {
   await this.scratchDrawer.expectDrawerVisible(state === 'visible');
 });

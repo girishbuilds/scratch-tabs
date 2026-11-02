@@ -1,9 +1,16 @@
-import React, { useLayoutEffect, useRef } from "react";
-import { ShieldCheck, X } from "lucide-react";
+import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useDrawerResize } from "../hooks/useDrawerResize";
 import { useScratchHotkey } from "../hooks/useScratchHotkey";
+import { filterEntries } from "../services/searchEntries";
 import { useScratchpadStore } from "../stores/useScratchpadStore";
+import { useScratchSettingsStore } from "../stores/scratchSettingsStore";
+import { ConfirmationDialog } from "../../../components/Tab/ConfirmationDialog";
+import type { ScratchEntryActions } from "./entryActions";
 import { ScratchComposer } from "./ScratchComposer";
 import { ScratchEntryRow } from "./ScratchEntryRow";
+import { ScratchHeader } from "./ScratchHeader";
+import { ScratchResizeHandle } from "./ScratchResizeHandle";
+import { ScratchSearch } from "./ScratchSearch";
 
 /**
  * Restores focus to whatever had it (e.g. the editor) when the drawer closes.
@@ -20,45 +27,66 @@ function useRestoreFocus(isOpen: boolean) {
 }
 
 export const ScratchDrawer: React.FC = () => {
-  const { isOpen, status, items, notice, error } = useScratchpadStore();
-  const { toggle, close, addFromText, undoLastAdd, remove, revealSecrets, getCopyText } =
-    useScratchpadStore.getState();
+  const { isOpen, status, items, notice, error, query, isPresenting } = useScratchpadStore();
+  const { clipboardAutoClear, setClipboardAutoClear, drawerWidth, setDrawerWidth } =
+    useScratchSettingsStore();
+  const resize = useDrawerResize(drawerWidth, setDrawerWidth);
+  const [confirmingClear, setConfirmingClear] = useState(false);
 
-  useScratchHotkey(() => void toggle());
+  const store = useScratchpadStore.getState();
+  const actions = useMemo<ScratchEntryActions>(() => {
+    const s = useScratchpadStore.getState();
+    return {
+      remove: (id) => void s.remove(id),
+      togglePin: (id) => void s.togglePin(id),
+      markNotSecret: s.markNotSecret,
+      maskRange: s.maskRange,
+      revealSecrets: s.revealSecrets,
+      getSecretValue: s.getSecretValue,
+      getEditableText: s.getEditableText,
+      getCopyText: s.getCopyText,
+    };
+  }, []);
+
+  const visibleItems = useMemo(() => filterEntries(items, query), [items, query]);
+
+  useScratchHotkey(() => void store.toggle());
   useRestoreFocus(isOpen);
 
   if (!isOpen) return null;
+
+  const isSearching = query.trim().length > 0;
 
   return (
     <aside
       data-testid="scratch-drawer"
       role="complementary"
       aria-label="Scratch"
-      className="fixed bottom-0 right-0 top-8 z-40 flex w-[380px] max-w-full flex-col border-l border-base bg-surface-secondary shadow-xl"
+      style={{ width: resize.width }}
+      className={`fixed bottom-0 right-0 top-8 z-40 flex max-w-full flex-col border-l border-base bg-surface-secondary shadow-xl ${
+        resize.isDragging ? "select-none" : ""
+      }`}
       onKeyDown={(e) => {
-        if (e.key === "Escape") close();
+        if (e.key === "Escape") store.close();
       }}
     >
-      <header className="flex items-center justify-between border-b border-base bg-surface-raised px-3 py-2">
-        <h2 className="flex items-center gap-1.5 text-sm font-semibold text-main">
-          Scratch
-          <span title="Entries are encrypted before they are stored in this browser">
-            <ShieldCheck size={14} className="text-secondary" aria-label="Encrypted" />
-          </span>
-        </h2>
-        <button
-          type="button"
-          data-testid="scratch-close"
-          aria-label="Close Scratch"
-          className="rounded p-1 text-secondary transition-colors hover:bg-element-hover hover:text-main"
-          onClick={close}
-        >
-          <X size={16} />
-        </button>
-      </header>
+      <ScratchResizeHandle
+        width={resize.width}
+        isDragging={resize.isDragging}
+        handleProps={resize.handleProps}
+      />
+      <ScratchHeader
+        presenting={isPresenting}
+        clipboardAutoClear={clipboardAutoClear}
+        canClearAll={items.length > 0}
+        onTogglePresenting={() => store.setPresenting(!isPresenting)}
+        onToggleClipboardAutoClear={() => setClipboardAutoClear(!clipboardAutoClear)}
+        onClearAll={() => setConfirmingClear(true)}
+        onClose={store.close}
+      />
 
       <div className="space-y-2 border-b border-base p-3">
-        <ScratchComposer onSubmit={(text) => void addFromText(text)} />
+        <ScratchComposer onSubmit={(text) => void store.addFromText(text)} />
         {error && (
           <p role="alert" data-testid="scratch-error" className="text-xs text-warning">
             {error}
@@ -74,23 +102,18 @@ export const ScratchDrawer: React.FC = () => {
               type="button"
               data-testid="scratch-undo"
               className="text-main underline"
-              onClick={() => void undoLastAdd()}
+              onClick={() => void store.undoLastAdd()}
             >
               Undo
             </button>
           </p>
         )}
+        {items.length > 0 && <ScratchSearch query={query} onChange={store.setQuery} />}
       </div>
 
-      <ul className="custom-scrollbar flex-1 overflow-y-auto" data-testid="scratch-list">
-        {items.map((item) => (
-          <ScratchEntryRow
-            key={item.id}
-            item={item}
-            onRemove={(id) => void remove(id)}
-            loadSecrets={revealSecrets}
-            loadCopyText={getCopyText}
-          />
+      <ul className="custom-scrollbar flex-1 overflow-y-auto pb-16" data-testid="scratch-list">
+        {visibleItems.map((item) => (
+          <ScratchEntryRow key={item.id} item={item} actions={actions} presenting={isPresenting} />
         ))}
         {status === "ready" && items.length === 0 && (
           <li data-testid="scratch-empty" className="px-4 py-8 text-center text-sm text-muted">
@@ -98,7 +121,23 @@ export const ScratchDrawer: React.FC = () => {
             encrypted automatically.
           </li>
         )}
+        {isSearching && items.length > 0 && visibleItems.length === 0 && (
+          <li data-testid="scratch-no-matches" className="px-4 py-8 text-center text-sm text-muted">
+            No matches. Secret values are not searched.
+          </li>
+        )}
       </ul>
+
+      <ConfirmationDialog
+        isOpen={confirmingClear}
+        message={`Delete all ${items.length} Scratch entries? This cannot be undone.`}
+        confirmButtonText="Delete all"
+        onCancel={() => setConfirmingClear(false)}
+        onConfirm={() => {
+          setConfirmingClear(false);
+          void store.clearAll();
+        }}
+      />
     </aside>
   );
 };

@@ -75,3 +75,95 @@ Feature: Scratch drawer
     And the Scratch toggle should be in the right pane only
     When I open the Scratch drawer from the toolbar
     Then the Scratch drawer should be visible
+
+  Scenario: Search finds entries by visible text but never by a secret
+    When I open the Scratch drawer from the toolbar
+    And I paste into Scratch:
+      """
+      UAT key: 3knd8dsuhds89hds-ds8hdshds-ds98hds
+
+      mvn -B -ntp -fae -T 1C clean verify
+      """
+    And I search Scratch for "clean verify"
+    Then Scratch should list 1 entries
+    When I search Scratch for "3knd8dsuhds89hds"
+    Then Scratch should list 0 entries
+
+  Scenario: A pinned entry stays at the top
+    When I open the Scratch drawer from the toolbar
+    And I paste into Scratch:
+      """
+      TODO: Make allow list include notes header
+      """
+    And I paste into Scratch:
+      """
+      mvn -B -ntp -fae -T 1C clean verify
+      """
+    Then the first Scratch entry should contain "mvn -B"
+    When I pin the Scratch entry containing "TODO"
+    Then the first Scratch entry should contain "TODO"
+
+  Scenario: A false positive can be unmasked
+    When I open the Scratch drawer from the toolbar
+    And I paste into Scratch:
+      """
+      UAT key: 3knd8dsuhds89hds-ds8hdshds-ds98hds
+      """
+    And I mark the first Scratch secret as not a secret
+    Then Scratch should mask 0 secrets
+    And Scratch should show "3knd8dsuhds89hds-ds8hdshds-ds98hds"
+
+  Scenario: Text the detector missed can be selected and masked
+    When I open the Scratch drawer from the toolbar
+    And I paste into Scratch:
+      """
+      deploy pw is plainword now
+      """
+    Then Scratch should mask 0 secrets
+    When I mask "plainword" in the Scratch entry containing "deploy pw"
+    Then Scratch should mask 1 secrets
+    And Scratch should not show "plainword" anywhere
+
+  Scenario: Presenting mode removes the ways to reveal a secret
+    When I open the Scratch drawer from the toolbar
+    And I paste into Scratch:
+      """
+      UAT key: 3knd8dsuhds89hds-ds8hdshds-ds98hds
+      """
+    And I turn Scratch presenting mode on
+    Then Scratch should offer no reveal or mask controls
+    And Scratch should mask 1 secrets
+    When I turn Scratch presenting mode off
+    And I reveal the first secret in Scratch
+    Then the revealed Scratch secret should be "3knd8dsuhds89hds-ds8hdshds-ds98hds"
+
+  Scenario: Clear all removes every entry after confirmation
+    When I open the Scratch drawer from the toolbar
+    And I paste into Scratch:
+      """
+      mvn -B -ntp -fae -T 1C clean verify
+
+      TODO: Make allow list include notes header
+      """
+    Then Scratch should list 2 entries
+    When I clear all Scratch entries
+    Then Scratch should list 0 entries
+
+  Scenario: Clicking an entry copies it and ticks its icon
+    When I open the Scratch drawer from the toolbar
+    And I paste into Scratch:
+      """
+      mvn -B -ntp -fae -T 1C clean verify
+      """
+    Then the Scratch entry "mvn -B" should not show it was copied
+    When I click the text of the Scratch entry "mvn -B"
+    Then the Scratch entry "mvn -B" should show it was copied
+    And the Scratch entry "mvn -B" should not show it was copied
+
+  Scenario: The drawer can be widened and reset
+    When I open the Scratch drawer from the toolbar
+    Then the Scratch drawer should be 380 pixels wide
+    When I drag the Scratch drawer edge 200 pixels to the left
+    Then the Scratch drawer should be wider than 500 pixels
+    When I double-click the Scratch drawer edge
+    Then the Scratch drawer should be 380 pixels wide
