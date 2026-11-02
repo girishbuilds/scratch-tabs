@@ -1,6 +1,10 @@
 import Dexie from "dexie";
 import { Tab, Workspace, WorkspaceLink, SplitViewRecord } from "../types";
 import type {
+  ScratchEntryRecord,
+  ScratchKeyRecord,
+} from "../features/scratchpad/types";
+import type {
   CanvasAssetRecord,
   CanvasDocument,
   CanvasSessionRecord,
@@ -64,6 +68,8 @@ export class ScratchTabsDB extends Dexie {
   canvasDocuments!: Dexie.Table<CanvasDocument>;
   canvasAssets!: Dexie.Table<CanvasAssetRecord>;
   canvasSessions!: Dexie.Table<CanvasSessionRecord>;
+  scratchEntries!: Dexie.Table<ScratchEntryRecord, string>;
+  scratchKeys!: Dexie.Table<ScratchKeyRecord, string>;
 
   constructor() {
     super("ScratchTabsDB");
@@ -130,6 +136,22 @@ export class ScratchTabsDB extends Dexie {
       canvasDocuments: "id, tabId, workspaceId, updatedAt",
       canvasAssets: "id, workspaceId, sha256, createdAt",
       canvasSessions: "tabId, updatedAt",
+    });
+
+    // Version 8: Global Scratchpad. Encrypted entries and their key live in
+    // dedicated tables so no tab/workspace code path (search, export, share,
+    // broadcast) can read them.
+    this.version(8).stores({
+      tabs: "id, workspaceId, lastModified, lastAccessed",
+      splitView: "id, workspaceId, lastModified",
+      workspaces: "id, lastAccessed, displayOrder",
+      settings: "key",
+      pipelines: "id, name, lastUsedAt, lastModified, isFavorite",
+      canvasDocuments: "id, tabId, workspaceId, updatedAt",
+      canvasAssets: "id, workspaceId, sha256, createdAt",
+      canvasSessions: "tabId, updatedAt",
+      scratchEntries: "id, createdAt",
+      scratchKeys: "id",
     });
   }
 

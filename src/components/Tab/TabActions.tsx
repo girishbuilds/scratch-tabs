@@ -1,8 +1,11 @@
 import { Plus, ClipboardPlus, Layers, Extension } from "../Icons";
 import { useRootStore } from "../../stores";
+import { ScratchToggleButton } from "../../features/scratchpad";
 
 interface TabActionsProps {
   side?: "left" | "right";
+  /** Show the Global Scratchpad toggle (once per window, not once per split pane). */
+  showScratch?: boolean;
   onShowTabletSelector: () => void;
   newTabButtonRef?: React.RefObject<HTMLButtonElement>;
 }
@@ -11,6 +14,7 @@ const BUTTON_CLASS = "px-2 py-1 text-main flex items-center h-8";
 
 export const TabActions: React.FC<TabActionsProps> = ({
   side = "left",
+  showScratch = false,
   onShowTabletSelector,
   newTabButtonRef,
 }) => {
@@ -55,6 +59,7 @@ export const TabActions: React.FC<TabActionsProps> = ({
       >
         <Extension size={16} />
       </button>
+      {showScratch && <ScratchToggleButton className={BUTTON_CLASS} />}
     </div>
   );
 };

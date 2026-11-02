@@ -130,29 +130,51 @@
     <div class="container mx-auto px-6">
       <div class="max-w-4xl mx-auto">
 
-        <!-- Version 1.52.0 -->
+        <!-- Version 1.53.0 -->
         <div class="changelog-entry latest">
           <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2">
             <div class="flex items-center gap-3">
-              <h2 class="text-2xl font-bold text-white">V1.52.0</h2>
+              <h2 class="text-2xl font-bold text-white">V1.53.0</h2>
               <span class="badge latest">LATEST</span>
             </div>
-            <span class="text-gray-500 text-xs font-mono">10/31/2026</span>
+            <span class="text-gray-500 text-xs font-mono">11/02/2026</span>
           </div>
-          <h3 class="text-lg font-bold text-emerald-500 mb-4 font-mono">SMARTER IMAGE PASTE</h3>
+          <h3 class="text-lg font-bold text-emerald-500 mb-4 font-mono">GLOBAL SCRATCHPAD</h3>
           <div class="changelog-content text-gray-400 text-sm leading-relaxed">
-            <p class="mb-4">Copying cells from Excel or Numbers now pastes as text in text tabs, Rich Text tabs, and new tabs. The image paste dialog now previews the image and can be driven from the keyboard.</p>
+            <p class="mb-4">Open it from the toolbar or with Cmd/Ctrl+Shift+Y. Paste anything and it is split into entries. Keys and tokens are masked and encrypted before they are saved in your browser.</p>
+
+            <h4 class="text-white text-xs font-mono uppercase tracking-widest mb-3"># new_features</h4>
+            <ul class="space-y-2 mb-6">
+              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Global Scratchpad:</strong> Paste text to save it as entries, one per command, link or note</span></li>
+              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Masked secrets:</strong> Keys, tokens and passwords are detected, hidden and encrypted at rest</span></li>
+              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Click to copy:</strong> Click an entry to copy it. Click a masked secret to copy only that value</span></li>
+              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Reveal:</strong> Show a secret for 10 seconds. It hides again when you switch windows</span></li>
+              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Fix masking:</strong> Mark a false positive as not a secret, or select text to mask what was missed</span></li>
+              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Presenting mode:</strong> Turn off reveal while you share your screen</span></li>
+              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Search and pin:</strong> Search entries by text and pin the ones you need at the top</span></li>
+            </ul>
 
             <h4 class="text-white text-xs font-mono uppercase tracking-widest mb-3"># improvements</h4>
             <ul class="space-y-2 mb-6">
-              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Image paste preview:</strong> The dialog shows a thumbnail with the image size and type</span></li>
-              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Image paste shortcuts:</strong> Press Enter for Canvas or 1 to 3 to pick an option, with Canvas listed first</span></li>
+              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Clipboard clearing:</strong> The clipboard is cleared 30 seconds after you copy a secret. You can turn this off</span></li>
+              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Resizable width:</strong> Drag the panel edge to resize it. Double-click the edge to reset</span></li>
+              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Hover actions:</strong> Row actions appear on hover, with extra actions in a menu</span></li>
+              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Clear all:</strong> Delete every entry after a confirmation</span></li>
             </ul>
-
-            <h4 class="text-white text-xs font-mono uppercase tracking-widest mb-3"># bug_fixes</h4>
-            <ul class="space-y-2 mb-6">
-              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Spreadsheet paste:</strong> Copied Excel and Numbers cells paste as values instead of offering to paste an image</span></li>
-            </ul>
+          </div>
+        </div>
+        <!-- Version 1.52.0 -->
+        <div class="changelog-entry release">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2">
+            <div class="flex items-center gap-3">
+              <h2 class="text-xl font-bold text-white uppercase">V1.52.0</h2>
+              <span class="badge release">RELEASE</span>
+            </div>
+            <span class="text-gray-500 text-xs font-mono">10/31/2026</span>
+          </div>
+          <h3 class="text-lg font-bold text-gray-400 mb-4 font-mono">SMARTER IMAGE PASTE</h3>
+          <div class="changelog-content text-gray-400 text-sm leading-relaxed">
+            <p>Pasting spreadsheet cells now pastes the values instead of opening the image dialog.</p>
           </div>
         </div>
         <!-- Version 1.51.0 -->
@@ -1036,7 +1058,7 @@
       <div class="flex flex-col md:flex-row justify-between items-center gap-8">
         <div class="flex items-center space-x-3">
           <img src="https://scratchtabs.b-cdn.net/favicon-gray.svg" alt="Scratch Tabs" class="logo-size" />
-          <span class="text-gray-400 font-mono text-sm">SCRATCH_TABS // v1.52.0</span>
+          <span class="text-gray-400 font-mono text-sm">SCRATCH_TABS // v1.53.0</span>
         </div>
 
         <div class="flex space-x-8">

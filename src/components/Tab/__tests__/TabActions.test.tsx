@@ -13,8 +13,24 @@ jest.mock("../../../stores", () => ({
   }),
 }));
 
+jest.mock("../../../features/scratchpad", () => ({
+  ScratchToggleButton: () => <button data-testid="icon-scratch" />,
+}));
+
 describe("TabActions", () => {
   beforeEach(() => jest.clearAllMocks());
+
+  it("hides the Scratch toggle unless asked to show it", () => {
+    render(<TabActions onShowTabletSelector={jest.fn()} />);
+    expect(screen.queryByTestId("icon-scratch")).not.toBeInTheDocument();
+  });
+
+  it("shows the Scratch toggle when showScratch is set, on either side", () => {
+    const { rerender } = render(<TabActions showScratch onShowTabletSelector={jest.fn()} />);
+    expect(screen.getByTestId("icon-scratch")).toBeVisible();
+    rerender(<TabActions side="right" showScratch onShowTabletSelector={jest.fn()} />);
+    expect(screen.getByTestId("icon-scratch")).toBeVisible();
+  });
 
   it("renders New Tab, Import from Paste, Canvas, and Developer Tool as top-level buttons", () => {
     const onShowTabletSelector = jest.fn();

@@ -21,6 +21,7 @@ import { SplitViewDivider } from "../SplitView/SplitViewDivider";
 import { DiffModal } from "../DiffModal";
 import { SummarizeModal } from "../AI/SummarizeModal";
 import { SearchModal } from "../Search/SearchModal";
+import { ScratchDrawer } from "../../features/scratchpad";
 import { AIModelManagementModal } from "../AI/AIModelManagementModal";
 import { AboutModal, ChangelogModal } from "../Modals";
 import { ConfirmationDialog } from "../Tab/ConfirmationDialog";
@@ -439,6 +440,7 @@ const MainLayout: React.FC = () => {
         </>
       )}
       {isSearchOpen && <SearchModal />}
+      <ScratchDrawer />
       <AIModelManagementModal />
       <AboutModal />
       <ChangelogModal />

@@ -1,0 +1,237 @@
+import { Page, expect } from '@playwright/test';
+
+export class ScratchDrawerActions {
+  constructor(private page: Page) { }
+
+  private get drawer() {
+    return this.page.getByTestId('scratch-drawer');
+  }
+
+  async openFromToolbar() {
+    await this.page.getByTestId('icon-scratch').first().click();
+    await expect(this.drawer).toBeVisible();
+  }
+
+  async toggleWithShortcut() {
+    await this.page.keyboard.press('Control+Shift+Y');
+  }
+
+  /**
+   * The toggle must appear once per window: in the only pane when not split,
+   * and in the right pane (beside the menu) when split.
+   */
+  async expectToggleInPaneOnly(pane: 'left' | 'right') {
+    const toggles = this.page.getByTestId('icon-scratch');
+    await expect(toggles).toHaveCount(1);
+    const rightPaneLocator = this.page.locator('[data-editor-pane-side="right"]');
+    if (pane === 'left') {
+      expect(await rightPaneLocator.count()).toBe(0);
+      return;
+    }
+    const toggleBox = await toggles.boundingBox();
+    const rightPaneBox = await rightPaneLocator.boundingBox();
+    expect(toggleBox).not.toBeNull();
+    expect(rightPaneBox).not.toBeNull();
+    // The toggle sits above the right pane's editor, so it must be at or past its left edge.
+    expect(toggleBox!.x).toBeGreaterThanOrEqual(rightPaneBox!.x);
+  }
+
+  async expectDrawerVisible(visible: boolean) {
+    if (visible) await expect(this.drawer).toBeVisible();
+    else await expect(this.drawer).toHaveCount(0);
+  }
+
+  /** Dispatches a real paste event so the capture path matches Cmd+V. */
+  async pasteText(text: string) {
+    await this.page.getByTestId('scratch-input').evaluate((el, value) => {
+      const data = new DataTransfer();
+      data.setData('text/plain', value);
+      el.dispatchEvent(
+        new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }),
+      );
+    }, text);
+  }
+
+  async expectEntryCount(count: number) {
+    await expect(this.page.getByTestId('scratch-entry')).toHaveCount(count);
+  }
+
+  async expectMaskCount(count: number) {
+    await expect(this.page.getByTestId('scratch-mask')).toHaveCount(count);
+  }
+
+  async expectDrawerDoesNotContain(text: string) {
+    await expect(this.drawer).not.toContainText(text);
+    expect(await this.drawer.innerHTML()).not.toContain(text);
+  }
+
+  async expectDrawerContains(text: string) {
+    await expect(this.drawer).toContainText(text);
+  }
+
+  async revealFirstSecret() {
+    await this.page.getByTestId('scratch-reveal').first().click();
+  }
+
+  async expectRevealedSecret(value: string) {
+    await expect(this.page.getByTestId('scratch-secret-revealed').first()).toHaveText(value);
+  }
+
+  async deleteEntryContaining(text: string) {
+    const row = this.entryContaining(text);
+    await row.getByTestId('scratch-more').click();
+    await row.getByTestId('scratch-delete').click();
+    await row.getByTestId('scratch-delete').click();
+  }
+
+  private entryContaining(text: string) {
+    return this.page.getByTestId('scratch-entry').filter({ hasText: text });
+  }
+
+  async search(text: string) {
+    await this.page.getByTestId('scratch-search').fill(text);
+  }
+
+  async pinEntryContaining(text: string) {
+    await this.entryContaining(text).getByTestId('scratch-pin').click();
+  }
+
+  async expectFirstEntryContains(text: string) {
+    await expect(this.page.getByTestId('scratch-entry').first()).toContainText(text);
+  }
+
+  async unmaskFirstSecret() {
+    await this.page.getByTestId('scratch-reveal').first().click();
+    await this.page.getByTestId('scratch-not-secret').first().click();
+  }
+
+  async setPresenting(on: boolean) {
+    const button = this.page.getByTestId('scratch-presenting');
+    if ((await button.getAttribute('aria-pressed')) !== String(on)) await button.click();
+  }
+
+  async expectNoRevealControls() {
+    await expect(this.page.getByTestId('scratch-reveal')).toHaveCount(0);
+    await this.page.getByTestId('scratch-more').first().click();
+    await expect(this.page.getByTestId('scratch-mask-mode')).toHaveCount(0);
+  }
+
+  async clearAll() {
+    await this.page.getByTestId('scratch-settings').click();
+    await this.page.getByTestId('scratch-clear-all').click();
+    await this.page
+      .getByTestId('confirmation-dialog')
+      .getByRole('button', { name: 'Delete all' })
+      .click();
+  }
+
+  /** Selects `selected` inside the raw-text editor of the entry containing `entryText`, then masks it. */
+  async maskTextInEntry(entryText: string, selected: string) {
+    const row = this.entryContaining(entryText);
+    await row.getByTestId('scratch-more').click();
+    await row.getByTestId('scratch-mask-mode').click();
+    await row.getByTestId('scratch-mask-text').evaluate((el, value) => {
+      const area = el as HTMLTextAreaElement;
+      const start = area.value.indexOf(value);
+      // React only reports selection changes for the focused element.
+      area.focus();
+      area.setSelectionRange(start, start + value.length);
+      document.dispatchEvent(new Event('selectionchange'));
+    }, selected);
+    await row.getByTestId('scratch-mask-selection').click();
+  }
+
+  /** Clicks the text of the entry itself, away from any control. */
+  async clickEntryText(text: string) {
+    await this.entryContaining(text).locator('div.font-mono').click();
+  }
+
+  async expectEntryCopied(text: string) {
+    await expect(this.entryContaining(text).getByTestId('scratch-copied-tick')).toBeVisible();
+  }
+
+  async expectEntryNotCopied(text: string) {
+    await expect(this.entryContaining(text).getByTestId('scratch-copied-tick')).toHaveCount(0);
+  }
+
+  async drawerWidth(): Promise<number> {
+    const box = await this.drawer.boundingBox();
+    expect(box).not.toBeNull();
+    return box!.width;
+  }
+
+  async dragResizeHandleBy(deltaX: number) {
+    const handle = this.page.getByTestId('scratch-resize');
+    const box = await handle.boundingBox();
+    expect(box).not.toBeNull();
+    const x = box!.x + box!.width / 2;
+    const y = box!.y + box!.height / 2;
+    await this.page.mouse.move(x, y);
+    await this.page.mouse.down();
+    await this.page.mouse.move(x + deltaX, y, { steps: 5 });
+    await this.page.mouse.up();
+  }
+
+  async resetWidthByDoubleClick() {
+    await this.page.getByTestId('scratch-resize').dblclick();
+  }
+
+  async expectDrawerWiderThan(px: number) {
+    await expect.poll(() => this.drawerWidth()).toBeGreaterThan(px);
+  }
+
+  async expectDrawerWidth(px: number) {
+    await expect.poll(() => this.drawerWidth()).toBe(px);
+  }
+
+  async close() {
+    await this.page.keyboard.press('Escape');
+  }
+
+  async reload() {
+    await this.page.reload();
+    await this.page.waitForLoadState('domcontentloaded');
+    await expect(this.page.getByText('SCRATCH_TABS')).toBeVisible();
+  }
+
+  /**
+   * Reads the raw rows straight out of IndexedDB, bypassing the app, and
+   * returns everything that is stored as one searchable string.
+   */
+  async readRawStoredEntries(): Promise<{ count: number; haystack: string }> {
+    return this.page.evaluate(
+      () =>
+        new Promise<{ count: number; haystack: string }>((resolve, reject) => {
+          const open = indexedDB.open('ScratchTabsDB');
+          open.onerror = () => reject(open.error);
+          open.onsuccess = () => {
+            const tx = open.result.transaction('scratchEntries', 'readonly');
+            const req = tx.objectStore('scratchEntries').getAll();
+            req.onerror = () => reject(req.error);
+            req.onsuccess = () => {
+              const rows = req.result as Array<Record<string, unknown>>;
+              const haystack = rows
+                .map((row) =>
+                  Object.values(row)
+                    .map((v) =>
+                      v instanceof Uint8Array
+                        ? new TextDecoder('latin1').decode(v)
+                        : String(v),
+                    )
+                    .join('|'),
+                )
+                .join('\n');
+              open.result.close();
+              resolve({ count: rows.length, haystack });
+            };
+          };
+        }),
+    );
+  }
+
+  async expectNothingReadableAtRest(forbidden: string[], expectedCount: number) {
+    const { count, haystack } = await this.readRawStoredEntries();
+    expect(count).toBe(expectedCount);
+    for (const text of forbidden) expect(haystack).not.toContain(text);
+  }
+}

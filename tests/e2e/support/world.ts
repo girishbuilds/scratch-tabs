@@ -22,6 +22,7 @@ import { XmlSmartViewActions } from './xmlSmartView.actions';
 import { CanvasActions } from './canvas.actions';
 import { CanvasConflictActions } from './canvasConflict.actions';
 import { MergeTabsActions } from './mergeTabs.actions';
+import { ScratchDrawerActions } from './scratchDrawer.actions';
 
 /**
  * E2E World Class - Lightweight Orchestrator & Dependency Injection Container
@@ -59,6 +60,7 @@ export class E2EWorld extends World {
   canvas!: CanvasActions;
   canvasConflict!: CanvasConflictActions;
   mergeTabs!: MergeTabsActions;
+  scratchDrawer!: ScratchDrawerActions;
 
   constructor(options: IWorldOptions) {
     super(options);
@@ -97,6 +99,7 @@ export class E2EWorld extends World {
       this.canvas,
     );
     this.mergeTabs = new MergeTabsActions(this.page);
+    this.scratchDrawer = new ScratchDrawerActions(this.page);
   }
 }
 
