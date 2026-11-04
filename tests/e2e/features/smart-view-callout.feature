@@ -18,10 +18,10 @@ Feature: Smart View Callout Notification
     And I create a new tab from the document menu and clipboard
     Then the status bar language should be "JSON"
     And I should see the smart view callout
-    And the smart view callout message should contain "Data View"
+    And the smart view callout message should contain "Smart View"
 
   @clipboard
-  Scenario: Clicking Data View button activates Smart View
+  Scenario: Clicking Smart View button activates Smart View
     When I set clipboard content to:
       """
       {
@@ -31,7 +31,7 @@ Feature: Smart View Callout Notification
       """
     And I create a new tab from the document menu and clipboard
     Then I should see the smart view callout
-    When I click the Data View button in the smart view callout
+    When I click the Smart View button in the smart view callout
     Then I should not see the smart view callout
     And I should see the JSON Smart View
 
@@ -50,7 +50,7 @@ Feature: Smart View Callout Notification
     Then I should not see the smart view callout
 
   @clipboard
-  Scenario: Smart View callout auto-dismisses after 15 seconds
+  Scenario: Smart View callout stays visible until dismissed
     When I set clipboard content to:
       """
       {
@@ -60,7 +60,7 @@ Feature: Smart View Callout Notification
     And I create a new tab from the document menu and clipboard
     Then I should see the smart view callout
     When I wait for 16 seconds
-    Then I should not see the smart view callout
+    Then I should see the smart view callout
 
   @clipboard
   Scenario: Smart View callout shows correct format name for CSV
@@ -73,4 +73,4 @@ Feature: Smart View Callout Notification
     And I create a new tab from the document menu and clipboard
     Then the status bar language should be "CSV / TSV"
     And I should see the smart view callout
-    And the smart view callout message should contain "Data View"
+    And the smart view callout message should contain "Smart View"

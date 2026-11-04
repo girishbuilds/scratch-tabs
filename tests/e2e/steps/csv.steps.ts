@@ -14,16 +14,16 @@ CsvThen('the status bar should show language "{string}"', async function(expecte
   await this.statusBar.expectStatusBarLanguage(expectedLanguage);
 });
 
-// Text/Data view switch steps
-CsvThen('the status bar should contain a Data View button', async function() {
+// Text/Smart view switch steps
+CsvThen('the status bar should contain a Smart View button', async function() {
   await this.statusBar.expectDataViewSwitchVisible();
 });
 
-CsvThen('the status bar should not contain a Data View button', async function() {
+CsvThen('the status bar should not contain a Smart View button', async function() {
   await this.statusBar.expectDataViewSwitchNotVisible();
 });
 
-CsvWhen('I click the Data View button in the status bar', async function() {
+CsvWhen('I click the Smart View button in the status bar', async function() {
   await this.statusBar.clickDataViewButton();
 });
 

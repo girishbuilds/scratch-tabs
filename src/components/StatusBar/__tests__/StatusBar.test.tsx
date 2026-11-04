@@ -480,7 +480,7 @@ describe('StatusBar - Font Size Controls Integration', () => {
       );
 
       expect(screen.getByTestId('rich-text-toggle')).toBeInTheDocument();
-      expect(screen.getByText('Rich')).toBeInTheDocument();
+      expect(screen.getByText('Rich Text')).toBeInTheDocument();
       expect(screen.queryByTestId('font-size-controls')).not.toBeInTheDocument();
     });
 

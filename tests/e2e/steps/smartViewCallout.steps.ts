@@ -19,7 +19,7 @@ Then('the smart view callout message should contain "{string}"', async function(
 });
 
 // Button interactions
-When('I click the Data View button in the smart view callout', async function() {
+When('I click the Smart View button in the smart view callout', async function() {
   await this.smartViewCallout.clickDataViewButton();
 });
 
@@ -27,7 +27,7 @@ When('I click the smart view callout dismiss button', async function() {
   await this.smartViewCallout.clickDismissButton();
 });
 
-// Wait for auto-dismiss (15 second timeout)
+// Wait (used to check the callout does not auto-dismiss)
 When('I wait for {int} seconds', async function(seconds) {
   await this.page.waitForTimeout(seconds * 1000);
 });
