@@ -10,7 +10,7 @@ describe("generateCsv", () => {
       const json = { name: "Alice", age: 30 };
       const result = convertToCsv(json);
       expect(result.error).toBeNull();
-      expect(result.csv).toBe("age,name\n30,Alice");
+      expect(result.csv).toBe("name,age\nAlice,30");
     });
 
     it("should convert array of flat objects", () => {
@@ -20,9 +20,7 @@ describe("generateCsv", () => {
       ];
       const result = convertToCsv(json);
       expect(result.error).toBeNull();
-      expect(result.csv).toContain("age,name");
-      expect(result.csv).toContain("30,Alice");
-      expect(result.csv).toContain("25,Bob");
+      expect(result.csv).toBe("name,age\nAlice,30\nBob,25");
     });
 
     it("should handle JSON string input", () => {
@@ -37,6 +35,61 @@ describe("generateCsv", () => {
       const result = convertToCsv(json);
       expect(result.error).toBeNull();
       expect(result.csv).toBe("");
+    });
+  });
+
+  describe("Column order and row count", () => {
+    it("keeps source key order, not alphabetical", () => {
+      const result = convertToCsv([{ zeta: 1, alpha: 2, mid: 3 }]);
+      expect(result.csv.split("\n")[0]).toBe("zeta,alpha,mid");
+    });
+
+    it("keeps an expanded array's columns where the array sat in the source", () => {
+      const result = convertToCsv({
+        id: 1,
+        items: [{ sku: "a" }, { sku: "b" }],
+        total: 9,
+      });
+      expect(result.csv.split("\n")[0]).toBe("id,items.sku,total");
+    });
+
+    it("reports data row count without the header", () => {
+      const result = convertToCsv([{ a: 1 }, { a: 2 }, { a: 3 }]);
+      expect(result.error).toBeNull();
+      expect(result.rowCount).toBe(3);
+      expect(result.csv.split("\n")).toHaveLength(4);
+    });
+
+    it("does not count newlines inside quoted cells as rows", () => {
+      const result = convertToCsv([{ note: "line1\nline2" }, { note: "x" }]);
+      expect(result.rowCount).toBe(2);
+    });
+  });
+
+  describe("Nested arrays are never dropped", () => {
+    it("stringifies arrays nested inside array items", () => {
+      const result = convertToCsv({
+        orders: [
+          { id: 1, tags: ["x", "y"] },
+          { id: 2, tags: ["z"] },
+        ],
+      });
+      expect(result.error).toBeNull();
+      expect(result.csv).toContain('"[""x"",""y""]"');
+      expect(result.csv).toContain('"[""z""]"');
+      expect(result.rowCount).toBe(2);
+    });
+
+    it("stringifies arrays inside nested objects", () => {
+      const result = convertToCsv([{ id: 1, meta: { tags: ["a", "b"] } }]);
+      expect(result.csv).toContain("meta.tags");
+      expect(result.csv).toContain('"[""a"",""b""]"');
+    });
+
+    it("stringifies arrays of arrays", () => {
+      const result = convertToCsv({ grid: [[1, 2], [3, 4]] });
+      expect(result.csv).toContain("[1,2]");
+      expect(result.csv).toContain("[3,4]");
     });
   });
 
@@ -149,11 +202,11 @@ describe("generateCsv", () => {
       const lines = result.csv.split("\n");
       // Header + (2 hobbies × 2 skills) = 5 rows
       expect(lines).toHaveLength(5);
-      // Check Cartesian product (columns are alphabetically sorted)
-      expect(result.csv).toContain("reading,Alice,JS");
-      expect(result.csv).toContain("reading,Alice,Python");
-      expect(result.csv).toContain("gaming,Alice,JS");
-      expect(result.csv).toContain("gaming,Alice,Python");
+      // Check Cartesian product (columns follow source key order)
+      expect(result.csv).toContain("Alice,reading,JS");
+      expect(result.csv).toContain("Alice,reading,Python");
+      expect(result.csv).toContain("Alice,gaming,JS");
+      expect(result.csv).toContain("Alice,gaming,Python");
     });
 
     it("should handle empty arrays in expandAll mode", () => {

@@ -68,6 +68,10 @@ temp.directory = /tmp/myapp/
       return this.noMatch();
     }
 
+    if (this.hasYamlStructure(lines)) {
+      return this.noMatch();
+    }
+
     const keyValueRegex = /^\s*([a-zA-Z0-9_.-]+)\s*([:=])\s*(.*)/;
     const sectionRegex = /^\s*\[([^\]]+)\]\s*$/;
     const urlRegex = /https?:\/\/[^\s]+/i;
@@ -186,6 +190,34 @@ temp.directory = /tmp/myapp/
       confidence: isMatch ? confidenceScore : 0.0,
       matchedDefinitive: isMatch && confidenceScore > 0.6 && dotNotationCount >= 2,
     };
+  }
+
+  /**
+   * Properties files are flat. A `key:` line with no value followed by a more
+   * indented line (a nested mapping), or `- item` list entries, is YAML.
+   */
+  private hasYamlStructure(lines: string[]): boolean {
+    const significant = lines.filter((line) => {
+      const t = line.trim();
+      return t.length > 0 && !t.startsWith("#") && !t.startsWith("!");
+    });
+    const indentOf = (line: string) => line.length - line.trimStart().length;
+
+    let listItems = 0;
+    for (let i = 0; i < significant.length; i++) {
+      const line = significant[i];
+      if (/^\s*-\s+\S/.test(line)) listItems++;
+
+      const next = significant[i + 1];
+      if (
+        next !== undefined &&
+        /^\s*[a-zA-Z0-9_.-]+\s*:\s*$/.test(line) &&
+        indentOf(next) > indentOf(line)
+      ) {
+        return true;
+      }
+    }
+    return listItems >= 2;
   }
 
   getFileExtension(): string {

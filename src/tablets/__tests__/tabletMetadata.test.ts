@@ -383,4 +383,85 @@ describe('Tablet Metadata Actions', () => {
       expect(allValidActions.length).toBeGreaterThan(allInvalidActions.length);
     });
   });
+
+describe('JWT metadata getActionsForContext', () => {
+  const JWT =
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
+  const jwtMetadata = tabletMetadata.find((meta) => meta.id === 'jwt')!;
+
+  const makeTab = (overrides: Partial<Tab> = {}): Tab => ({
+    id: 'jwt-tab',
+    title: 'Scratch 1',
+    content: JWT,
+    language: 'jwt',
+    languageLocked: false,
+    workspaceId: 'ws',
+    dateCreated: Date.now(),
+    lastModified: Date.now(),
+    cursorPosition: { lineNumber: 1, column: 1 },
+    ...overrides,
+  });
+
+  beforeEach(() => jest.clearAllMocks());
+
+  it('offers Decode JWT when the content is a JWT', () => {
+    const tab = makeTab();
+    const actions = jwtMetadata.getActionsForContext!({
+      source: 'editor-tab',
+      tab,
+      content: tab.content,
+      side: 'right',
+    });
+
+    expect(actions).toHaveLength(1);
+    expect(actions[0].id).toBe('jwt.new-tab-from-content');
+    expect(actions[0].label).toBe('Decode JWT');
+
+    actions[0].action();
+    expect(mockTabletActionService.handleAction).toHaveBeenCalledWith({
+      targetTablet: 'jwt',
+      action: 'new-tab',
+      payload: { token: JWT },
+      source: { tabId: 'jwt-tab', titleHint: 'Scratch 1 (JWT)', side: 'right' },
+    });
+  });
+
+  it('passes only the token when the content has a Bearer prefix', () => {
+    const tab = makeTab({ content: `Bearer ${JWT}\n` });
+    const [action] = jwtMetadata.getActionsForContext!({
+      source: 'editor-tab',
+      tab,
+      content: tab.content,
+    });
+    action.action();
+    expect(mockTabletActionService.handleAction).toHaveBeenCalledWith(
+      expect.objectContaining({ payload: { token: JWT } }),
+    );
+  });
+
+  it.each([
+    ['plain text', 'hello world'],
+    ['a JSON document', '{"a": 1}'],
+    ['a token inside other text', `token = ${JWT}`],
+    ['empty content', ''],
+  ])('offers nothing for %s', (_label, content) => {
+    const tab = makeTab({ content });
+    expect(
+      jwtMetadata.getActionsForContext!({ source: 'editor-tab', tab, content }),
+    ).toEqual([]);
+  });
+
+  it('offers nothing in tablet or rich tabs', () => {
+    for (const flags of [{ isTablet: true }, { isRich: true }]) {
+      const tab = makeTab(flags);
+      expect(
+        jwtMetadata.getActionsForContext!({
+          source: 'editor-tab',
+          tab,
+          content: JWT,
+        }),
+      ).toEqual([]);
+    }
+  });
+});
 });

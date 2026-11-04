@@ -22,6 +22,7 @@ import "./image";
 import "./ini/index";
 import "./java";
 import "./javascript";
+import "./jwt";
 import "./json/index";
 import "./kotlin";
 import "./markdown/index";

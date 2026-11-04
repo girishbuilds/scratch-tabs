@@ -231,4 +231,71 @@ Bob,35,,Canada`;
       }).not.toThrow();
     });
   });
+
+  describe("Quoted fields containing delimiters, newlines and non-ASCII text", () => {
+    test("detects quoted CSV with non-ASCII text", () => {
+      const csv = `id,name,city
+1,"Zoë Müller","São Paulo"
+2,"李雷","北京"
+3,"Ægir","Reykjavík"`;
+      expect(detector.detect(csv).match).toBe(true);
+    });
+
+    test("does not count a comma inside quotes as a delimiter", () => {
+      const csv = `id,name,city
+1,"Müller, Zoë","São Paulo"
+2,"Lee, 雷","北京"
+3,"Ægir","Reykjavík"`;
+      expect(detector.detect(csv).match).toBe(true);
+    });
+
+    test("detects ASCII quoted CSV with embedded commas", () => {
+      const csv = `id,name,city
+1,"Muller, Zoe","Sao Paulo"
+2,"Lee, Lei","Beijing"
+3,"Aegir","Reykjavik"`;
+      expect(detector.detect(csv).match).toBe(true);
+    });
+
+    test("detects a quoted field that spans lines", () => {
+      const csv = `id,name,note
+1,"Zoë","line one
+line two"
+2,"Bob","ok"
+3,"Ann","fine"`;
+      expect(detector.detect(csv).match).toBe(true);
+    });
+
+    test("detects quoted TSV with an embedded tab", () => {
+      const tsv = 'id\tname\tcity\n1\t"Zoë\tMüller"\t"São Paulo"\n2\t"Lee"\t"北京"\n3\t"Bo"\t"Oslo"';
+      expect(detector.detect(tsv).match).toBe(true);
+    });
+
+    test("detects CRLF line endings with quoted fields", () => {
+      const csv = 'id,name,city\r\n1,"Zoë","São Paulo"\r\n2,"Bo","Oslo"\r\n3,"Al","Rome"\r\n';
+      expect(detector.detect(csv).match).toBe(true);
+    });
+
+    test("rejects a record whose field count differs once quotes are respected", () => {
+      const csv = `id,name,city
+1,"Müller, Zoë",Paris,extra
+2,"Lee",Rome
+3,"Bo",Oslo`;
+      expect(detector.detect(csv).match).toBe(false);
+    });
+
+    test("rejects text after a closing quote", () => {
+      const csv = `a,b,c
+1,"x"y,3
+4,5,6`;
+      expect(detector.detect(csv).match).toBe(false);
+    });
+
+    test("does not mistake prose with quoted phrases for CSV", () => {
+      const prose = `He said "hi", then left
+she said "bye", too
+and so on, "ok"`;
+      expect(detector.detect(prose).match).toBe(false);
+    });
+  });
 });

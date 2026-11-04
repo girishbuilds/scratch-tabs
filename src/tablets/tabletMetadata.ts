@@ -1,6 +1,7 @@
 import { TabletActionContext, TabletAction } from "./types";
-import { FileText, Type, Shield, Network, Palette, QrCode, Binary, ShieldAlert, Database, LoaderPinwheel } from "../components/Icons";
+import { FileText, Type, Shield, Network, Palette, QrCode, Binary, ShieldAlert, Database, LoaderPinwheel, Key } from "../components/Icons";
 import { tabletActionService } from "../services/tabletActionService";
+import { extractJwt } from "../formats/jwtToken";
 
 export interface TabletMetadata {
   id: string;
@@ -98,6 +99,39 @@ export const tabletMetadata: TabletMetadata[] = [
     label: "JWT",
     description: "Decode and inspect JSON Web Tokens to view headers, payloads, and verify signatures.",
     keywords: ["jwt", "token", "json web token", "authentication", "decode"],
+    getActionsForContext: (context) => {
+      if (
+        context.source !== "editor-tab" ||
+        !context.tab ||
+        context.tab.isRich ||
+        context.tab.isTablet
+      ) {
+        return [];
+      }
+
+      const token = extractJwt(context.content ?? "");
+      if (!token) return [];
+
+      return [
+        {
+          id: "jwt.new-tab-from-content",
+          label: "Decode JWT",
+          icon: Key,
+          action: () => {
+            tabletActionService.handleAction({
+              targetTablet: "jwt",
+              action: "new-tab",
+              payload: { token },
+              source: {
+                tabId: context.tab?.id,
+                titleHint: `${context.tab?.title ?? "Token"} (JWT)`,
+                side: context.side,
+              },
+            });
+          },
+        },
+      ];
+    },
   },
   {
     id: "openmetrics",

@@ -115,14 +115,8 @@ export const Toolbox: React.FC<ToolboxProps> = ({
       // Import the appropriate generator dynamically
       switch (language) {
         case "typescript":
-          import("../../utils/generateTypeScriptInterfaces").then(({ generateTypeScriptInterfaces }) => {
-            const interfaces = generateTypeScriptInterfaces(json);
-            const tabs = interfaces.map((iface) => ({
-              id: crypto.randomUUID(),
-              title: iface.interfaceName,
-              content: iface.code,
-              language: "typescript",
-            }));
+          import("../../utils/generateTypeScriptInterfaces").then(({ generateTypeScriptInterfaces, buildTypeScriptTabs }) => {
+            const tabs = buildTypeScriptTabs(generateTypeScriptInterfaces(json));
             openCodeGenerationModal(tabs, addTab);
           });
           break;

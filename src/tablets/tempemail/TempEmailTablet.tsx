@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Tablet, TabletState } from "../types";
 import { Mail, RefreshCw, X, Loader2, Copy, Check } from "lucide-react";
 import { useThemeStore } from "../../stores/themeStore";
+import { normalizeMailTimestamp, formatMailTime } from "./emailTime";
 
 interface Email {
   id: string;
@@ -154,7 +155,7 @@ const TempEmailTabletUI: React.FC<{
             id: email.mail_id,
             subject: email.subject,
             from: email.mail_from,
-            timestamp: email.mail_timestamp,
+            timestamp: normalizeMailTimestamp(email.mail_timestamp),
           }));
 
         // Only update state if we have new emails
@@ -199,7 +200,10 @@ const TempEmailTabletUI: React.FC<{
         id: data.mail_id,
         subject: data.subject,
         from: data.mail_from,
-        timestamp: data.mail_timestamp,
+        // Keep the time shown in the list so opening a message never changes it
+        timestamp:
+          state.data.emails.find((e) => e.id === emailId)?.timestamp ??
+          normalizeMailTimestamp(data.mail_timestamp),
         body: data.mail_body,
       };
 
@@ -304,7 +308,7 @@ const TempEmailTabletUI: React.FC<{
                       <p className="text-sm text-secondary mt-1">{email.from}</p>
                     </div>
                     <span className="text-xs text-muted">
-                      {new Date(email.timestamp * 1000).toLocaleTimeString()}
+                      {formatMailTime(email.timestamp)}
                     </span>
                   </div>
                 </button>

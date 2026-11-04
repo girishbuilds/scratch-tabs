@@ -27,11 +27,11 @@ export const CsvExportOptionsModal: React.FC<CsvExportOptionsModalProps> = ({
   const [isCopied, setIsCopied] = useState(false);
 
   // Generate CSV with current options
-  const { csv, error } = useMemo(() => {
+  const { csv, rowCount, error } = useMemo(() => {
     try {
       return convertToCsv(jsonString, options);
     } catch (e: any) {
-      return { csv: "", error: e.message || "Unknown error" };
+      return { csv: "", rowCount: 0, error: e.message || "Unknown error" };
     }
   }, [jsonString, options]);
 
@@ -175,7 +175,7 @@ export const CsvExportOptionsModal: React.FC<CsvExportOptionsModalProps> = ({
               CSV Preview
               {csv && !error && (
                 <span className="ml-2 text-xs text-muted">
-                  ({csv.split("\n").length} rows)
+                  ({rowCount} {rowCount === 1 ? "row" : "rows"})
                 </span>
               )}
             </h3>

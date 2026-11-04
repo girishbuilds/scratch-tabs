@@ -3,7 +3,7 @@ import * as monaco from "monaco-editor";
 import { Tab } from "../../../types";
 import { useJsonModals } from "./useJsonModals";
 import { generateJavaClasses } from "../utils/javaGenerator";
-import { generateTypeScriptInterfaces } from "../utils/generateTypeScriptInterfaces";
+import { generateTypeScriptInterfaces, buildTypeScriptTabs } from "../utils/generateTypeScriptInterfaces";
 import { generatePythonClasses } from "../utils/generatePythonClasses";
 import { generateGoStructs } from "../utils/generateGoStructs";
 import { generateCSharpClasses } from "../utils/generateCSharpClasses";
@@ -62,12 +62,7 @@ export const useJsonConversions = (
       const json = JSON.parse(content);
 
       const tsInterfaces = generateTypeScriptInterfaces(json);
-      const tabs = tsInterfaces.map((tsInterface) => ({
-        id: crypto.randomUUID(),
-        title: tsInterface.interfaceName,
-        content: tsInterface.code,
-        language: "typescript",
-      }));
+      const tabs = buildTypeScriptTabs(tsInterfaces);
 
       openCodeGenerationModal(tabs, addTab);
     } catch (error) {

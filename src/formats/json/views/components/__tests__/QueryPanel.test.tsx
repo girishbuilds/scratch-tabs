@@ -82,6 +82,25 @@ describe('QueryPanel', () => {
     expect(screen.getByTitle('Close Query Panel')).toBeInTheDocument();
   });
 
+  it('should start with an empty query and show a placeholder instead of a real query', () => {
+    mockUseJmespath.mockReturnValue({ results: null, error: null });
+
+    render(<QueryPanel content={sampleContent} addTab={mockAddTab} tabId={testTabId} />);
+
+    expect(mockSetQuery).not.toHaveBeenCalled();
+    expect(screen.getAllByTestId('monaco-editor')[0]).toHaveValue('');
+    expect(screen.getByTestId('query-placeholder')).toHaveTextContent(/^e\.g\. /);
+  });
+
+  it('should hide the placeholder once a query is entered', () => {
+    mockGetStateForTab.mockReturnValue({ isOpen: true, query: 'foo', panelSizes: [70, 30] });
+    mockUseJmespath.mockReturnValue({ results: 'bar', error: null });
+
+    render(<QueryPanel content={sampleContent} addTab={mockAddTab} tabId={testTabId} />);
+
+    expect(screen.queryByTestId('query-placeholder')).not.toBeInTheDocument();
+  });
+
   it('should display results when hook returns data', () => {
     const mockResults = { foo: 'bar' };
     mockUseJmespath.mockReturnValue({

@@ -18,6 +18,7 @@ interface SortableTabListProps {
   onTabClick: (tabId: string) => void;
   onTabClose: (tabId: string) => void;
   onTabDoubleClick: (tab: Tab, e: React.MouseEvent<HTMLDivElement>) => void;
+  onTabStartRename?: (tab: Tab) => void;
   onTabContextMenu: (
     e: React.MouseEvent<HTMLDivElement>,
     tabId: string,
@@ -42,6 +43,7 @@ export const SortableTabList: React.FC<SortableTabListProps> = ({
   onTabClick,
   onTabClose,
   onTabDoubleClick,
+  onTabStartRename,
   onTabContextMenu,
   onEditChange,
   onEditSubmit,
@@ -79,6 +81,7 @@ export const SortableTabList: React.FC<SortableTabListProps> = ({
               }
             }}
             onDoubleClick={(e) => onTabDoubleClick(tab, e)}
+            onStartRename={onTabStartRename ? () => onTabStartRename(tab) : undefined}
             onContextMenu={(e) => onTabContextMenu(e, tab.id)}
             onEditChange={onEditChange}
             onEditSubmit={onEditSubmit}

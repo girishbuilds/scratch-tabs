@@ -83,6 +83,26 @@ describe("pipelineExecutor", () => {
         },
       },
       {
+        id: "test.warns",
+        name: "Warns",
+        description: "Reports a warning",
+        categories: ["test"],
+        parameters: [],
+        execute: (input, _params, context) => {
+          context.warn?.("something looks off");
+          return `${input}!`;
+        },
+      },
+      {
+        id: "test.uppercase-strict",
+        name: "Uppercase (strict)",
+        description: "Uppercases and opts in to the unchanged-input warning",
+        categories: ["test"],
+        parameters: [],
+        warnIfUnchanged: true,
+        execute: (input) => input.toUpperCase(),
+      },
+      {
         id: "test.context-aware",
         name: "Context Aware",
         description: "Uses execution context",
@@ -149,6 +169,45 @@ describe("pipelineExecutor", () => {
       expect(result.skipped).toBe(false);
       expect(result.error).toBeUndefined();
       expect(result.duration).toBeGreaterThanOrEqual(0);
+    });
+
+    it("should surface a warning reported by the operation", async () => {
+      const step: PipelineStep = { id: "s", operationId: "test.warns", params: {}, enabled: true };
+      const result = await executeStep(step, "hi", createExecutionContext("hi", 0, 1, ""));
+
+      expect(result.error).toBeUndefined();
+      expect(result.output).toBe("hi!");
+      expect(result.warning).toBe("something looks off");
+    });
+
+    it("should warn when an opted-in step leaves the input unchanged", async () => {
+      const step: PipelineStep = { id: "s", operationId: "test.uppercase-strict", params: {}, enabled: true };
+      const result = await executeStep(step, "ALREADY", createExecutionContext("ALREADY", 0, 1, ""));
+
+      expect(result.error).toBeUndefined();
+      expect(result.warning).toMatch(/did not change/i);
+    });
+
+    it("should not warn about unchanged input for operations that did not opt in", async () => {
+      const step: PipelineStep = { id: "s", operationId: "test.uppercase", params: {}, enabled: true };
+      const result = await executeStep(step, "ALREADY", createExecutionContext("ALREADY", 0, 1, ""));
+
+      expect(result.warning).toBeUndefined();
+    });
+
+    it("should not warn when a step changes the input or is skipped", async () => {
+      const changed = await executeStep(
+        { id: "s", operationId: "test.uppercase", params: {}, enabled: true },
+        "hello",
+        createExecutionContext("hello", 0, 1, ""),
+      );
+      const skipped = await executeStep(
+        { id: "s", operationId: "test.uppercase", params: {}, enabled: false },
+        "hello",
+        createExecutionContext("hello", 0, 1, ""),
+      );
+      expect(changed.warning).toBeUndefined();
+      expect(skipped.warning).toBeUndefined();
     });
 
     it("should skip disabled steps", async () => {

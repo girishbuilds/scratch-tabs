@@ -1,4 +1,4 @@
-import { executeSingleOperation } from "../../pipelineExecutor";
+import { executeSingleOperation, executeStep, createExecutionContext } from "../../pipelineExecutor";
 import "../crypto";
 import "../extraction";
 import "../../../../formats/json/pipelineOperations";
@@ -253,6 +253,50 @@ describe("Priority B Pipeline Operations", () => {
         it("throws on invalid JSON input", async () => {
             await expect(execute("json.jsonpath", "not json", { path: "$.foo" }))
                 .rejects.toThrow(/Invalid JSON/);
+        });
+
+        it("fails on an unclosed bracket instead of returning data", async () => {
+            const json = '{"users":[{"email":"a@b.c"}]}';
+            await expect(execute("json.jsonpath", json, { path: "$.users[" }))
+                .rejects.toThrow(/Invalid JSONPath.*missing closing "\]"/);
+        });
+
+        it("fails on an unterminated string and stray closers", async () => {
+            const json = '{"users":[]}';
+            await expect(execute("json.jsonpath", json, { path: "$.users['a" }))
+                .rejects.toThrow(/unterminated string/);
+            await expect(execute("json.jsonpath", json, { path: "$.users]" }))
+                .rejects.toThrow(/unexpected "\]"/);
+        });
+
+        it("ignores brackets inside quoted strings", async () => {
+            const json = '{"a[b":1}';
+            const result = await execute("json.jsonpath", json, { path: "$['a[b']", outputFormat: "compact" });
+            expect(JSON.parse(result)).toEqual([1]);
+        });
+    });
+
+    // ── json.unstringify warnings ────────────────────────────────────────────
+
+    describe("json.unstringify", () => {
+        const run = (input: string) =>
+            executeStep(
+                { id: "s", operationId: "json.unstringify", params: {}, enabled: true },
+                input,
+                createExecutionContext(input, 0, 1, ""),
+            );
+
+        it("unwraps a stringified JSON value without a warning", async () => {
+            const result = await run(JSON.stringify('{"a":1}'));
+            expect(result.error).toBeUndefined();
+            expect(JSON.parse(result.output)).toEqual({ a: 1 });
+            expect(result.warning).toBeUndefined();
+        });
+
+        it("warns when the input is already JSON and not a string", async () => {
+            const result = await run('[{"a":1}]');
+            expect(result.error).toBeUndefined();
+            expect(result.warning).toMatch(/not a JSON string/);
         });
     });
 });

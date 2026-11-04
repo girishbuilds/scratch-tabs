@@ -13,6 +13,7 @@ import {
   ChevronRight,
   Check,
   AlertCircle,
+  AlertTriangle,
   Clock,
 } from "../Icons";
 import { PipelineStep, StepResult } from "../../services/pipeline/types";
@@ -198,7 +199,17 @@ export const PipelineCanvas: React.FC<PipelineCanvasProps> = ({
                   {result.skipped ? (
                     <span className="text-xs text-muted">Skipped</span>
                   ) : result.error ? (
-                    <AlertCircle className="w-4 h-4 text-danger" />
+                    <AlertCircle
+                      className="w-4 h-4 text-danger"
+                      aria-label="Step failed"
+                      data-testid="step-status-error"
+                    />
+                  ) : result.warning ? (
+                    <AlertTriangle
+                      className="w-4 h-4 text-warning"
+                      aria-label="Step warning"
+                      data-testid="step-status-warning"
+                    />
                   ) : (
                     <div className="flex items-center gap-1 text-xs text-muted">
                       <Clock className="w-3 h-3" />
@@ -263,6 +274,15 @@ export const PipelineCanvas: React.FC<PipelineCanvasProps> = ({
                     />
                   </div>
                 ))}
+              </div>
+            )}
+
+            {/* Warning Message */}
+            {!result?.error && result?.warning && (
+              <div className="px-3 pb-3 pt-1 border-t border-warning/20">
+                <div className="text-xs text-warning" data-testid="step-warning-message">
+                  {result.warning}
+                </div>
               </div>
             )}
 

@@ -21,6 +21,22 @@ const DEFAULT_OPTIONS: CsvOptions = {
 };
 
 /**
+ * Flattens a nested value into exactly one row. Arrays inside it are kept as
+ * JSON strings, so no items are lost when only one row can be used.
+ */
+function flattenToSingleRow(
+  data: any,
+  options: CsvOptions
+): Record<string, any> {
+  if (Array.isArray(data)) {
+    return { value: JSON.stringify(data) };
+  }
+  return (
+    flattenAndExpand(data, { ...options, arrayExpansion: "stringify" })[0] || {}
+  );
+}
+
+/**
  * Recursively flattens a JSON object and expands its arrays into multiple rows.
  * This is the core of the smart CSV generation.
  *
@@ -48,13 +64,14 @@ function flattenAndExpand(
   for (const [key, value] of Object.entries(data)) {
     if (Array.isArray(value) && options.arrayExpansion !== "stringify") {
       arraysToExpand.push({ key, values: value });
+      baseObject[key] = ""; // placeholder keeps the column in source order
     } else if (
       typeof value === "object" &&
       value !== null &&
       !Array.isArray(value)
     ) {
       // Nested object: flatten its keys into the base object
-      const flatSubObject = flattenAndExpand(value, options)[0] || {};
+      const flatSubObject = flattenToSingleRow(value, options);
       for (const [subKey, subValue] of Object.entries(flatSubObject)) {
         baseObject[`${key}.${subKey}`] = subValue;
       }
@@ -93,16 +110,24 @@ function flattenAndExpand(
     // For each existing row, create new rows for each item in the current array
     for (const currentRow of rows) {
       for (const item of values) {
-        const flatItem = flattenAndExpand(item, options)[0] || {};
-        const newRow = { ...currentRow };
+        const flatItem = flattenToSingleRow(item, options);
+        const newRow: Record<string, any> = {};
 
-        // If the item is a primitive, just use the array key
-        if (Object.keys(flatItem).length === 1 && flatItem.value !== undefined) {
-          newRow[key] = flatItem.value;
-        } else {
-          // If the item is an object, prefix its keys with the array key
-          for (const [itemKey, itemValue] of Object.entries(flatItem)) {
-            newRow[`${key}.${itemKey}`] = itemValue;
+        // Rebuild the row so the array's columns stay where the array sat in the source
+        for (const [rowKey, rowValue] of Object.entries(currentRow)) {
+          if (rowKey !== key) {
+            newRow[rowKey] = rowValue;
+          } else if (
+            Object.keys(flatItem).length === 1 &&
+            flatItem.value !== undefined
+          ) {
+            // Primitive item: use the array key itself
+            newRow[key] = flatItem.value;
+          } else {
+            // Object item: prefix its keys with the array key
+            for (const [itemKey, itemValue] of Object.entries(flatItem)) {
+              newRow[`${key}.${itemKey}`] = itemValue;
+            }
           }
         }
 
@@ -154,7 +179,7 @@ function escapeCsvValue(value: any, delimiter: string): string {
 export function convertToCsv(
   jsonString: string | any,
   options: Partial<CsvOptions> = {}
-): { csv: string; error: null } | { csv: ""; error: string } {
+): { csv: string; rowCount: number; error: null } | { csv: ""; rowCount: 0; error: string } {
   const finalOptions: CsvOptions = { ...DEFAULT_OPTIONS, ...options };
 
   try {
@@ -166,7 +191,7 @@ export function convertToCsv(
     const flatData = flattenAndExpand(json, finalOptions);
 
     if (flatData.length === 0) {
-      return { csv: "", error: null };
+      return { csv: "", rowCount: 0, error: null };
     }
 
     // Collect all unique headers from all generated rows
@@ -174,7 +199,7 @@ export function convertToCsv(
     flatData.forEach((row) => {
       Object.keys(row).forEach((key) => headersSet.add(key));
     });
-    const headers = Array.from(headersSet).sort();
+    const headers = Array.from(headersSet);
 
     const csvRows: string[] = [];
 
@@ -195,11 +220,12 @@ export function convertToCsv(
       csvRows.push(rowValues.join(finalOptions.delimiter));
     });
 
-    return { csv: csvRows.join("\n"), error: null };
+    return { csv: csvRows.join("\n"), rowCount: flatData.length, error: null };
   } catch (error: any) {
     console.error("Error during CSV conversion:", error);
     return {
       csv: "",
+      rowCount: 0,
       error: `Conversion failed: ${error.message || "Unknown error"}`,
     };
   }
