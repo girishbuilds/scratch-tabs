@@ -386,6 +386,69 @@ describe("scratchpadStore", () => {
     });
   });
 
+  describe("updateText", () => {
+    it("replaces the text and re-detects secrets, in state and in storage", async () => {
+      const { state } = await setup();
+      await state().addFromText("deploy notes");
+      expect(state().items[0]).toMatchObject({ kind: "note", secretCount: 0 });
+      await state().updateText("id-1", FIXTURES.uatKeyLine);
+      expect(state().items[0]).toMatchObject({ kind: "secret", secretCount: 1 });
+      expect(await state().getEditableText("id-1")).toBe(FIXTURES.uatKeyLine);
+      expect(await state().revealSecrets("id-1")).toEqual([FIXTURES.uatKeyValue]);
+      expect(JSON.stringify(state().items)).not.toContain(FIXTURES.uatKeyValue);
+    });
+
+    it("unmasks an entry whose secret was edited away", async () => {
+      const { state } = await setup();
+      await state().addFromText(FIXTURES.uatKeyLine);
+      await state().updateText("id-1", FIXTURES.mvn);
+      expect(state().items[0]).toMatchObject({ kind: "command", secretCount: 0 });
+    });
+
+    it("keeps the entry's position, pin and creation time", async () => {
+      const { state, repository } = await setup();
+      await state().addFromText("older");
+      await state().addFromText("newer");
+      await state().togglePin("id-1");
+      const createdAt = repository.records.get("id-1")!.createdAt;
+      await state().updateText("id-1", "older, edited");
+      expect(state().items.map((i) => i.id)).toEqual(["id-1", "id-2"]);
+      expect(state().items[0]).toMatchObject({ pinned: true, createdAt });
+    });
+
+    it("stamps the stored record as updated", async () => {
+      const { state, repository } = await setup();
+      await state().addFromText("a");
+      const before = repository.records.get("id-1")!;
+      await state().updateText("id-1", "b");
+      expect(repository.records.get("id-1")!.updatedAt).toBeGreaterThan(before.updatedAt);
+    });
+
+    it("rejects blank or oversized text and leaves the entry unchanged", async () => {
+      const { state } = await setup();
+      await state().addFromText("keep me");
+      await expect(state().updateText("id-1", "  ")).rejects.toThrow("can't be empty");
+      await expect(
+        state().updateText("id-1", "x".repeat(MAX_SCRATCH_INPUT_CHARS + 1)),
+      ).rejects.toThrow("too large");
+      expect(await state().getEditableText("id-1")).toBe("keep me");
+    });
+
+    it("is blocked while presenting", async () => {
+      const { state } = await setup();
+      await state().addFromText("keep me");
+      state().setPresenting(true);
+      await expect(state().updateText("id-1", "changed")).rejects.toBeInstanceOf(PresentingModeError);
+      state().setPresenting(false);
+      expect(await state().getEditableText("id-1")).toBe("keep me");
+    });
+
+    it("rejects for an unknown entry", async () => {
+      const { state } = await setup();
+      await expect(state().updateText("nope", "x")).rejects.toThrow("Entry not found");
+    });
+  });
+
   describe("getSecretValue", () => {
     it("decrypts one secret by index", async () => {
       const { state } = await setup();

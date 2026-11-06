@@ -3,7 +3,7 @@ import type { ScratchListItem } from "../types";
 import { getPrimaryCopyText, getSecretValues } from "../services/blockSegmenter";
 import { sortEntries } from "../services/entryOrdering";
 import { createEntryGateway } from "../services/entryGateway";
-import { createPayloads } from "../services/ingestText";
+import { createEditedPayload, createPayloads } from "../services/ingestText";
 import { markRangeAsSecret, unmarkSecrets } from "../services/payloadEdits";
 import {
   openEntry,
@@ -60,6 +60,8 @@ export interface ScratchpadState {
   markNotSecret: (id: string, secretIndex: number) => Promise<void>;
   /** Masks a range the detectors missed. */
   maskRange: (id: string, start: number, end: number) => Promise<void>;
+  /** Replaces an entry's text and re-detects its secrets. Rejects while presenting. */
+  updateText: (id: string, text: string) => Promise<void>;
   /** Decrypts and returns the secret values of an entry. Never stored in state. */
   revealSecrets: (id: string) => Promise<string[]>;
   /** Decrypts one secret to copy it without revealing it. Allowed while presenting. */
@@ -218,6 +220,12 @@ export function createScratchpadStore(deps: ScratchpadDeps) {
       maskRange: async (id, start, end) => {
         assertNotPresenting();
         const view = await gateway.edit(id, (payload) => markRangeAsSecret(payload, { start, end }));
+        set(replaceItem(view));
+      },
+
+      updateText: async (id, text) => {
+        assertNotPresenting();
+        const view = await gateway.edit(id, () => createEditedPayload(text));
         set(replaceItem(view));
       },
 
