@@ -1,6 +1,5 @@
 import React, { useState } from "react";
-import { Check, Copy, Eye, EyeOff, Pin, PinOff, TextSelect, Trash2 } from "lucide-react";
-import { ScratchMenu, ScratchMenuItem } from "./ScratchMenu";
+import { Check, Copy, Eye, EyeOff, Pencil, Pin, PinOff, TextSelect, Trash2 } from "lucide-react";
 import { iconButton } from "./styles";
 
 interface ScratchEntryToolbarProps {
@@ -11,11 +10,12 @@ interface ScratchEntryToolbarProps {
   copy?: { label: string; onCopy: () => void };
   reveal?: { isRevealed: boolean; onToggle: () => void };
   onMaskText?: () => void;
+  onEdit?: () => void;
 }
 
 /**
- * Hover/focus toolbar floating over the top-right of an entry. Frequent
- * actions are buttons; Mask text and Delete live in the overflow menu.
+ * Hover/focus toolbar floating over the top-right of an entry. Every action
+ * is a direct button; Delete needs a second click to confirm.
  */
 export const ScratchEntryToolbar: React.FC<ScratchEntryToolbarProps> = ({
   pinned,
@@ -24,16 +24,15 @@ export const ScratchEntryToolbar: React.FC<ScratchEntryToolbarProps> = ({
   copy,
   reveal,
   onMaskText,
+  onEdit,
 }) => {
-  const [menuOpen, setMenuOpen] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   return (
     <div
       data-testid="scratch-toolbar"
-      className={`absolute right-1.5 top-1 z-10 flex items-center gap-0.5 rounded border border-base bg-surface-raised p-0.5 shadow transition-opacity focus-within:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100 ${
-        menuOpen ? "opacity-100" : "opacity-0"
-      }`}
+      className="absolute right-1.5 top-1 z-10 flex items-center gap-0.5 rounded border border-base bg-surface-raised p-0.5 shadow transition-opacity focus-within:opacity-100 group-hover:opacity-100 opacity-0 [@media(hover:none)]:opacity-100"
+      onMouseLeave={() => setConfirmingDelete(false)}
     >
       {copy && (
         <button
@@ -59,6 +58,18 @@ export const ScratchEntryToolbar: React.FC<ScratchEntryToolbarProps> = ({
           {reveal.isRevealed ? <EyeOff size={14} /> : <Eye size={14} />}
         </button>
       )}
+      {onEdit && (
+        <button
+          type="button"
+          data-testid="scratch-edit"
+          aria-label="Edit entry"
+          title="Edit"
+          className={iconButton}
+          onClick={onEdit}
+        >
+          <Pencil size={14} />
+        </button>
+      )}
       <button
         type="button"
         data-testid="scratch-pin"
@@ -70,42 +81,32 @@ export const ScratchEntryToolbar: React.FC<ScratchEntryToolbarProps> = ({
       >
         {pinned ? <PinOff size={14} /> : <Pin size={14} />}
       </button>
-      <ScratchMenu
-        label="More actions"
-        testId="scratch-more"
-        onOpenChange={(open) => {
-          setMenuOpen(open);
-          if (!open) setConfirmingDelete(false);
+      {onMaskText && (
+        <button
+          type="button"
+          data-testid="scratch-mask-mode"
+          aria-label="Mask text"
+          title="Mask text..."
+          className={iconButton}
+          onClick={onMaskText}
+        >
+          <TextSelect size={14} />
+        </button>
+      )}
+      <button
+        type="button"
+        data-testid="scratch-delete"
+        aria-label={confirmingDelete ? "Confirm delete" : "Delete entry"}
+        title={confirmingDelete ? "Click again to delete" : "Delete"}
+        className={`${iconButton} ${confirmingDelete ? "!text-warning" : ""}`}
+        onClick={() => {
+          if (confirmingDelete) onDelete();
+          else setConfirmingDelete(true);
         }}
+        onBlur={() => setConfirmingDelete(false)}
       >
-        {({ close }) => (
-          <>
-            {onMaskText && (
-              <ScratchMenuItem
-                testId="scratch-mask-mode"
-                label="Mask text..."
-                ariaLabel="Mask text"
-                icon={<TextSelect size={14} />}
-                onSelect={() => {
-                  onMaskText();
-                  close();
-                }}
-              />
-            )}
-            <ScratchMenuItem
-              testId="scratch-delete"
-              label={confirmingDelete ? "Click again to delete" : "Delete"}
-              ariaLabel={confirmingDelete ? "Confirm delete" : "Delete entry"}
-              icon={confirmingDelete ? <Check size={14} /> : <Trash2 size={14} />}
-              danger
-              onSelect={() => {
-                if (confirmingDelete) onDelete();
-                else setConfirmingDelete(true);
-              }}
-            />
-          </>
-        )}
-      </ScratchMenu>
+        {confirmingDelete ? <Check size={14} /> : <Trash2 size={14} />}
+      </button>
     </div>
   );
 };

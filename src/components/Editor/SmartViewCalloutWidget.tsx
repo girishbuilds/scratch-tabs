@@ -1,10 +1,8 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Eye, X } from '../Icons';
 import { SmartView } from '../../views/registry';
 import { formatRegistry } from '../../formats';
-
-const AUTO_DISMISS_TIMEOUT_MS = 15000;
 
 interface SmartViewCalloutWidgetProps {
   view: SmartView;
@@ -19,11 +17,7 @@ export const SmartViewCalloutWidget: React.FC<SmartViewCalloutWidgetProps> = ({
   onSwitch,
   onDismiss,
 }) => {
-  // Auto-dismiss after configured timeout
-  useEffect(() => {
-    const timer = setTimeout(onDismiss, AUTO_DISMISS_TIMEOUT_MS);
-    return () => clearTimeout(timer);
-  }, [onDismiss]);
+  // Persistent chip: stays until the user opens the Smart View or dismisses it.
 
   // Get the format name from the registry
   const formatName = useMemo(() => {
@@ -53,7 +47,7 @@ export const SmartViewCalloutWidget: React.FC<SmartViewCalloutWidgetProps> = ({
            <Eye size={15} aria-hidden="true" />
         </div>
         <div className="flex min-w-0 flex-col" data-testid="smart-view-callout-message">
-          <span className="text-xs font-semibold text-main">Data View available</span>
+          <span className="text-xs font-semibold text-main">Smart View available</span>
           <span className="truncate text-[10px] text-muted">{formatName} detected</span>
         </div>
       </div>
@@ -63,16 +57,17 @@ export const SmartViewCalloutWidget: React.FC<SmartViewCalloutWidgetProps> = ({
           data-testid="smart-view-callout-data-view"
           onClick={onSwitch}
           className="rounded-md border border-base bg-surface-raised px-2.5 py-1.5 text-xs font-semibold text-main shadow-sm transition-colors hover:bg-element-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-          aria-label="Open Data View"
-          title={`Open Data View (${view.label})`}
+          aria-label="Open Smart View"
+          title={`Open Smart View (${view.label})`}
         >
-          Data View
+          Smart View
         </button>
         <button
           data-testid="smart-view-callout-dismiss"
           onClick={onDismiss}
           className="p-1.5 text-muted hover:text-main hover:bg-element-hover rounded transition-colors"
           title="Dismiss"
+          aria-label="Dismiss Smart View suggestion"
         >
           <X size={14} />
         </button>

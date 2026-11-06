@@ -1,8 +1,9 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { DndContext } from "@dnd-kit/core";
 import { SidebarDraggableTab } from "../SidebarDraggableTab";
-import { describe, it, expect, jest } from "@jest/globals";
+import { useSidebarStore } from "../../../stores/sidebarStore";
+import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 
 describe("SidebarDraggableTab", () => {
     const defaultProps = {
@@ -18,6 +19,33 @@ describe("SidebarDraggableTab", () => {
     const renderWithDndContext = (component: React.ReactElement) => {
         return render(<DndContext>{component}</DndContext>);
     };
+
+    describe("rename triggers", () => {
+        beforeEach(() => {
+            useSidebarStore.getState().setEditingId(null);
+        });
+
+        it("starts renaming on double-click", () => {
+            renderWithDndContext(<SidebarDraggableTab {...defaultProps} />);
+            fireEvent.doubleClick(screen.getByTestId("sidebar-tab-tab1"));
+            expect(useSidebarStore.getState().editingId).toBe("tab1");
+            expect(useSidebarStore.getState().editingValue).toBe("Test Tab");
+        });
+
+        it("starts renaming on F2", () => {
+            renderWithDndContext(<SidebarDraggableTab {...defaultProps} />);
+            fireEvent.keyDown(screen.getByTestId("sidebar-tab-tab1"), { key: "F2" });
+            expect(useSidebarStore.getState().editingId).toBe("tab1");
+        });
+
+        it("does not start renaming on a single click or other keys", () => {
+            renderWithDndContext(<SidebarDraggableTab {...defaultProps} />);
+            const row = screen.getByTestId("sidebar-tab-tab1");
+            fireEvent.click(row);
+            fireEvent.keyDown(row, { key: "Enter" });
+            expect(useSidebarStore.getState().editingId).toBeNull();
+        });
+    });
 
     it("should render tab with title", () => {
         renderWithDndContext(<SidebarDraggableTab {...defaultProps} />);

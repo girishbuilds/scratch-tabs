@@ -667,4 +667,31 @@ describe("JwtTablet", () => {
       expect(deserialized.data.signingAlgorithm).toBe("HS256");
     });
   });
+
+  describe("createInitialState with a seeded token", () => {
+    it("decodes the token so the decoder shows it immediately", () => {
+      (jwtUtils.decodeJwt as jest.Mock).mockReturnValueOnce({
+        header: { alg: "HS256" },
+        payload: { sub: "1234567890" },
+        signature: "sig",
+        warning: null,
+      });
+
+      const state = JwtTablet.createInitialState({ token: "  a.b.c  " }) as any;
+
+      expect(jwtUtils.decodeJwt).toHaveBeenCalledWith("a.b.c");
+      expect(state.data.token).toBe("a.b.c");
+      expect(state.data.header).toEqual({ alg: "HS256" });
+      expect(state.data.payload).toEqual({ sub: "1234567890" });
+      expect(state.data.signature).toBe("sig");
+      expect(state.data.activeTab).toBe("decode");
+    });
+
+    it("does not decode when no token is given", () => {
+      (jwtUtils.decodeJwt as jest.Mock).mockClear();
+      const state = JwtTablet.createInitialState({}) as any;
+      expect(jwtUtils.decodeJwt).not.toHaveBeenCalled();
+      expect(state.data.token).toBe("");
+    });
+  });
 });

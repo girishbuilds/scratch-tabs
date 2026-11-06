@@ -27,6 +27,7 @@ import { AboutModal, ChangelogModal } from "../Modals";
 import { ConfirmationDialog } from "../Tab/ConfirmationDialog";
 import { TestFields } from "../TestFields/TestFields";
 import { MilestoneToast, MilestoneModal } from "../MilestoneCelebration";
+import { PasteFallbackDialog } from "../PasteFallback/PasteFallbackDialog";
 import { useAIStore } from "../../stores/aiStore";
 import { useStoreWithEqualityFn } from "zustand/traditional";
 import { shallow } from "zustand/shallow";
@@ -461,6 +462,7 @@ const MainLayout: React.FC = () => {
       {/* Milestone Celebration Components */}
       <MilestoneToast />
       <MilestoneModal />
+      <PasteFallbackDialog />
     </div>
   );
 };

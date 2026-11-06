@@ -11,7 +11,7 @@ import type { ToolItem } from "../../../services/toolService";
  */
 export const DEMO_JSON_CONTENT = {
   "welcome": "Smart View Demo",
-  "smartView": "Click the 'Data View' button in the Smart View popup to the right",
+  "smartView": "Click the 'Smart View' button in the popup to the right",
   "features": {
     "autoDetection": "Paste any JSON to see it transform automatically",
     "treeView": "Navigate nested objects with expand/collapse",
@@ -20,14 +20,14 @@ export const DEMO_JSON_CONTENT = {
   },
   "howToUse": [
     "1. Everything starts off as a raw editor, until content is pasted in",
-    "2. Upon auto-detection, click the 'Data View' button to the right to transform the view",
+    "2. Upon auto-detection, click the 'Smart View' button to the right to transform the view",
     "3. Click arrows to expand/collapse objects",
     "4. Paste your own JSON (Ctrl+V) to try it yourself"
   ],
   "tabs": "All content opens in new tabs. Switch between tabs at the top to organize your work.",
   "devTools": "Click the extension icon (top right) to open developer tools (JWT, Regex, REST Client, etc.)",
   "workspaces": "Group related tabs into Workspaces using the sidebar for better organization.",
-  "toggle": "Click the 3 dots at the bottom of the page to toggle back to raw editor",
+  "toggle": "Click 'Text View' in the status bar at the bottom to switch back to the raw editor",
   "nextSteps": "Try pasting your own JSON to see Smart View in action!"
 };
 

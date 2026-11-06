@@ -26,6 +26,17 @@ describe("ScratchComposer", () => {
     expect(input.value).toBe("");
   });
 
+  it("pastes into the field when there is already typed text", () => {
+    const onSubmit = jest.fn();
+    render(<ScratchComposer onSubmit={onSubmit} />);
+    const input = screen.getByTestId("scratch-input") as HTMLTextAreaElement;
+    fireEvent.change(input, { target: { value: "My key: " } });
+    const event = paste(input, "abc123def456");
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(false);
+    expect(input.value).toBe("My key: ");
+  });
+
   it("lets blank pastes through untouched", () => {
     const onSubmit = jest.fn();
     render(<ScratchComposer onSubmit={onSubmit} />);

@@ -28,7 +28,7 @@ export const RichTextControls: React.FC<RichTextControlsProps> = ({
     >
       <FileText size={12} className="text-slate-600 dark:text-muted group-hover:text-slate-900 dark:group-hover:text-secondary" />
       <span className="text-xs text-slate-700 dark:text-secondary">
-        {activeTab.isRich ? 'Rich' : 'Text'}
+        {activeTab.isRich ? 'Rich Text' : 'Plain Text'}
       </span>
     </button>
   );

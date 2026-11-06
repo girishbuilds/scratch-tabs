@@ -41,6 +41,7 @@ export const ScratchDrawer: React.FC = () => {
       togglePin: (id) => void s.togglePin(id),
       markNotSecret: s.markNotSecret,
       maskRange: s.maskRange,
+      updateText: s.updateText,
       revealSecrets: s.revealSecrets,
       getSecretValue: s.getSecretValue,
       getEditableText: s.getEditableText,

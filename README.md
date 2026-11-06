@@ -7,18 +7,20 @@ Website: https://scratchtabs.com
 ## Highlights
 
 - Local-first persistence with IndexedDB (no server required for core workflows)
-- Installable Progressive Web App with offline app-shell caching
+- Installable Progressive Web App
 - Monaco-powered editor with many format/tool integrations
-- Smart Views for structured content (JSON, CSV, and more)
-- Spatial Canvas for arranging mixed text, code, images, links, and videos
+- Automatic format detection for JSON, CSV/TSV, YAML, TOML, XML, INI, `.env`, Properties, HAR, OpenAPI, PEM certificates, JWT, SQL, Markdown, HTML/SVG, stack traces, and common programming languages
+- Smart Views for structured formats, such as a table view for CSV, a certificate viewer for PEM, and an explorer for OpenAPI
 - Transformation Pipeline system for repeatable data operations
-- Dev tools ("tablets") (JWT, regex, REST client, converter, checksums, etc.)
+- Built-in dev tools such as JWT, regex, REST client, converters, and checksums
 
 ## Tech Stack
 
 - React 18 + TypeScript
 - Vite
 - Zustand
+- Monaco Editor
+- Dexie (IndexedDB)
 - Tailwind CSS
 - Jest + Testing Library
 - Playwright + Cucumber
@@ -63,23 +65,13 @@ The app starts on `http://localhost:5173`.
 - `landing/`: Landing site assets/pages
 - `changelog/`: Changelog generation scripts
 
-## Developer Guidance
-
-Coding-agent and implementation guidance is in [CLAUDE.md](./CLAUDE.md).
-
 ## Privacy Model
 
 Scratch Tabs is designed to keep data client-side. Core app workflows run in the browser and persist locally.
 
-Canvas documents and pasted image assets are stored separately in local IndexedDB
-records. Baseline link cards do not fetch remote preview metadata, and supported
-video embeds are created only after the user chooses Play. Workspace export is an
-explicit local action and includes only the Canvas documents and referenced assets
-in the selected workspace.
-
 ## Contributing
 
-Please read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request.
+Please read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request. Implementation guidance for coding agents is in [CLAUDE.md](./CLAUDE.md).
 
 ## Security
 

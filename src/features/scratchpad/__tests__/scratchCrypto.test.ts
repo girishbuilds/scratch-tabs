@@ -3,6 +3,7 @@ import {
   decryptPayload,
   encryptPayload,
   generateScratchKey,
+  SECURE_CONTEXT_ERROR,
   type ScratchKeyStore,
 } from "../services/scratchCrypto";
 import type { ScratchPayload } from "../types";
@@ -149,5 +150,17 @@ describe("createKeyProvider", () => {
     const provider = createKeyProvider(store, newTestKey);
     await expect(provider.getKey()).rejects.toThrow("idb unavailable");
     expect(await provider.getKey()).toBe(key);
+  });
+});
+
+describe("generateScratchKey in an insecure context", () => {
+  it("throws an actionable error when crypto.subtle is unavailable", async () => {
+    const original = Object.getOwnPropertyDescriptor(globalThis, "crypto");
+    Object.defineProperty(globalThis, "crypto", { value: {}, configurable: true });
+    try {
+      await expect(generateScratchKey()).rejects.toThrow(SECURE_CONTEXT_ERROR);
+    } finally {
+      if (original) Object.defineProperty(globalThis, "crypto", original);
+    }
   });
 });

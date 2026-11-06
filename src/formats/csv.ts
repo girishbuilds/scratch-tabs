@@ -2,9 +2,118 @@ import { BaseFormatDetector } from "./baseDetector";
 import { formatRegistry } from "./registry";
 import { DetectionResult, FormatModule  } from "./types";
 
-// Helper to escape characters for RegExp constructor
-function escapeRegExp(string: string): string {
-  return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+/**
+ * Quote-aware split of `content` into records of fields.
+ *
+ * Quotes are only valid wrapping a whole field. Inside a quoted field a doubled
+ * quote (RFC 4180) or a backslash-escaped quote is a literal quote, and
+ * delimiters and newlines are plain text. Returns null when quoting is
+ * malformed (a quote in the middle of an unquoted field, or text after a
+ * closing quote), so prose with stray quotes is not mistaken for CSV.
+ *
+ * Blank lines are skipped. A record still open at the end of input is dropped:
+ * detection samples the first lines of a file, which can cut a multi-line
+ * quoted field in half.
+ */
+function parseDelimitedRecords(
+  content: string,
+  delimiter: string,
+): string[][] | null {
+  const records: string[][] = [];
+  let fields: string[] = [];
+  let field = "";
+  let state: "start" | "unquoted" | "quoted" | "afterQuote" = "start";
+  let recordHasContent = false;
+
+  const endField = () => {
+    fields.push(field);
+    field = "";
+    state = "start";
+  };
+  const endRecord = () => {
+    if (recordHasContent) {
+      endField();
+      records.push(fields);
+    }
+    fields = [];
+    field = "";
+    state = "start";
+    recordHasContent = false;
+  };
+  const isFieldEnd = (index: number): boolean => {
+    let i = index;
+    while (content[i] === " ") i++;
+    return (
+      i >= content.length ||
+      content[i] === delimiter ||
+      content[i] === "\n" ||
+      content[i] === "\r"
+    );
+  };
+
+  for (let i = 0; i < content.length; i++) {
+    const ch = content[i];
+
+    if (state === "quoted") {
+      if (ch === '"') {
+        if (content[i + 1] === '"') {
+          field += '"';
+          i++;
+        } else {
+          state = "afterQuote";
+        }
+      } else if (ch === "\\" && content[i + 1] === '"' && !isFieldEnd(i + 2)) {
+        field += '"';
+        i++;
+      } else {
+        field += ch;
+      }
+      continue;
+    }
+
+    if (ch === "\r" && content[i + 1] === "\n") continue;
+
+    if (ch === "\n") {
+      endRecord();
+      continue;
+    }
+
+    if (ch === delimiter) {
+      recordHasContent = true;
+      endField();
+      continue;
+    }
+
+    if (state === "afterQuote") {
+      if (ch === " ") continue;
+      return null; // text after the closing quote
+    }
+
+    if (state === "start") {
+      if (ch === " ") {
+        field += ch;
+        continue;
+      }
+      recordHasContent = true;
+      if (ch === '"' && field.trim() === "") {
+        field = "";
+        state = "quoted";
+      } else {
+        field += ch;
+        state = "unquoted";
+      }
+      continue;
+    }
+
+    // unquoted
+    if (ch === '"') return null; // quote inside an unquoted field
+    field += ch;
+  }
+
+  // Input ended outside quotes: flush the last record. Inside quotes: drop it.
+  if (state !== "quoted") endRecord();
+
+  return records;
 }
 
 /**
@@ -46,70 +155,41 @@ export class CsvFormatDetector extends BaseFormatDetector implements FormatModul
       return this.noMatch();
     }
 
-    // --- 1. Determine Delimiter from the First Line ---
-    const firstLine = lines[0];
+    // --- 1. Determine Delimiter ---
+    // The delimiter with the most occurrences outside quotes in the first
+    // record wins; a quoted comma ("Smith, Jane") is not a delimiter.
     const candidateDelimiters = [",", "\t", ";", "|"];
     let chosenDelimiter: string | null = null;
-    let expectedDelimiterCount = -1;
-
+    let chosenRecords: string[][] = [];
     let maxDelimiterFrequency = 0;
 
     for (const delim of candidateDelimiters) {
-      const occurrences = (
-        firstLine.match(new RegExp(escapeRegExp(delim), "g")) || []
-      ).length;
-      if (occurrences > 0 && occurrences > maxDelimiterFrequency) {
+      const records = parseDelimitedRecords(content, delim);
+      if (!records || records.length === 0) continue;
+      const occurrences = records[0].length - 1;
+      if (occurrences > maxDelimiterFrequency) {
         maxDelimiterFrequency = occurrences;
         chosenDelimiter = delim;
+        chosenRecords = records;
       }
     }
 
-    if (chosenDelimiter) {
-      expectedDelimiterCount = maxDelimiterFrequency;
-    } else {
+    if (!chosenDelimiter) {
       return this.noMatch();
     }
+    const expectedDelimiterCount = maxDelimiterFrequency;
 
     // Must have at least 2 delimiters (3 columns minimum)
     if (expectedDelimiterCount < 2) {
       return this.noMatch();
     }
 
-    // --- 2. Check All Lines for Consistent Delimiter Count ---
-    for (const line of lines) {
-      const currentLineDelimiterCount = (
-        line.match(new RegExp(escapeRegExp(chosenDelimiter), "g")) || []
-      ).length;
-
-      if (currentLineDelimiterCount !== expectedDelimiterCount) {
-        return this.noMatch();
-      }
+    // --- 2. Check All Records Have a Consistent Field Count ---
+    if (chosenRecords.length < 3) {
+      return this.noMatch();
     }
-
-    // --- 3. Quote Validation ---
-    // If quotes are present, validate they properly wrap entire fields
-    for (const line of lines) {
-      const fields = line.split(chosenDelimiter);
-      
-      for (const field of fields) {
-        const trimmedField = field.trim();
-        
-        // If field contains quotes, it must be properly quoted
-        if (trimmedField.includes('"')) {
-          // Field must start and end with quotes to be valid
-          if (!trimmedField.startsWith('"') || !trimmedField.endsWith('"')) {
-            return this.noMatch();
-          }
-          
-          // Check for unescaped internal quotes (simplified check).
-          // Both RFC 4180 doubled quotes ("") and backslash escapes (\") are accepted.
-          const innerContent = trimmedField.slice(1, -1).replace(/""/g, "");
-          const unescapedQuotes = innerContent.match(/(?<!\\)"/g);
-          if (unescapedQuotes && unescapedQuotes.length > 0) {
-            return this.noMatch();
-          }
-        }
-      }
+    if (chosenRecords.some((record) => record.length !== expectedDelimiterCount + 1)) {
+      return this.noMatch();
     }
 
     // Simple confidence based on delimiter consistency

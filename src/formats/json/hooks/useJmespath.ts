@@ -2,6 +2,18 @@ import { useMemo } from 'react';
 import { search } from 'jmespath';
 import { useDebounce } from '../../../hooks/useDebounce';
 
+/**
+ * The jmespath parser can crash with an internal TypeError (e.g. `users..email`)
+ * instead of a parse error. Replace that with a message a user can act on.
+ */
+function describeQueryError(error: unknown): string {
+  if (!(error instanceof Error)) return 'Query Error: Invalid JMESPath expression';
+  if (error instanceof TypeError) {
+    return "Query Error: Syntax error - check for a doubled '.', a missing name or an incomplete expression";
+  }
+  return `Query Error: ${error.message}`;
+}
+
 interface JmespathResult {
   results: unknown | null;
   error: string | null;
@@ -48,12 +60,7 @@ export function useJmespath(
       const queryResult = search(parsedJson, debouncedQuery);
       return { results: queryResult, error: null };
     } catch (jmespathError) {
-      return {
-        results: null,
-        error: jmespathError instanceof Error
-          ? `Query Error: ${jmespathError.message}`
-          : 'Query Error: Invalid JMESPath expression'
-      };
+      return { results: null, error: describeQueryError(jmespathError) };
     }
   }, [debouncedQuery, jsonString]);
 

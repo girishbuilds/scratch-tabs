@@ -43,18 +43,18 @@ describe("SmartViewButtons", () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it("renders both Text View and Data View with Text View selected by default", () => {
+  it("renders both Text View and Smart View with Text View selected by default", () => {
     (smartViewRegistry.getViewsForLanguage as jest.Mock).mockReturnValue([mockView]);
 
     render(<SmartViewButtons language="json" tabId="tab-1" />);
 
     expect(screen.getByTestId("text-view-button")).toHaveTextContent("Text View");
-    expect(screen.getByTestId("data-view-button")).toHaveTextContent("Data View");
+    expect(screen.getByTestId("data-view-button")).toHaveTextContent("Smart View");
     expect(screen.getByTestId("text-view-button")).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByTestId("data-view-button")).toHaveAttribute("aria-pressed", "false");
   });
 
-  it("selects the primary Data View when the data option is clicked", () => {
+  it("selects the primary Smart View when the data option is clicked", () => {
     (smartViewRegistry.getViewsForLanguage as jest.Mock).mockReturnValue([mockView]);
     render(<SmartViewButtons language="json" tabId="tab-1" />);
 
@@ -76,7 +76,7 @@ describe("SmartViewButtons", () => {
     expect(mockSetActiveView).toHaveBeenCalledWith("tab-1", null);
   });
 
-  it("marks Data View selected for any registered active smart view", () => {
+  it("marks Smart View selected for any registered active smart view", () => {
     const secondaryView = { ...mockView, id: "json-schema", label: "Schema" };
     (smartViewRegistry.getViewsForLanguage as jest.Mock).mockReturnValue([mockView, secondaryView]);
     (useRootStore as jest.Mock).mockReturnValue({
@@ -88,6 +88,6 @@ describe("SmartViewButtons", () => {
 
     expect(screen.getByTestId("text-view-button")).toHaveAttribute("aria-pressed", "false");
     expect(screen.getByTestId("data-view-button")).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByTestId("data-view-button")).toHaveAttribute("aria-label", "Data View (JSON Tree)");
+    expect(screen.getByTestId("data-view-button")).toHaveAttribute("aria-label", "Smart View (JSON Tree)");
   });
 });

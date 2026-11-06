@@ -57,6 +57,7 @@ import { MaskedCell } from "./MaskedCell";
 import { isSensitiveHeader } from "../utils/sensitiveUtils";
 import { createCellKey, parseCellKey } from "../utils/cellUtils";
 import { canPerformShiftRight, getShiftRightCellIdentifiers } from "../utils/shiftRightUtils";
+import { compareCsvValues } from "../utils/sorting";
 import { CsvFindReplaceBar } from "./CsvFindReplaceBar";
 import {
   buildReplaceUpdates,
@@ -1267,6 +1268,11 @@ export const CsvTableViewer: React.FC<SmartViewProps> = ({
             );
           },
           enableSorting: true,
+          sortingFn: (rowA, rowB, columnId) =>
+            compareCsvValues(
+              String(rowA.getValue(columnId) ?? ""),
+              String(rowB.getValue(columnId) ?? ""),
+            ),
         }),
       ),
       columnHelper.display({

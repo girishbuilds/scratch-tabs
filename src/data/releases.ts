@@ -15,12 +15,31 @@ export interface Release {
   categories: ReleaseCategory[];
 }
 
-export const APP_VERSION = '1.53.0';
+export const APP_VERSION = '1.54.0';
 
 export const RELEASES: Release[] = [
   {
-    "version": "1.53.0",
+    "version": "1.54.0",
     "type": "latest",
+    "date": "2026-11-06",
+    "headline": "Minor Improvements",
+    "summary": "A round of minor improvements across Smart View, paste handling, JWT, CSV and JSON.",
+    "categories": [
+      {
+        "name": "Improvements",
+        "changes": [
+          "**Smart View:** Renamed from Data View, with a larger Text View / Smart View toggle and a suggestion chip that no longer auto-dismisses",
+          "**Paste fallback:** A new dialog helps when a paste cannot be handled directly",
+          "**JWT detection:** JWTs are now recognized more reliably",
+          "**TypeScript interfaces:** Objects that map to the same interface name are merged instead of dropped",
+          "**CSV and JSON:** Refinements to CSV editing, sorting and export, and to JSON queries and conversions"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "1.53.0",
+    "type": "release",
     "date": "2026-11-02",
     "headline": "Global Scratchpad",
     "summary": "A quick-capture scratchpad for commands, links and keys, with secrets masked and encrypted.",

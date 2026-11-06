@@ -70,6 +70,8 @@ export const EditorInstance: React.FC<EditorInstanceProps> = ({
     return tab || null;
   });
 
+  const activeViewId = activeTab?.activeViewId ?? null;
+
   // This can now be simplified since cursor position is no longer in React state
   const activeTabWithoutCursor = activeTab;
 
@@ -318,7 +320,7 @@ export const EditorInstance: React.FC<EditorInstanceProps> = ({
     const editor = editorRef.current;
     if (!editor || !monacoRef.current) return;
 
-    const shouldShowHere = isCalloutVisible && calloutTabId === activeTabId && calloutView && calloutLanguageId;
+    const shouldShowHere = isCalloutVisible && calloutTabId === activeTabId && calloutView && calloutLanguageId && !activeViewId;
 
     if (shouldShowHere) {
       // Create the widget if it doesn't exist
@@ -408,7 +410,15 @@ export const EditorInstance: React.FC<EditorInstanceProps> = ({
         }, 0);
       }
     };
-  }, [editorRef.current, isCalloutVisible, calloutTabId, calloutView, calloutLanguageId, activeTabId]);
+  }, [editorRef.current, isCalloutVisible, calloutTabId, calloutView, calloutLanguageId, activeTabId, activeViewId]);
+
+  // Once the user opens a Smart View by any route, the suggestion has done its job
+  useEffect(() => {
+    if (activeViewId && isCalloutVisible && calloutTabId === activeTabId) {
+      useTabsStore.getState().updateTabState(activeTabId, { smartViewIndicatorDismissed: true });
+      useCalloutStore.getState().hideCallout();
+    }
+  }, [activeViewId, isCalloutVisible, calloutTabId, activeTabId]);
 
 
 

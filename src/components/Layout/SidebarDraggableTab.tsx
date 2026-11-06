@@ -68,6 +68,10 @@ export const SidebarDraggableTab: React.FC<SidebarDraggableTabProps> = ({
     }
   }, [handleRenameSave, setEditingId]);
 
+  const startRename = useCallback(() => {
+    setEditingId(id, title);
+  }, [setEditingId, id, title]);
+
   // Setup draggable
   const {
     attributes,
@@ -134,6 +138,16 @@ export const SidebarDraggableTab: React.FC<SidebarDraggableTabProps> = ({
         isDragging && "opacity-50 scale-105"
       )}
       onClick={!isEditing ? onClick : undefined}
+      onDoubleClick={!isEditing ? startRename : undefined}
+      onKeyDown={(e) => {
+        if (isEditing) return;
+        if (e.key === "F2" && e.target === e.currentTarget) {
+          e.preventDefault();
+          startRename();
+          return;
+        }
+        listeners?.onKeyDown?.(e);
+      }}
       onContextMenu={!isEditing ? onContextMenu : undefined}
       data-testid={`sidebar-tab-${id}`}
       aria-selected={isActive}
@@ -167,7 +181,7 @@ export const SidebarDraggableTab: React.FC<SidebarDraggableTabProps> = ({
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                setEditingId(id, title);
+                startRename();
               }}
               className="p-0.5 hover:bg-surface-raised rounded text-secondary hover:text-main"
               title="Rename tab"

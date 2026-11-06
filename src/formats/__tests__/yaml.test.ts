@@ -413,4 +413,41 @@ And another line - with yet more dashes.`;
       expect(result.confidence).toBe(0.0);
     });
   });
+
+  describe("Kubernetes manifests", () => {
+    const configMap = `apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: prod
+data:
+  app.name: my-app
+  app.mode: production
+  log.level: info
+  db.host: postgres.default.svc
+`;
+
+    it("treats a manifest as a definitive YAML match", () => {
+      const result = detector.detect(configMap);
+      expect(result.match).toBe(true);
+      expect(result.matchedDefinitive).toBe(true);
+    });
+
+    it("matches a minimal manifest", () => {
+      const result = detector.detect(`apiVersion: v1
+kind: Namespace
+metadata:
+  name: staging
+`);
+      expect(result.match).toBe(true);
+    });
+
+    it("does not treat an indented apiVersion/kind as a manifest", () => {
+      const result = detector.detect(`config:
+  apiVersion: v1
+  kind: thing
+`);
+      expect(result.matchedDefinitive).toBeFalsy();
+    });
+  });
 });

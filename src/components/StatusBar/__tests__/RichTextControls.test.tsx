@@ -49,7 +49,7 @@ describe('RichTextControls', () => {
       const button = screen.getByRole('button');
       expect(button).toBeInTheDocument();
       expect(button).toHaveAttribute('title', 'Switch to Rich Text');
-      expect(screen.getByText('Text')).toBeInTheDocument();
+      expect(screen.getByText('Plain Text')).toBeInTheDocument();
       expect(screen.getByTestId('file-text-icon')).toBeInTheDocument();
     });
 
@@ -60,7 +60,7 @@ describe('RichTextControls', () => {
       const button = screen.getByRole('button');
       expect(button).toBeInTheDocument();
       expect(button).toHaveAttribute('title', 'Switch to Plain Text');
-      expect(screen.getByText('Rich')).toBeInTheDocument();
+      expect(screen.getByText('Rich Text')).toBeInTheDocument();
       expect(screen.getByTestId('file-text-icon')).toBeInTheDocument();
     });
 

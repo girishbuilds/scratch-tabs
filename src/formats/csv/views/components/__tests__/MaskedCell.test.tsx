@@ -1,4 +1,5 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import React from "react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { MaskedCell } from "../MaskedCell";
 
@@ -248,6 +249,65 @@ describe("MaskedCell", () => {
       // Should show input field, not highlighted text
       expect(screen.getByDisplayValue("Sensitive Data")).toBeInTheDocument();
       expect(screen.queryByText("Sensitive", { selector: "mark" })).not.toBeInTheDocument();
+    });
+  });
+
+  describe("Escape cancels a pasted edit", () => {
+    // Mirrors the real parent, which clears the start-editing trigger when editing ends
+    const Harness = () => {
+      const [start, setStart] = React.useState(true);
+      return (
+        <MaskedCell
+          {...defaultProps}
+          startEditing={start}
+          onEditingChange={(editing: boolean) => {
+            mockOnEditingChange(editing);
+            if (!editing) setStart(false);
+          }}
+        />
+      );
+    };
+    const startEdit = () => render(<Harness />);
+
+    it("restores the original value and does not commit pasted text", () => {
+      startEdit();
+      const input = screen.getByDisplayValue("Sensitive Data");
+      fireEvent.paste(input, { clipboardData: { getData: () => "pasted!" } });
+      fireEvent.change(input, { target: { value: "pasted!" } });
+
+      fireEvent.keyDown(input, { key: "Escape" });
+
+      expect(mockOnChange).not.toHaveBeenCalled();
+      expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+      expect(screen.getByText("Sensitive Data")).toBeInTheDocument();
+      expect(mockOnEditingChange).toHaveBeenLastCalledWith(false);
+    });
+
+    it("ignores the blur that fires right after Escape", () => {
+      startEdit();
+      const input = screen.getByDisplayValue("Sensitive Data");
+      fireEvent.change(input, { target: { value: "pasted!" } });
+
+      act(() => {
+        fireEvent.keyDown(input, { key: "Escape" });
+        fireEvent.blur(input);
+      });
+
+      expect(mockOnChange).not.toHaveBeenCalled();
+    });
+
+    it("still commits on Enter, once", () => {
+      startEdit();
+      const input = screen.getByDisplayValue("Sensitive Data");
+      fireEvent.change(input, { target: { value: "new" } });
+
+      act(() => {
+        fireEvent.keyDown(input, { key: "Enter" });
+        fireEvent.blur(input);
+      });
+
+      expect(mockOnChange).toHaveBeenCalledTimes(1);
+      expect(mockOnChange).toHaveBeenCalledWith("new");
     });
   });
 });

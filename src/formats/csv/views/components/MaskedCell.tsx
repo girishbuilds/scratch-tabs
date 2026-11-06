@@ -57,6 +57,9 @@ export const MaskedCell: React.FC<MaskedCellProps> = React.memo(({
     const textRef = useRef<HTMLSpanElement>(null);
     const clickTimerRef = useRef<NodeJS.Timeout | null>(null);
     const clickCountRef = useRef(0);
+    // Set once an edit is committed or cancelled, so the blur that follows
+    // (while the old closure still holds the typed/pasted text) is ignored.
+    const editFinishedRef = useRef(false);
 
     // Start editing when triggered
     useEffect(() => {
@@ -70,6 +73,7 @@ export const MaskedCell: React.FC<MaskedCellProps> = React.memo(({
     // Focus and position cursor when editing starts
     useEffect(() => {
       if (isEditing && inputRef.current) {
+        editFinishedRef.current = false;
         inputRef.current.focus();
         // Position cursor at end
         const length = inputRef.current.value.length;
@@ -78,7 +82,8 @@ export const MaskedCell: React.FC<MaskedCellProps> = React.memo(({
     }, [isEditing]);
 
     const handleCommitChange = useCallback(() => {
-      if (isEditing) {
+      if (isEditing && !editFinishedRef.current) {
+        editFinishedRef.current = true;
         setIsEditing(false);
         onEditingChange(false);
         if (editValue !== value) {
@@ -88,6 +93,7 @@ export const MaskedCell: React.FC<MaskedCellProps> = React.memo(({
     }, [isEditing, editValue, value, onChange, onEditingChange]);
 
     const handleCancelEdit = useCallback(() => {
+      editFinishedRef.current = true;
       setIsEditing(false);
       setEditValue(value);
       onEditingChange(false);

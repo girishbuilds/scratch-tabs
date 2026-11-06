@@ -30,6 +30,7 @@ jest.mock("../clipboardStore", () => ({
 }));
 
 import { useRootStore } from "../rootStore";
+import { usePasteFallbackStore } from "../pasteFallbackStore";
 
 describe("RootStore.handleNewTabFromPaste", () => {
   const clipboardItems = [{ types: ["text/plain"] }];
@@ -39,6 +40,7 @@ describe("RootStore.handleNewTabFromPaste", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    usePasteFallbackStore.getState().dismissPasteFallback();
     handleNewTab = jest.fn().mockResolvedValue("new-tab-id");
     canAddNewTab = jest.fn().mockReturnValue(false);
     readText = jest.fn().mockResolvedValue("a\tb\n1\t2");
@@ -81,13 +83,17 @@ describe("RootStore.handleNewTabFromPaste", () => {
     expect(handleNewTab).toHaveBeenCalledWith(false, "a\tb\n1\t2");
   });
 
-  it("creates an empty tab when no clipboard access is possible", async () => {
+  it("opens the paste box instead of an empty tab when no clipboard access is possible", async () => {
     navigator.clipboard.read.mockRejectedValue(new Error("denied"));
     readText.mockRejectedValue(new Error("denied"));
     jest.spyOn(console, "warn").mockImplementation(() => {});
 
-    await useRootStore.getState().handleNewTabFromPaste(false);
+    const result = await useRootStore.getState().handleNewTabFromPaste(true);
 
-    expect(handleNewTab).toHaveBeenCalledWith(false, "");
+    expect(handleNewTab).not.toHaveBeenCalled();
+    expect(result).toBeUndefined();
+    expect(usePasteFallbackStore.getState().request).toEqual(
+      expect.objectContaining({ isRightSide: true }),
+    );
   });
 });

@@ -6,52 +6,104 @@ import type {
   SecretSpan,
 } from "../types";
 
+/** Net bracket depth change of a line, ignoring brackets inside "double quoted" strings. */
+function depthDelta(line: string): number {
+  let delta = 0;
+  let inString = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inString) {
+      if (ch === "\\") i++;
+      else if (ch === '"') inString = false;
+    } else if (ch === '"') inString = true;
+    else if (ch === "{" || ch === "[" || ch === "(") delta++;
+    else if (ch === "}" || ch === "]" || ch === ")") delta--;
+  }
+  return delta;
+}
+
+const indentOf = (line: string) => line.length - line.trimStart().length;
+
+const startsStructure = (line: string) => /^\s*[{[]/.test(line) || /[{[(]\s*$/.test(line);
+
+/** True when `line` starts a quote it does not close (e.g. `curl -d '{`). */
+function opensUnclosedQuote(line: string): string | null {
+  const first = line.trim().replace(/^[$>]\s+/, "").split(/\s+/, 1)[0];
+  if (!COMMAND_WORDS.has(first) && !first.startsWith("./")) return null;
+  for (const quote of ["'", '"']) {
+    const count = (line.match(new RegExp(`(?<!\\\\)${quote}`, "g")) ?? []).length;
+    if (count % 2 === 1) return quote;
+  }
+  return null;
+}
+
 /**
  * Splits pasted text into independent scratch entries.
  *
- * Blank lines always separate entries. Within a paragraph each line is its own
- * entry unless it clearly continues the previous one: a trailing `\`, `&&`,
- * `||` or `|`, leading indentation, an open bracket, or a PEM block.
+ * Blank lines always separate entries, and within a paragraph each line is its
+ * own entry. A line only joins the entry above it when it is clearly part of
+ * the same thing: a trailing `\`, `&&`, `||` or `|`, deeper indentation than
+ * the entry's first line, a PEM block, or a bracketed / quoted structure
+ * (JSON blob, `curl -d '...'`) that actually closes within the paragraph. A
+ * stray `(` or `{` in a note never swallows the lines after it.
  */
 export function splitIntoBlocks(raw: string): string[] {
   const lines = raw.replace(/\r\n?/g, "\n").split("\n");
   const blocks: string[] = [];
   let current: string[] = [];
-  let depth = 0;
   let inPem = false;
+  /** Lines still owed to a structure that was verified to close. */
+  let structureEnd = -1;
 
   const flush = () => {
     const block = current.join("\n").trimEnd();
     if (block.trim()) blocks.push(block);
     current = [];
-    depth = 0;
     inPem = false;
+    structureEnd = -1;
   };
 
-  for (const line of lines) {
+  /** Index of the line that closes a structure opened at `from`, or -1. */
+  const findStructureEnd = (from: number): number => {
+    let depth = 0;
+    const quote = opensUnclosedQuote(lines[from]);
+    for (let i = from; i < lines.length && lines[i].trim(); i++) {
+      if (quote && i > from) {
+        const count = (lines[i].match(new RegExp(`(?<!\\\\)${quote}`, "g")) ?? []).length;
+        if (count % 2 === 1) return i;
+      }
+      depth += depthDelta(lines[i]);
+      if (!quote && depth <= 0 && (i > from || startsStructure(lines[from]))) {
+        return i > from ? i : -1;
+      }
+    }
+    return -1;
+  };
+
+  lines.forEach((line, index) => {
     if (!line.trim()) {
       flush();
-      continue;
+      return;
     }
 
     if (current.length > 0) {
       const previous = current[current.length - 1].trimEnd();
       const continues =
         inPem ||
-        depth > 0 ||
+        index <= structureEnd ||
         /(?:\\|&&|\|\||\|)$/.test(previous) ||
-        /^\s/.test(line);
+        indentOf(line) > indentOf(current[0]);
       if (!continues) flush();
+    }
+
+    if (current.length === 0 && (startsStructure(line) || opensUnclosedQuote(line))) {
+      structureEnd = findStructureEnd(index);
     }
 
     current.push(line);
     if (/^-----BEGIN /.test(line)) inPem = true;
     if (/^-----END /.test(line)) inPem = false;
-    depth = Math.max(
-      0,
-      depth + (line.match(/[{[(]/g)?.length ?? 0) - (line.match(/[}\])]/g)?.length ?? 0),
-    );
-  }
+  });
   flush();
 
   return blocks;

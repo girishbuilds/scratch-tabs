@@ -265,4 +265,48 @@ module.exports = config;`;
       ).toHaveBeenCalled();
     });
   });
+
+  describe("YAML-shaped content", () => {
+    test("rejects a Kubernetes ConfigMap with dotted keys", () => {
+      const configMap = `apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+data:
+  app.name: my-app
+  app.mode: production
+  log.level: info
+  db.host: postgres.default.svc
+`;
+      expect(detector.detect(configMap).match).toBe(false);
+    });
+
+    test("rejects a nested mapping", () => {
+      const nested = `server:
+  host: localhost
+  port: 8080
+  timeout: 30
+`;
+      expect(detector.detect(nested).match).toBe(false);
+    });
+
+    test("rejects content with list items", () => {
+      const list = `name: demo
+items:
+- one
+- two
+- three
+`;
+      expect(detector.detect(list).match).toBe(false);
+    });
+
+    test("still accepts flat colon-delimited properties", () => {
+      const flat = `app.name: my-app
+app.mode: production
+log.level: info
+db.host: localhost
+`;
+      expect(detector.detect(flat).match).toBe(true);
+    });
+  });
 });

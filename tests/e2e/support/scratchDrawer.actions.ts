@@ -79,7 +79,6 @@ export class ScratchDrawerActions {
 
   async deleteEntryContaining(text: string) {
     const row = this.entryContaining(text);
-    await row.getByTestId('scratch-more').click();
     await row.getByTestId('scratch-delete').click();
     await row.getByTestId('scratch-delete').click();
   }
@@ -112,7 +111,6 @@ export class ScratchDrawerActions {
 
   async expectNoRevealControls() {
     await expect(this.page.getByTestId('scratch-reveal')).toHaveCount(0);
-    await this.page.getByTestId('scratch-more').first().click();
     await expect(this.page.getByTestId('scratch-mask-mode')).toHaveCount(0);
   }
 
@@ -128,7 +126,6 @@ export class ScratchDrawerActions {
   /** Selects `selected` inside the raw-text editor of the entry containing `entryText`, then masks it. */
   async maskTextInEntry(entryText: string, selected: string) {
     const row = this.entryContaining(entryText);
-    await row.getByTestId('scratch-more').click();
     await row.getByTestId('scratch-mask-mode').click();
     await row.getByTestId('scratch-mask-text').evaluate((el, value) => {
       const area = el as HTMLTextAreaElement;

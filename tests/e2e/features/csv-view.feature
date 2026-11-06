@@ -12,7 +12,7 @@ Feature: CSV View and Auto-Detection
       3,Bob Johnson,25,Chicago
       """
     Then the status bar should show language "CSV / TSV"
-    And the status bar should contain a Data View button
+    And the status bar should contain a Smart View button
 
   Scenario: CSV auto-detection with tab-separated values
     Given I click the icon for "New tab"
@@ -24,7 +24,7 @@ Feature: CSV View and Auto-Detection
       3	Bob Johnson	25	Chicago
       """
     Then the status bar should show language "CSV / TSV"
-    And the status bar should contain a Data View button
+    And the status bar should contain a Smart View button
 
   Scenario: CSV auto-detection with semicolon-separated values
     Given I click the icon for "New tab"
@@ -36,7 +36,7 @@ Feature: CSV View and Auto-Detection
       3;Bob Johnson;25;Chicago
       """
     Then the status bar should show language "CSV / TSV"
-    And the status bar should contain a Data View button
+    And the status bar should contain a Smart View button
 
   Scenario: CSV auto-detection with quoted values
     Given I click the icon for "New tab"
@@ -48,9 +48,9 @@ Feature: CSV View and Auto-Detection
       "Keyboard","$79.99","Mechanical keyboard","3"
       """
     Then the status bar should show language "CSV / TSV"
-    And the status bar should contain a Data View button
+    And the status bar should contain a Smart View button
 
-  Scenario: JSON content should expose its Data View without CSV detection
+  Scenario: JSON content should expose its Smart View without CSV detection
     Given I click the icon for "New tab"
     When I type the following content into the active editor:
       """
@@ -61,7 +61,7 @@ Feature: CSV View and Auto-Detection
       }
       """
     Then the status bar should show language "JSON"
-    And the status bar should contain a Data View button
+    And the status bar should contain a Smart View button
 
   Scenario: Toggle from editor to CSV table view
     Given I click the icon for "New tab"
@@ -73,7 +73,7 @@ Feature: CSV View and Auto-Detection
       3,Bob Johnson,25,Chicago
       """
     And the status bar should show language "CSV / TSV"
-    And I click the Data View button in the status bar
+    And I click the Smart View button in the status bar
     Then I should see the CSV table view
     And I should see column headers "ID", "Name", "Age", "City"
     And I should see the row count "3 rows × 4 columns"
@@ -90,7 +90,7 @@ Feature: CSV View and Auto-Detection
       3,Bob Johnson,25,Chicago
       """
     And the status bar should show language "CSV / TSV"
-    And I click the Data View button in the status bar
+    And I click the Smart View button in the status bar
     And I should see the CSV table view
     When I click the Text View button in the status bar
     Then I should see the Monaco editor
@@ -112,7 +112,7 @@ Feature: CSV View and Auto-Detection
       3,Bob Johnson,25,Chicago
       """
     And the status bar should show language "CSV / TSV"
-    And I click the Data View button in the status bar
+    And I click the Smart View button in the status bar
     Then I should see the CSV table view
     And I should see the "Find duplicate rows" button
     When I click the "Find duplicate rows" button
@@ -129,7 +129,7 @@ Feature: CSV View and Auto-Detection
       3,Bob Johnson,25,Chicago
       """
     And the status bar should show language "CSV / TSV"
-    And I click the Data View button in the status bar
+    And I click the Smart View button in the status bar
     Then I should see the CSV table view
     When I click the "Find duplicate rows" button
     Then I should see duplicate row indicators
@@ -145,7 +145,7 @@ Feature: CSV View and Auto-Detection
       3,Bob Johnson,25,Chicago
       """
     And the status bar should show language "CSV / TSV"
-    And I click the Data View button in the status bar
+    And I click the Smart View button in the status bar
     And I should see the CSV table view
     When I make changes to the CSV data in table view
     And I click the Text View button in the status bar
@@ -162,7 +162,7 @@ Feature: CSV View and Auto-Detection
       3,Bob Johnson,25,Chicago
       """
     And the status bar should show language "CSV / TSV"
-    And I click the Data View button in the status bar
+    And I click the Smart View button in the status bar
     Then I should see the CSV table view
     And I should see the "Add column after" button
     And I should see the "Create snapshot" button
@@ -197,7 +197,7 @@ Feature: CSV View and Auto-Detection
       10,Henry Kim,26,Phoenix,USA,henry@example.com,555-666-7777
       """
     And the status bar should show language "CSV / TSV"
-    And I click the Data View button in the status bar
+    And I click the Smart View button in the status bar
     Then I should see the CSV table view
     And I should see the row count "10 rows × 7 columns"
     And the table should render efficiently with virtualization
@@ -213,7 +213,7 @@ Feature: CSV View and Auto-Detection
       3,Bob Johnson,25,Chicago
       """
     And the status bar should show language "CSV / TSV"
-    And I click the Data View button in the status bar
+    And I click the Smart View button in the status bar
     Then I should see the CSV table view
     When I click the "Export" dropdown
     Then I should see export options for "CSV", "JSON", "Markdown", and "SQL"
@@ -228,7 +228,7 @@ Feature: CSV View and Auto-Detection
       3,Bob Johnson,25,Chicago
       """
     And the status bar should show language "CSV / TSV"
-    And I click the Data View button in the status bar
+    And I click the Smart View button in the status bar
     Then I should see the CSV table view
     When I enable the CSV filter row
     And I filter the "Name" column by "jane"
@@ -245,7 +245,7 @@ Feature: CSV View and Auto-Detection
       3,Bob Johnson,25,Chicago
       """
     And the status bar should show language "CSV / TSV"
-    And I click the Data View button in the status bar
+    And I click the Smart View button in the status bar
     Then I should see the CSV table view
     When I enable the CSV filter row
     And I filter the "Age" column to a minimum of "30"
@@ -265,7 +265,7 @@ Feature: CSV View and Auto-Detection
       3,Bob Johnson,25,Chicago
       """
     And the status bar should show language "CSV / TSV"
-    And I click the Data View button in the status bar
+    And I click the Smart View button in the status bar
     Then I should see the CSV table view
     When I enable the CSV filter row
     And I filter the "City" column by "Chicago"
@@ -285,7 +285,7 @@ Feature: CSV View and Auto-Detection
       3,Bob Johnson,25,Chicago
       """
     And the status bar should show language "CSV / TSV"
-    And I click the Data View button in the status bar
+    And I click the Smart View button in the status bar
     Then I should see the CSV table view
     When I make changes to the CSV data in table view
     And I click the "Undo" button
@@ -303,7 +303,7 @@ Feature: CSV View and Auto-Detection
       3,Bob Johnson,25,Chicago
       """
     And the status bar should show language "CSV / TSV"
-    And I click the Data View button in the status bar
+    And I click the Smart View button in the status bar
     Then I should see the CSV table view
     When I click the "Add column after" button for the "Name" column
     Then I should see a new column added after "Name"
@@ -322,7 +322,7 @@ Feature: CSV View and Auto-Detection
       "Keyboard","$79.99","Mechanical keyboard","3"
       """
     And the status bar should show language "CSV / TSV"
-    And I click the Data View button in the status bar
+    And I click the Smart View button in the status bar
     Then I should see the CSV table view
     And the quoted values should be preserved correctly
     And special characters should be handled properly

@@ -144,7 +144,6 @@ describe("ScratchDrawer", () => {
     await openDrawer();
     await act(async () => pasteIntoInput(FIXTURES.mvn));
     const row = await screen.findByTestId("scratch-entry");
-    fireEvent.click(within(row).getByTestId("scratch-more"));
     fireEvent.click(within(row).getByTestId("scratch-delete"));
     fireEvent.click(within(row).getByTestId("scratch-delete"));
     await waitFor(() => expect(screen.queryAllByTestId("scratch-entry")).toHaveLength(0));
@@ -309,7 +308,6 @@ describe("ScratchDrawer secret corrections", () => {
     const row = await screen.findByTestId("scratch-entry");
     expect(within(row).queryByTestId("scratch-mask")).toBeNull();
 
-    fireEvent.click(within(row).getByTestId("scratch-more"));
     await act(async () => {
       fireEvent.click(within(row).getByTestId("scratch-mask-mode"));
     });
@@ -349,7 +347,6 @@ describe("ScratchDrawer presenting mode", () => {
     fireEvent.click(screen.getByTestId("scratch-presenting"));
     await waitFor(() => expect(within(row).queryByTestId("scratch-secret-revealed")).toBeNull());
     expect(within(row).queryByTestId("scratch-reveal")).toBeNull();
-    fireEvent.click(within(row).getByTestId("scratch-more"));
     expect(within(row).queryByTestId("scratch-mask-mode")).toBeNull();
     expect(screen.getByTestId("scratch-presenting")).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByTestId("scratch-drawer").innerHTML).not.toContain(FIXTURES.uatKeyValue);

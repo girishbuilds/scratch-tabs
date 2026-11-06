@@ -33,6 +33,7 @@ export function createActions(overrides: Partial<ScratchEntryActions> = {}) {
     togglePin: jest.fn(),
     markNotSecret: jest.fn().mockResolvedValue(undefined),
     maskRange: jest.fn().mockResolvedValue(undefined),
+    updateText: jest.fn().mockResolvedValue(undefined),
     revealSecrets: jest.fn().mockResolvedValue(["3knd8dsuhds89hds"]),
     getSecretValue: jest.fn().mockResolvedValue("3knd8dsuhds89hds"),
     getEditableText: jest.fn().mockResolvedValue("UAT key: 3knd8dsuhds89hds"),

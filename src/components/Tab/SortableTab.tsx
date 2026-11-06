@@ -20,6 +20,7 @@ interface SortableTabProps {
   onClick: () => void;
   onClose: (e: React.MouseEvent<HTMLButtonElement>) => void;
   onDoubleClick: (e: React.MouseEvent<HTMLDivElement>) => void;
+  onStartRename?: () => void;
   onContextMenu: (e: React.MouseEvent<HTMLDivElement>) => void;
   onEditChange: (value: string) => void;
   onEditSubmit: () => void;
@@ -42,6 +43,7 @@ export const SortableTab: React.FC<SortableTabProps> = ({
   onClick,
   onClose,
   onDoubleClick,
+  onStartRename,
   onContextMenu,
   onEditChange,
   onEditSubmit,
@@ -348,6 +350,14 @@ export const SortableTab: React.FC<SortableTabProps> = ({
         title=""
         {...attributes}
         {...listeners}
+        onKeyDown={(e) => {
+          if (e.key === "F2" && !isEditing && e.target === e.currentTarget && onStartRename) {
+            e.preventDefault();
+            onStartRename();
+            return;
+          }
+          (listeners as { onKeyDown?: (ev: React.KeyboardEvent) => void } | undefined)?.onKeyDown?.(e);
+        }}
       >
         {!tab.isTablet && lineCount > 0 && !isEditing && (
           <div

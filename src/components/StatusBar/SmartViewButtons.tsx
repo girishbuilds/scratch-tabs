@@ -22,9 +22,9 @@ export const SmartViewButtons: React.FC<SmartViewButtonsProps> = ({
 
   // The status bar exposes one consistent choice between the source editor and
   // the format's primary smart view. Some formats have more than one view, so
-  // an already-active secondary view still counts as Data View here.
+  // an already-active secondary view still counts as Smart View here.
   const primaryView = availableViews[0];
-  const isDataViewActive = availableViews.some((view) => view.id === activeViewId);
+  const isSmartViewActive = availableViews.some((view) => view.id === activeViewId);
 
   return (
     <div
@@ -36,39 +36,39 @@ export const SmartViewButtons: React.FC<SmartViewButtonsProps> = ({
       <button
         type="button"
         onClick={() => {
-          if (isDataViewActive) setActiveView(tabId, null);
+          if (isSmartViewActive) setActiveView(tabId, null);
         }}
-        className={`rounded-[3px] px-2 py-0.5 text-[11px] font-medium leading-4 whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${
-          !isDataViewActive
+        className={`rounded px-3 py-1 text-xs font-semibold leading-4 whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${
+          !isSmartViewActive
             ? "bg-surface-raised text-main shadow-sm ring-1 ring-inset ring-primary/25"
             : "text-secondary hover:bg-element-hover hover:text-main"
         }`}
         title="Text View"
         aria-label="Text View"
-        aria-pressed={!isDataViewActive}
+        aria-pressed={!isSmartViewActive}
         data-testid="text-view-button"
       >
         Text View
       </button>
-      <span aria-hidden="true" className="px-0.5 text-muted/70 text-[10px] leading-4">
+      <span aria-hidden="true" className="px-0.5 text-muted/70 text-xs leading-4">
         |
       </span>
       <button
         type="button"
         onClick={() => {
-          if (!isDataViewActive) setActiveView(tabId, primaryView.id);
+          if (!isSmartViewActive) setActiveView(tabId, primaryView.id);
         }}
-        className={`rounded-[3px] px-2 py-0.5 text-[11px] font-medium leading-4 whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${
-          isDataViewActive
+        className={`rounded px-3 py-1 text-xs font-semibold leading-4 whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${
+          isSmartViewActive
             ? "bg-surface-raised text-main shadow-sm ring-1 ring-inset ring-primary/25"
             : "text-secondary hover:bg-element-hover hover:text-main"
         }`}
-        title={isDataViewActive ? `Data View (${primaryView.label})` : `Open Data View (${primaryView.label})`}
-        aria-label={`Data View (${primaryView.label})`}
-        aria-pressed={isDataViewActive}
+        title={isSmartViewActive ? `Smart View (${primaryView.label})` : `Open Smart View (${primaryView.label})`}
+        aria-label={`Smart View (${primaryView.label})`}
+        aria-pressed={isSmartViewActive}
         data-testid="data-view-button"
       >
-        Data View
+        Smart View
       </button>
     </div>
   );

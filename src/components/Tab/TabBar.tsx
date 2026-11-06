@@ -513,6 +513,12 @@ export const TabBar: React.FC<TabBarProps> = ({
     e.stopPropagation();
   };
 
+  const handleStartRename = (tab: Tab) => {
+    clearCommonTooltipState();
+    setEditingTabId(tab.id);
+    setEditingTitle(tab.title);
+  };
+
   const handleCreateNewTab = () => {
     if (!canAddNewTab(isRightSide)) return;
 
@@ -661,6 +667,7 @@ export const TabBar: React.FC<TabBarProps> = ({
                     onTabClick={handleTabClick}
                     onTabClose={handleTabClose}
                     onTabDoubleClick={handleDoubleClick}
+                    onTabStartRename={handleStartRename}
                     onTabContextMenu={handleContextMenu}
                     onEditChange={setEditingTitle}
                     onEditSubmit={handleInputBlur}
@@ -684,6 +691,7 @@ export const TabBar: React.FC<TabBarProps> = ({
                     onTabClick={handleTabClick}
                     onTabClose={handleTabClose}
                     onTabDoubleClick={handleDoubleClick}
+                    onTabStartRename={handleStartRename}
                     onTabContextMenu={handleContextMenu}
                     onEditChange={setEditingTitle}
                     onEditSubmit={handleInputBlur}

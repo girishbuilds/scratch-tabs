@@ -22,6 +22,47 @@ import {
 import { JSONPath } from "jsonpath-plus";
 import { deepMergeJsonValues, isSafeJsonObjectKey } from "./mergeUtils";
 
+/** True when the input is a JSON string literal (a quoted, escaped string). */
+function isJsonStringLiteral(input: string): boolean {
+  try {
+    return typeof JSON.parse(input.trim()) === "string";
+  } catch {
+    // Unbalanced quotes are repaired by unstringifyJson, so treat them as strings
+    const t = input.trim();
+    return t.startsWith('"') || t.endsWith('"');
+  }
+}
+
+/**
+ * jsonpath-plus silently accepts unterminated paths such as `$.users[`.
+ * Returns a description of the first unbalanced bracket or quote, or null.
+ */
+function findJsonPathSyntaxError(path: string): string | null {
+  const closers: Record<string, string> = { "[": "]", "(": ")" };
+  const stack: string[] = [];
+  let quote: string | null = null;
+
+  for (let i = 0; i < path.length; i++) {
+    const ch = path[i];
+    if (quote) {
+      if (ch === "\\") i++;
+      else if (ch === quote) quote = null;
+      continue;
+    }
+    if (ch === "'" || ch === '"') {
+      quote = ch;
+    } else if (ch in closers) {
+      stack.push(closers[ch]);
+    } else if (ch === "]" || ch === ")") {
+      if (stack.pop() !== ch) return `unexpected "${ch}" at position ${i}`;
+    }
+  }
+
+  if (quote) return `unterminated string (missing ${quote})`;
+  if (stack.length > 0) return `missing closing "${stack[stack.length - 1]}"`;
+  return null;
+}
+
 /**
  * JSON operations for the pipeline
  */
@@ -195,7 +236,15 @@ const jsonOperations: OperationDefinition[] = [
     categories: ["json", "encoding"],
     parameters: [],
     processingMode: "entire",
-    execute: (input) => unstringifyJsonContent(input),
+    execute: (input, _params, context) => {
+      if (!isJsonStringLiteral(input)) {
+        context.warn?.(
+          "Input is not a JSON string, so there was nothing to unstringify. " +
+            "If an earlier step returned an array (e.g. JSONPath), set its output to One Value Per Line.",
+        );
+      }
+      return unstringifyJsonContent(input);
+    },
     keywords: ["unescape", "unquote", "parse"],
     icon: "Ungroup",
     source: "format",
@@ -249,7 +298,19 @@ const jsonOperations: OperationDefinition[] = [
         throw new Error("Invalid JSON input");
       }
 
-      const raw = JSONPath({ path, json });
+      const syntaxError = findJsonPathSyntaxError(path);
+      if (syntaxError) {
+        throw new Error(`Invalid JSONPath "${path}": ${syntaxError}`);
+      }
+
+      let raw: unknown;
+      try {
+        raw = JSONPath({ path, json });
+      } catch (err) {
+        throw new Error(
+          `Invalid JSONPath "${path}": ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
       // Normalize: real library wraps in array, mock may return raw value
       const results: unknown[] = Array.isArray(raw)
         ? raw

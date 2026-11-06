@@ -250,3 +250,40 @@ describe("getCopyTarget", () => {
     expect(getCopyTarget(payload("key: abcdef and more words", [[5, 11]]))).toBe("all");
   });
 });
+
+describe("splitIntoBlocks - stray punctuation and pasted layout", () => {
+  it.each([
+    ["an unmatched opening paren", "remember :( to do\nnpm test\ngit status"],
+    ["an unmatched opening brace", "use { for blocks\nnpm test\ngit status"],
+    ["a trailing opener that never closes", "ok :(\nnpm test\ngit status"],
+  ])("a note with %s does not swallow the lines after it", (_name, text) => {
+    expect(splitIntoBlocks(text)).toEqual(text.split("\n"));
+  });
+
+  it("splits a uniformly indented paste line by line", () => {
+    expect(splitIntoBlocks("  note one\n  note two\n  npm test")).toEqual([
+      "  note one",
+      "  note two",
+      "  npm test",
+    ]);
+  });
+
+  it("keeps a multi-line JSON blob together and splits what follows", () => {
+    const json = '{\n  "a": 1,\n  "b": [1, 2]\n}';
+    expect(splitIntoBlocks(`${json}\nsome note\nnpm test`)).toEqual([json, "some note", "npm test"]);
+  });
+
+  it("ignores brackets inside JSON strings", () => {
+    const json = '{\n"a": ")",\n"b": "{"\n}';
+    expect(splitIntoBlocks(`${json}\nafter`)).toEqual([json, "after"]);
+  });
+
+  it("keeps a curl with a multi-line quoted body together", () => {
+    const curl = "curl -X POST https://x.io -d '{\n\"a\": 1\n}'";
+    expect(splitIntoBlocks(`${curl}\nnpm test`)).toEqual([curl, "npm test"]);
+  });
+
+  it("does not treat an apostrophe in a note as a quote", () => {
+    expect(splitIntoBlocks("don't forget\nnpm test")).toEqual(["don't forget", "npm test"]);
+  });
+});

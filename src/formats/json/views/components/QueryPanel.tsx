@@ -23,7 +23,6 @@ export const QueryPanel: React.FC<QueryPanelProps> = ({ content, addTab, tabId }
   const [showInfo, setShowInfo] = useState(false);
   const samplesRef = useRef<HTMLDivElement>(null);
   const infoRef = useRef<HTMLDivElement>(null);
-  const hasInitialized = useRef(false);
   const { getStateForTab, setQuery: setQueryInStore, closePanel } = useQueryPanelStore();
   const { query } = getStateForTab(tabId);
   const { isDarkMode } = useThemeStore();
@@ -33,13 +32,9 @@ export const QueryPanel: React.FC<QueryPanelProps> = ({ content, addTab, tabId }
     return generateContextualSamples(content);
   }, [content]);
 
-  // Initialize with first sample query if empty
-  useEffect(() => {
-    if (!hasInitialized.current && !query && sampleQueries.length > 0) {
-      setQueryInStore(tabId, sampleQueries[0].query);
-      hasInitialized.current = true;
-    }
-  }, [query, sampleQueries, tabId, setQueryInStore]);
+  const placeholder = sampleQueries.length > 0
+    ? `e.g. ${sampleQueries[0].query}`
+    : 'Enter a JMESPath expression';
 
   // Execute JMESPath query with debouncing
   const { results, error } = useJmespath(content, query);
@@ -264,7 +259,15 @@ export const QueryPanel: React.FC<QueryPanelProps> = ({ content, addTab, tabId }
         <div className="flex items-center px-2 py-0.5 bg-surface border-b border-base">
           <span className="text-xs text-muted mr-2">Query:</span>
         </div>
-        <div style={{ height: `${DEFAULT_QUERY_EDITOR_HEIGHT}px` }} className="bg-surface">
+        <div style={{ height: `${DEFAULT_QUERY_EDITOR_HEIGHT}px` }} className="bg-surface relative">
+          {!query && (
+            <div
+              className="absolute left-[14px] top-1 z-10 text-[13px] font-mono text-muted pointer-events-none select-none"
+              data-testid="query-placeholder"
+            >
+              {placeholder}
+            </div>
+          )}
           <Editor
             height="100%"
             language="plaintext"

@@ -13,8 +13,6 @@ function renderRow(item: ScratchListItem, presenting = false) {
   return actions;
 }
 
-const openMenu = () => fireEvent.click(screen.getByTestId("scratch-more"));
-
 describe("ScratchEntryRow", () => {
   it("exposes the entry kind and pin state to tests and assistive tech", () => {
     renderRow({ ...plainEntry, pinned: true });
@@ -30,42 +28,30 @@ describe("ScratchEntryRow", () => {
       expect(toolbar).toHaveClass("opacity-0", "group-hover:opacity-100", "focus-within:opacity-100");
     });
 
-    it("stays visible while its menu is open", () => {
+    it("shows Mask text and Delete as direct buttons", () => {
       renderRow(plainEntry);
-      openMenu();
-      expect(screen.getByTestId("scratch-toolbar")).toHaveClass("opacity-100");
-      expect(screen.getByTestId("scratch-toolbar")).not.toHaveClass("opacity-0");
-    });
-
-    it("keeps Mask text and Delete out of the toolbar until the menu is opened", () => {
-      renderRow(plainEntry);
-      expect(screen.queryByTestId("scratch-delete")).toBeNull();
-      expect(screen.queryByTestId("scratch-mask-mode")).toBeNull();
-      openMenu();
       expect(screen.getByTestId("scratch-delete")).toBeInTheDocument();
       expect(screen.getByTestId("scratch-mask-mode")).toBeInTheDocument();
+      expect(screen.queryByTestId("scratch-more")).toBeNull();
     });
   });
 
   describe("delete", () => {
     it("requires a second click", () => {
       const actions = renderRow(plainEntry);
-      openMenu();
       const item = screen.getByTestId("scratch-delete");
       fireEvent.click(item);
       expect(actions.remove).not.toHaveBeenCalled();
       expect(item).toHaveAttribute("aria-label", "Confirm delete");
-      expect(item).toHaveTextContent("Click again to delete");
+      expect(item).toHaveAttribute("title", "Click again to delete");
       fireEvent.click(item);
       expect(actions.remove).toHaveBeenCalledWith("e2");
     });
 
-    it("forgets a pending confirmation when the menu closes", () => {
+    it("forgets a pending confirmation when the pointer leaves the toolbar", () => {
       const actions = renderRow(plainEntry);
-      openMenu();
       fireEvent.click(screen.getByTestId("scratch-delete"));
-      openMenu();
-      openMenu();
+      fireEvent.mouseLeave(screen.getByTestId("scratch-toolbar"));
       const item = screen.getByTestId("scratch-delete");
       expect(item).toHaveAttribute("aria-label", "Delete entry");
       fireEvent.click(item);
@@ -107,7 +93,6 @@ describe("ScratchEntryRow", () => {
       expect(screen.getByText(/can no longer be decrypted/i)).toBeInTheDocument();
       expect(screen.queryByTestId("scratch-copy")).toBeNull();
       expect(screen.queryByTestId("scratch-reveal")).toBeNull();
-      openMenu();
       expect(screen.queryByTestId("scratch-mask-mode")).toBeNull();
     });
 
@@ -122,10 +107,45 @@ describe("ScratchEntryRow", () => {
       const actions = renderRow(unreadable);
       fireEvent.click(screen.getByTestId("scratch-pin"));
       expect(actions.togglePin).toHaveBeenCalledWith("bad");
-      openMenu();
       fireEvent.click(screen.getByTestId("scratch-delete"));
       fireEvent.click(screen.getByTestId("scratch-delete"));
       expect(actions.remove).toHaveBeenCalledWith("bad");
     });
+  });
+});
+
+describe("ScratchEntryRow - long entries", () => {
+  const longEntry = (lines: number): ScratchListItem => ({
+    ...plainEntry,
+    segments: [{ type: "text", text: Array.from({ length: lines }, (_, i) => `line ${i + 1}`).join("\n") }],
+  });
+
+  it("does not collapse short entries", () => {
+    renderRow(longEntry(5));
+    expect(screen.queryByTestId("scratch-expand")).toBeNull();
+  });
+
+  it("does not collapse when only one line would be hidden", () => {
+    renderRow(longEntry(6));
+    expect(screen.queryByTestId("scratch-expand")).toBeNull();
+  });
+
+  it("collapses tall entries and expands and collapses on demand", () => {
+    renderRow(longEntry(20));
+    const toggle = screen.getByTestId("scratch-expand");
+    expect(screen.getByTestId("scratch-content")).toHaveAttribute("data-collapsed", "true");
+    expect(toggle).toHaveTextContent("Show 15 more lines");
+    fireEvent.click(toggle);
+    expect(screen.getByTestId("scratch-content")).toHaveAttribute("data-collapsed", "false");
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(toggle).toHaveTextContent("Show less");
+    fireEvent.click(toggle);
+    expect(screen.getByTestId("scratch-content")).toHaveAttribute("data-collapsed", "true");
+  });
+
+  it("does not copy the entry when the toggle is clicked", () => {
+    const actions = renderRow(longEntry(20));
+    fireEvent.click(screen.getByTestId("scratch-expand"));
+    expect(actions.getCopyText).not.toHaveBeenCalled();
   });
 });

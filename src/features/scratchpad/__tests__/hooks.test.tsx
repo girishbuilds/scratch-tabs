@@ -4,6 +4,7 @@ import { isScratchHotkey, useScratchHotkey } from "../hooks/useScratchHotkey";
 import { REVEAL_TTL_MS, useSecretReveal } from "../hooks/useSecretReveal";
 import { useTransientFlag } from "../hooks/useTransientFlag";
 import { useDrawerResize } from "../hooks/useDrawerResize";
+import { useEditSession } from "../hooks/useEditSession";
 import { useExpiringValue } from "../hooks/useExpiringValue";
 import { clearClipboard, copyToClipboard } from "../utils/copyToClipboard";
 
@@ -419,5 +420,69 @@ describe("useDrawerResize", () => {
     const { result } = renderHook(() => useDrawerResize(600, commit));
     result.current.handleProps.onDoubleClick();
     expect(commit).toHaveBeenCalledWith(380);
+  });
+});
+
+describe("useEditSession", () => {
+  afterEach(() => jest.useRealTimers());
+
+  it("is closed until opened", () => {
+    const { result } = renderHook(() => useEditSession(jest.fn().mockResolvedValue("text")));
+    expect(result.current).toMatchObject({ text: null, isOpen: false });
+  });
+
+  it("loads the text when opened and drops it on close", async () => {
+    const load = jest.fn().mockResolvedValue("text");
+    const { result } = renderHook(() => useEditSession(load));
+    await act(() => result.current.open());
+    expect(result.current).toMatchObject({ text: "text", isOpen: true });
+    act(() => result.current.close());
+    expect(result.current).toMatchObject({ text: null, isOpen: false });
+  });
+
+  it("treats an empty string as open", async () => {
+    const { result } = renderHook(() => useEditSession(jest.fn().mockResolvedValue("")));
+    await act(() => result.current.open());
+    expect(result.current.isOpen).toBe(true);
+  });
+
+  it("does not expire on a timer or when the window loses focus", async () => {
+    jest.useFakeTimers();
+    const { result } = renderHook(() => useEditSession(jest.fn().mockResolvedValue("text")));
+    await act(() => result.current.open());
+    act(() => {
+      jest.advanceTimersByTime(10 * 60_000);
+      window.dispatchEvent(new Event("blur"));
+    });
+    expect(result.current.text).toBe("text");
+  });
+
+  it("does not open if closed while the load is in flight", async () => {
+    let resolve!: (text: string) => void;
+    const load = jest.fn(() => new Promise<string>((r) => (resolve = r)));
+    const { result } = renderHook(() => useEditSession(load));
+    let opening!: Promise<void>;
+    act(() => {
+      opening = result.current.open();
+    });
+    act(() => result.current.close());
+    await act(async () => {
+      resolve("late");
+      await opening;
+    });
+    expect(result.current.isOpen).toBe(false);
+  });
+
+  it("does not open if unmounted while the load is in flight", async () => {
+    let resolve!: (text: string) => void;
+    const load = jest.fn(() => new Promise<string>((r) => (resolve = r)));
+    const { result, unmount } = renderHook(() => useEditSession(load));
+    let opening!: Promise<void>;
+    act(() => {
+      opening = result.current.open();
+    });
+    unmount();
+    resolve("late");
+    await expect(opening).resolves.toBeUndefined();
   });
 });

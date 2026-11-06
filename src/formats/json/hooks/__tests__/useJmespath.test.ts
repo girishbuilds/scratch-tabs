@@ -83,6 +83,18 @@ describe('useJmespath', () => {
     expect(result.current.error).toBeNull();
   });
 
+  it('should show a readable error and no result for a doubled dot', async () => {
+    const { result } = renderHook(() => useJmespath(validJson, 'people..name'));
+
+    await waitFor(() => {
+      jest.advanceTimersByTime(300);
+    });
+
+    expect(result.current.results).toBeNull();
+    expect(result.current.error).toContain('Query Error: Syntax error');
+    expect(result.current.error).not.toContain('Cannot read properties');
+  });
+
   it('should return error for invalid JMESPath query', async () => {
     const { result } = renderHook(() =>
       useJmespath(validJson, 'foo[[[')

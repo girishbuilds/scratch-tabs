@@ -55,6 +55,13 @@ deployment:
     // Analyze a sample of up to 50 lines for performance
     const sampleLines = lines.slice(0, 50);
 
+    // A Kubernetes-style manifest (top-level apiVersion + kind) is YAML even
+    // when its body also looks like flat key/value config (e.g. a ConfigMap
+    // with dotted keys).
+    if (this.looksLikeKubernetesManifest(sampleLines)) {
+      return { match: true, confidence: 1.0, matchedDefinitive: true };
+    }
+
     let keyValueLines = 0;
     let listLines = 0;
     let indentedLines = 0;
@@ -167,6 +174,17 @@ deployment:
       match: isMatch,
       confidence: isMatch ? finalConfidence : 0.0,
     };
+  }
+
+  private looksLikeKubernetesManifest(lines: string[]): boolean {
+    let hasApiVersion = false;
+    let hasKind = false;
+    for (const line of lines) {
+      if (/^apiVersion:\s*\S+/.test(line)) hasApiVersion = true;
+      else if (/^kind:\s*\S+/.test(line)) hasKind = true;
+      if (hasApiVersion && hasKind) return true;
+    }
+    return false;
   }
 
   registerProvider(monaco: any): void {

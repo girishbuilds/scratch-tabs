@@ -75,9 +75,16 @@ export function createExecutionContext(
 export async function executeStep(
   step: PipelineStep,
   input: string,
-  context: ExecutionContext,
+  baseContext: ExecutionContext,
 ): Promise<StepResult> {
   const startTime = performance.now();
+  const warnings: string[] = [];
+  const context: ExecutionContext = {
+    ...baseContext,
+    warn: (message: string) => {
+      if (!warnings.includes(message)) warnings.push(message);
+    },
+  };
 
   // Handle disabled steps
   if (!step.enabled) {
@@ -141,6 +148,14 @@ export async function executeStep(
       stringOutput = typeof output === "string" ? output : String(output ?? "");
     }
 
+    if (
+      operation.warnIfUnchanged &&
+      warnings.length === 0 &&
+      stringOutput === input
+    ) {
+      warnings.push("This step did not change the input");
+    }
+
     return {
       stepId: step.id,
       operationId: step.operationId,
@@ -148,6 +163,7 @@ export async function executeStep(
       output: stringOutput,
       duration: performance.now() - startTime,
       skipped: false,
+      ...(warnings.length > 0 && { warning: warnings.join("; ") }),
     };
   } catch (error) {
     return {

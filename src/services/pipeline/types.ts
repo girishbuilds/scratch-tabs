@@ -106,6 +106,13 @@ export interface OperationDefinition {
    * - 'configurable': User can toggle between 'entire' and 'line' via UI.
    */
   processingMode?: "entire" | "line" | "configurable";
+
+  /**
+   * Opt in to a "did not change the input" warning when the output equals the
+   * input. Leave unset for operations where a no-op is a normal result
+   * (trim, sort, find/replace with no matches, ...).
+   */
+  warnIfUnchanged?: boolean;
 }
 
 /**
@@ -146,6 +153,12 @@ export interface ExecutionContext {
 
   /** Total number of lines when in 'line' processing mode */
   totalLines?: number;
+
+  /**
+   * Report a non-fatal problem. The step still succeeds, but the UI shows it
+   * as a warning (e.g. "input is not a JSON string").
+   */
+  warn?: (message: string) => void;
 }
 
 /**
@@ -218,6 +231,9 @@ export interface StepResult {
 
   /** Error message if execution failed */
   error?: string;
+
+  /** Non-fatal warning: the step ran but probably did not do what was intended */
+  warning?: string;
 }
 
 /**

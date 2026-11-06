@@ -3,6 +3,7 @@ import { useTabsStore } from "./tabsStore";
 import { useSplitViewStore } from "./splitViewStore";
 import { useEditorStore } from "./editorStore";
 import { useWorkspaceStore } from "./workspaceStore";
+import { usePasteFallbackStore } from "./pasteFallbackStore";
 import { useSidebarStore } from "./sidebarStore";
 import { useMilestoneCelebrationStore } from "./milestoneCelebrationStore";
 import { useNavigationStore } from "./navigationStore";
@@ -199,9 +200,6 @@ const _createImageTab = async (
   });
 
   addTab(newTabObject, isRightSide);
-
-  // Trigger inline editing in sidebar
-  useSidebarStore.getState().setEditingId(newTabObject.id, newTabObject.title);
 };
 
 export const useRootStore = create<RootStore>((set, get) => {
@@ -340,9 +338,6 @@ export const useRootStore = create<RootStore>((set, get) => {
 
       addTab(newTabObject, toRightSide);
 
-      // Trigger inline editing in sidebar
-      useSidebarStore.getState().setEditingId(newTabObject.id, newTabObject.title);
-
       return newTabObject.id;
     },
 
@@ -370,9 +365,6 @@ export const useRootStore = create<RootStore>((set, get) => {
         initialContent: content,
       });
       addTab(newTabObject, isRightSide);
-
-      // Trigger inline editing in sidebar
-      useSidebarStore.getState().setEditingId(newTabObject.id, newTabObject.title);
 
       return newTabObject.id;
     },
@@ -441,9 +433,12 @@ export const useRootStore = create<RootStore>((set, get) => {
         try {
           const content = await navigator.clipboard.readText();
           return get().handleNewTab(isRightSide, content);
-        } catch {
-          // If even text reading fails, create an empty tab
-          return get().handleNewTab(isRightSide, '');
+        } catch (textError) {
+          // No clipboard access at all: tell the user and offer a paste box
+          // instead of silently opening an empty tab.
+          console.warn('Clipboard text read failed:', textError);
+          usePasteFallbackStore.getState().showPasteFallback(isRightSide);
+          return undefined;
         }
       }
     },

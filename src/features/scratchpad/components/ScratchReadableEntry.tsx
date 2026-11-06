@@ -25,7 +25,7 @@ export const ScratchReadableEntry: React.FC<ScratchReadableEntryProps> = ({
       kind={item.kind}
       pinned={item.pinned}
       copied={entry.copied}
-      onActivate={() => void entry.copyEntry()}
+      onActivate={entry.edit.isOpen ? undefined : () => void entry.copyEntry()}
       toolbar={
         <ScratchEntryToolbar
           pinned={item.pinned}
@@ -40,7 +40,8 @@ export const ScratchReadableEntry: React.FC<ScratchReadableEntryProps> = ({
               ? { isRevealed: entry.reveal.isRevealed, onToggle: () => void entry.reveal.toggle() }
               : undefined
           }
-          onMaskText={presenting ? undefined : () => void entry.editor.show()}
+          onMaskText={presenting ? undefined : () => void entry.startMasking()}
+          onEdit={presenting ? undefined : () => void entry.startEdit()}
         />
       }
     >
@@ -48,10 +49,13 @@ export const ScratchReadableEntry: React.FC<ScratchReadableEntryProps> = ({
         segments={item.segments}
         revealed={entry.reveal.values}
         editorText={entry.editor.value}
+        editText={entry.edit.text}
         onCopySecret={entry.copySecret}
         onNotSecret={entry.markNotSecret}
         onMask={entry.maskSelection}
         onCloseEditor={entry.editor.hide}
+        onSaveEdit={entry.saveEdit}
+        onCancelEdit={entry.edit.close}
       />
     </ScratchEntryShell>
   );

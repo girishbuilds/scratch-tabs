@@ -5,6 +5,7 @@ import { JwtVerifier } from "./components/JwtVerifier";
 import { JwtKeyManager } from "./components/JwtKeyManager";
 import { Tabs } from "./components/ui/Tabs";
 import { JwtHistory } from "./components/JwtHistory";
+import { decodeJwt } from "./utils/jwtUtils";
 import { JwtState, JwtHistoryItem, StoredKey } from "./types";
 import { SensitiveDataManager } from "../../utils/sensitiveDataManager";
 import { Key } from "../../components/Icons";
@@ -22,17 +23,22 @@ export const JwtTablet: Tablet = {
     showStandardHeader: false,
   },
 
-  createInitialState(): JwtTabletState {
+  createInitialState(payload?: { token?: string }): JwtTabletState {
+    // A seeded token (e.g. from the editor context menu) is decoded up front:
+    // the decoder only re-decodes when the text changes after mount.
+    const token = payload?.token?.trim() ?? "";
+    const decoded = token ? decodeJwt(token) : null;
+
     return {
       type: "jwt",
       data: {
-        token: "",
-        header: {},
-        payload: {},
-        signature: "",
+        token,
+        header: decoded?.header ?? {},
+        payload: decoded?.payload ?? {},
+        signature: decoded?.signature ?? "",
         isValid: null,
         error: null,
-        warning: null,
+        warning: decoded?.warning ?? null,
         activeTab: "decode",
         history: [],
         storedKeys: [],

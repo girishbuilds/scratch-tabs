@@ -255,7 +255,6 @@ describe("ScratchReadableEntry", () => {
   describe("select to mask", () => {
     const openEditor = async () => {
       const view = renderEntry(plainEntry);
-      fireEvent.click(screen.getByTestId("scratch-more"));
       await clickId("scratch-mask-mode");
       return view;
     };
@@ -312,11 +311,118 @@ describe("ScratchReadableEntry", () => {
     });
   });
 
+  describe("edit text", () => {
+    const openEdit = async (item = plainEntry, actions = createActions()) => {
+      const view = renderEntry(item, false, actions);
+      await clickId("scratch-edit");
+      return view;
+    };
+    const field = () => screen.getByTestId("scratch-edit-text") as HTMLTextAreaElement;
+
+    it("opens an editor holding the decrypted text", async () => {
+      const { actions } = await openEdit();
+      expect(actions.getEditableText).toHaveBeenCalledWith("e2");
+      expect(field().value).toBe("UAT key: 3knd8dsuhds89hds");
+      expect(field()).not.toHaveAttribute("readonly");
+    });
+
+    it("saves the edited text and closes the editor", async () => {
+      const { actions } = await openEdit();
+      fireEvent.change(field(), { target: { value: "mvn verify" } });
+      await clickId("scratch-edit-save");
+      expect(actions.updateText).toHaveBeenCalledWith("e2", "mvn verify");
+      expect(screen.queryByTestId("scratch-text-editor")).toBeNull();
+    });
+
+    it("closes without saving when the text is unchanged", async () => {
+      const { actions } = await openEdit();
+      await clickId("scratch-edit-save");
+      expect(actions.updateText).not.toHaveBeenCalled();
+      expect(screen.queryByTestId("scratch-text-editor")).toBeNull();
+    });
+
+    it("keeps the editor open and shows the reason when saving fails", async () => {
+      const actions = createActions({
+        updateText: jest.fn().mockRejectedValue(new Error("That is too large for Scratch.")),
+      });
+      await openEdit(plainEntry, actions);
+      fireEvent.change(field(), { target: { value: "changed" } });
+      await clickId("scratch-edit-save");
+      expect(screen.getByTestId("scratch-edit-error")).toHaveTextContent("too large");
+      expect(field().value).toBe("changed");
+    });
+
+    it("discards the draft on Cancel", async () => {
+      const { actions } = await openEdit();
+      fireEvent.change(field(), { target: { value: "changed" } });
+      await clickId("scratch-edit-cancel");
+      expect(screen.queryByTestId("scratch-text-editor")).toBeNull();
+      expect(actions.updateText).not.toHaveBeenCalled();
+    });
+
+    it("hides a revealed secret once the edit is saved", async () => {
+      renderEntry(secretEntry);
+      await clickId("scratch-reveal");
+      expect(screen.getByTestId("scratch-secret-revealed")).toBeInTheDocument();
+      await clickId("scratch-edit");
+      fireEvent.change(field(), { target: { value: "UAT key: other-value-123456" } });
+      await clickId("scratch-edit-save");
+      expect(screen.queryByTestId("scratch-secret-revealed")).toBeNull();
+    });
+
+    it("does not copy the entry when clicking inside the editor", async () => {
+      const write = jest.spyOn(clipboard, "copyToClipboard").mockResolvedValue(true);
+      await openEdit();
+      await clickId("scratch-edit-text");
+      await click(screen.getByTestId("scratch-text-editor"));
+      expect(write).not.toHaveBeenCalled();
+      expect(row()).not.toHaveAttribute("title");
+    });
+
+    it("swaps with the select-to-mask editor instead of showing both", async () => {
+      await openEdit();
+      await clickId("scratch-mask-mode");
+      expect(screen.queryByTestId("scratch-text-editor")).toBeNull();
+      expect(screen.getByTestId("scratch-mask-editor")).toBeInTheDocument();
+
+      await clickId("scratch-edit");
+      expect(screen.queryByTestId("scratch-mask-editor")).toBeNull();
+      expect(screen.getByTestId("scratch-text-editor")).toBeInTheDocument();
+    });
+
+    it("does not expire while the user is editing", async () => {
+      jest.useFakeTimers();
+      await openEdit();
+      act(() => {
+        jest.advanceTimersByTime(60_000);
+        window.dispatchEvent(new Event("blur"));
+      });
+      expect(screen.getByTestId("scratch-text-editor")).toBeInTheDocument();
+    });
+  });
+
   describe("presenting", () => {
+    it("offers no edit control", () => {
+      renderEntry(plainEntry, true);
+      expect(screen.queryByTestId("scratch-edit")).toBeNull();
+    });
+
+    it("closes an open edit session when presenting starts", async () => {
+      const actions = createActions();
+      const { rerender } = renderEntry(plainEntry, false, actions);
+      await clickId("scratch-edit");
+      expect(screen.getByTestId("scratch-text-editor")).toBeInTheDocument();
+      rerender(
+        <ul>
+          <ScratchReadableEntry item={plainEntry} actions={actions} presenting />
+        </ul>,
+      );
+      expect(screen.queryByTestId("scratch-text-editor")).toBeNull();
+    });
+
     it("removes the reveal and mask-text controls", () => {
       renderEntry(secretEntry, true);
       expect(screen.queryByTestId("scratch-reveal")).toBeNull();
-      fireEvent.click(screen.getByTestId("scratch-more"));
       expect(screen.queryByTestId("scratch-mask-mode")).toBeNull();
     });
 
@@ -336,7 +442,6 @@ describe("ScratchReadableEntry", () => {
     it("closes an open mask editor when presenting starts", async () => {
       const actions = createActions();
       const { rerender } = renderEntry(plainEntry, false, actions);
-      fireEvent.click(screen.getByTestId("scratch-more"));
       await clickId("scratch-mask-mode");
       expect(screen.getByTestId("scratch-mask-editor")).toBeInTheDocument();
       rerender(
