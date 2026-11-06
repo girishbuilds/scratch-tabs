@@ -17,8 +17,20 @@ const IV_BYTES = 12;
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
+/**
+ * WebCrypto (`crypto.subtle`) only exists in secure contexts: https, or
+ * http://localhost / 127.0.0.1. Opened via a LAN IP or custom hostname over
+ * plain http it is undefined, so fail with an actionable message instead of
+ * "Cannot read properties of undefined (reading 'generateKey')".
+ */
+export const SECURE_CONTEXT_ERROR =
+  "Scratch needs encryption, which your browser only allows on https or " +
+  "localhost. Open the app at http://localhost (or over https) and try again.";
+
 export async function generateScratchKey(): Promise<CryptoKey> {
-  return crypto.subtle.generateKey({ name: ALGORITHM, length: 256 }, false, [
+  const subtle = globalThis.crypto?.subtle;
+  if (!subtle) throw new Error(SECURE_CONTEXT_ERROR);
+  return subtle.generateKey({ name: ALGORITHM, length: 256 }, false, [
     "encrypt",
     "decrypt",
   ]);
