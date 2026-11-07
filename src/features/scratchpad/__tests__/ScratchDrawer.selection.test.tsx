@@ -2,6 +2,8 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import { ScratchDrawer } from "../components/ScratchDrawer";
 import { FIXTURES } from "../testing/inMemory";
 import { useScratchpadStore } from "../stores/useScratchpadStore";
+import { useRootStore } from "../../../stores/rootStore";
+import * as clipboard from "../utils/copyToClipboard";
 
 // In-memory store instead of IndexedDB.
 jest.mock("../stores/useScratchpadStore", () => {
@@ -162,6 +164,36 @@ describe("ScratchDrawer selection", () => {
       enterSelection();
       clickRow(0);
       expect(screen.queryByTestId("scratch-copied-tick")).toBeNull();
+    });
+
+    it("copies the selected entries to the clipboard, one per line, in the order shown", async () => {
+      const write = jest.spyOn(clipboard, "copyToClipboard").mockResolvedValue(true);
+      await seed();
+      await openDrawer();
+      enterSelection();
+      clickRow(2);
+      clickRow(0);
+      fireEvent.click(screen.getByTestId("scratch-bulk-copy"));
+      await waitFor(() => expect(write).toHaveBeenCalledWith(`${FIXTURES.mvn}\n${FIXTURES.todo}`));
+      write.mockRestore();
+    });
+
+    it("opens the selected entries in one new tab, one per line, in the order shown", async () => {
+      const handleNewPopulatedTab = jest
+        .spyOn(useRootStore.getState(), "handleNewPopulatedTab")
+        .mockResolvedValue("tab-1");
+      await seed();
+      await openDrawer();
+      enterSelection();
+      clickRow(2);
+      clickRow(0);
+      fireEvent.click(screen.getByTestId("scratch-bulk-open-tab"));
+      await waitFor(() =>
+        expect(handleNewPopulatedTab).toHaveBeenCalledWith(
+          expect.objectContaining({ content: `${FIXTURES.mvn}\n${FIXTURES.todo}` }),
+        ),
+      );
+      handleNewPopulatedTab.mockRestore();
     });
 
     it("shift+click selects a range", async () => {

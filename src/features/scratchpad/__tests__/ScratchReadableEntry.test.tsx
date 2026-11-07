@@ -127,6 +127,21 @@ describe("ScratchReadableEntry", () => {
     });
   });
 
+  describe("open in new tab", () => {
+    it("opens just this entry in a new tab", async () => {
+      const { actions } = renderEntry(plainEntry);
+      await clickId("scratch-open-tab");
+      expect(actions.openInNewTab).toHaveBeenCalledWith([plainEntry.id]);
+    });
+
+    it("does not copy the entry", async () => {
+      const write = jest.spyOn(clipboard, "copyToClipboard").mockResolvedValue(true);
+      renderEntry(plainEntry);
+      await clickId("scratch-open-tab");
+      expect(write).not.toHaveBeenCalled();
+    });
+  });
+
   describe("copied tick", () => {
     beforeEach(() => jest.useFakeTimers());
 
@@ -259,6 +274,12 @@ describe("ScratchReadableEntry", () => {
       return view;
     };
 
+    it("hides the hover toolbar while the editor is open", async () => {
+      await openEditor();
+      expect(screen.getByTestId("scratch-mask-editor")).toBeInTheDocument();
+      expect(screen.queryByTestId("scratch-toolbar")).toBeNull();
+    });
+
     it("shows the raw text read-only in an editor and closes the menu", async () => {
       const { actions } = await openEditor();
       expect(actions.getEditableText).toHaveBeenCalledWith("e2");
@@ -379,15 +400,10 @@ describe("ScratchReadableEntry", () => {
       expect(row()).not.toHaveAttribute("title");
     });
 
-    it("swaps with the select-to-mask editor instead of showing both", async () => {
+    it("hides the hover toolbar while the text editor is open", async () => {
       await openEdit();
-      await clickId("scratch-mask-mode");
-      expect(screen.queryByTestId("scratch-text-editor")).toBeNull();
-      expect(screen.getByTestId("scratch-mask-editor")).toBeInTheDocument();
-
-      await clickId("scratch-edit");
-      expect(screen.queryByTestId("scratch-mask-editor")).toBeNull();
       expect(screen.getByTestId("scratch-text-editor")).toBeInTheDocument();
+      expect(screen.queryByTestId("scratch-toolbar")).toBeNull();
     });
 
     it("does not expire while the user is editing", async () => {
@@ -405,6 +421,11 @@ describe("ScratchReadableEntry", () => {
     it("offers no edit control", () => {
       renderEntry(plainEntry, true);
       expect(screen.queryByTestId("scratch-edit")).toBeNull();
+    });
+
+    it("offers no open-in-new-tab control, since the tab would show plaintext", () => {
+      renderEntry(plainEntry, true);
+      expect(screen.queryByTestId("scratch-open-tab")).toBeNull();
     });
 
     it("closes an open edit session when presenting starts", async () => {

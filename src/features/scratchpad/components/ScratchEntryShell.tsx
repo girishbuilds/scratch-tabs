@@ -27,6 +27,7 @@ interface ScratchEntryShellProps {
   /** Makes the whole row a copy target. */
   onActivate?: () => void;
   selection?: RowSelection;
+  /** Hover toolbar; null (e.g. while editing) shows none. */
   toolbar: React.ReactNode;
   children: React.ReactNode;
 }
@@ -115,7 +116,7 @@ export const ScratchEntryShell: React.FC<ScratchEntryShellProps> = ({
           aria-hidden
           data-testid="scratch-pinned-marker"
           className={`absolute right-2.5 top-2.5 text-muted ${
-            selecting ? "" : "group-hover:opacity-0 group-focus-within:opacity-0"
+            selecting || !toolbar ? "" : "group-hover:opacity-0 group-focus-within:opacity-0"
           }`}
         />
       )}

@@ -1,9 +1,11 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { ScratchSelectionBar } from "../components/ScratchSelectionBar";
 
 function renderBar(props: Partial<React.ComponentProps<typeof ScratchSelectionBar>> = {}) {
   const handlers = {
     onMove: jest.fn(),
+    onCopy: jest.fn().mockResolvedValue(true),
+    onOpenInNewTab: jest.fn(),
     onToggleAll: jest.fn(),
     onTogglePin: jest.fn(),
     onDelete: jest.fn(),
@@ -33,6 +35,36 @@ describe("ScratchSelectionBar", () => {
     expect(screen.getByTestId("scratch-selected-count")).toHaveTextContent("Select entries");
     expect(screen.getByTestId("scratch-bulk-pin")).toBeDisabled();
     expect(screen.getByTestId("scratch-bulk-delete")).toBeDisabled();
+    expect(screen.getByTestId("scratch-bulk-copy")).toBeDisabled();
+    expect(screen.getByTestId("scratch-bulk-open-tab")).toBeDisabled();
+  });
+
+  it("opens the selection in a new tab", () => {
+    const h = renderBar();
+    fireEvent.click(screen.getByTestId("scratch-bulk-open-tab"));
+    expect(h.onOpenInNewTab).toHaveBeenCalledTimes(1);
+  });
+
+  it("hides open-in-new-tab when it is not offered, e.g. while presenting", () => {
+    renderBar({ onOpenInNewTab: undefined });
+    expect(screen.queryByTestId("scratch-bulk-open-tab")).toBeNull();
+  });
+
+  it("copies the selection and ticks once it is on the clipboard", async () => {
+    const h = renderBar();
+    fireEvent.click(screen.getByTestId("scratch-bulk-copy"));
+    expect(h.onCopy).toHaveBeenCalledTimes(1);
+    await waitFor(() =>
+      expect(screen.getByTestId("scratch-bulk-copy").querySelector(".text-success")).not.toBeNull(),
+    );
+  });
+
+  it("does not tick when the copy fails", async () => {
+    const onCopy = jest.fn().mockResolvedValue(false);
+    renderBar({ onCopy });
+    fireEvent.click(screen.getByTestId("scratch-bulk-copy"));
+    await waitFor(() => expect(onCopy).toHaveBeenCalled());
+    expect(screen.getByTestId("scratch-bulk-copy").querySelector(".text-success")).toBeNull();
   });
 
   it("shows select-all as indeterminate for a partial selection", () => {
