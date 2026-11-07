@@ -46,7 +46,7 @@ export const ScratchEntryContent: React.FC<ScratchEntryContentProps> = ({
     <ScratchMaskEditor text={editorText} onMask={onMask} onDone={onCloseEditor} />
   ) : (
     <CollapsibleText lineCount={countLines(segments)}>
-      <div className="min-w-0 flex-1 whitespace-pre-wrap break-all font-mono text-xs text-main">
+      <div className="min-w-0 flex-1 whitespace-pre-wrap font-mono [overflow-wrap:anywhere] text-xs text-main">
         <MaskedSegments
           segments={segments}
           revealed={revealed}

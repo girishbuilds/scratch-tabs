@@ -167,3 +167,86 @@ Feature: Global Scratchpad
     Then the Global Scratchpad should be wider than 500 pixels
     When I double-click the Global Scratchpad edge
     Then the Global Scratchpad should be 380 pixels wide
+
+  Scenario: Several entries can be selected and deleted together
+    When I open the Global Scratchpad from the toolbar
+    And I paste into Scratch:
+      """
+      mvn -B -ntp -fae -T 1C clean verify
+
+      TODO: Make allow list include notes header
+
+      kubectl get pods -n prod
+      """
+    And I start selecting Scratch entries
+    And I select the Scratch entry containing "mvn -B"
+    And I select the Scratch entry containing "TODO"
+    Then Scratch should show 2 selected
+    And the Scratch entry "mvn -B" should not show it was copied
+    When I delete the selected Scratch entries
+    Then Scratch should list 1 entries
+    And Scratch should show "kubectl get pods"
+
+  Scenario: Cmd-click starts a selection, bulk pin moves entries to the top, Escape leaves selecting
+    When I open the Global Scratchpad from the toolbar
+    And I paste into Scratch:
+      """
+      mvn -B -ntp -fae -T 1C clean verify
+
+      TODO: Make allow list include notes header
+      """
+    And I Cmd-click the Scratch entry containing "TODO"
+    Then Scratch should show 1 selected
+    When I pin the selected Scratch entries
+    Then the first Scratch entry should contain "TODO"
+    When I press Escape in the Scratch selection bar
+    Then Scratch selection mode should be off
+    And the Global Scratchpad should be visible
+
+  Scenario: An entry can be moved to the top and stays there after a reload
+    When I open the Global Scratchpad from the toolbar
+    And I paste into Scratch:
+      """
+      mvn -B -ntp -fae -T 1C clean verify
+
+      TODO: Make allow list include notes header
+
+      kubectl get pods -n prod
+      """
+    Then the Scratch entries should read "mvn -B | TODO | kubectl"
+    When I move the Scratch entry containing "kubectl" to the top
+    Then the Scratch entries should read "kubectl | mvn -B | TODO"
+    When I move the Scratch entry containing "mvn -B" down
+    Then the Scratch entries should read "kubectl | TODO | mvn -B"
+    When I reload the page
+    And I open the Global Scratchpad from the toolbar
+    Then the Scratch entries should read "kubectl | TODO | mvn -B"
+
+  Scenario: Several selected entries move together
+    When I open the Global Scratchpad from the toolbar
+    And I paste into Scratch:
+      """
+      one: mvn -B -ntp -fae -T 1C clean verify
+
+      two: TODO: Make allow list include notes header
+
+      three: kubectl get pods -n prod
+
+      four: docker ps
+      """
+    And I start selecting Scratch entries
+    And I select the Scratch entry containing "one:"
+    And I select the Scratch entry containing "three:"
+    And I move the selected Scratch entries to the bottom
+    Then the Scratch entries should read "two: | four: | one: | three:"
+
+  Scenario: Moving waits for the search to be cleared
+    When I open the Global Scratchpad from the toolbar
+    And I paste into Scratch:
+      """
+      mvn -B -ntp -fae -T 1C clean verify
+
+      kubectl get pods -n prod
+      """
+    And I search Scratch for "kubectl"
+    Then Scratch should not offer to move entries

@@ -258,6 +258,184 @@ describe("scratchpadStore", () => {
     });
   });
 
+  describe("removeMany", () => {
+    it("deletes the chosen entries from state and storage and keeps the rest", async () => {
+      const { state, repository } = await setup();
+      await state().addFromText(FIXTURES.todo);
+      await state().addFromText(FIXTURES.mvn);
+      await state().addFromText(FIXTURES.uatKeyLine);
+      await state().removeMany(["id-1", "id-3"]);
+      expect(state().items.map((i) => i.id)).toEqual(["id-2"]);
+      expect([...repository.records.keys()]).toEqual(["id-2"]);
+    });
+
+    it("dismisses the add notice", async () => {
+      const { state } = await setup();
+      await state().addFromText(FIXTURES.mvn);
+      await state().removeMany(["id-1"]);
+      expect(state().notice).toBeNull();
+    });
+
+    it("does nothing for an empty list", async () => {
+      const { state, repository } = await setup();
+      await state().addFromText(FIXTURES.mvn);
+      const remove = jest.spyOn(repository, "remove");
+      await state().removeMany([]);
+      expect(remove).not.toHaveBeenCalled();
+      expect(state().items).toHaveLength(1);
+    });
+
+    it("reports a failure and keeps every entry", async () => {
+      const { state, repository } = await setup();
+      await state().addFromText(FIXTURES.mvn);
+      jest.spyOn(repository, "remove").mockRejectedValueOnce(new Error("disk full"));
+      await state().removeMany(["id-1"]);
+      expect(state().error).toBe("disk full");
+      expect(state().items).toHaveLength(1);
+    });
+
+    it("uses a fallback message for non-Error failures", async () => {
+      const { state, repository } = await setup();
+      await state().addFromText(FIXTURES.mvn);
+      jest.spyOn(repository, "remove").mockRejectedValueOnce("nope");
+      await state().removeMany(["id-1"]);
+      expect(state().error).toBe("Could not delete the entries");
+    });
+  });
+
+  describe("setPinnedMany", () => {
+    it("pins several entries at once and sorts them to the top", async () => {
+      const { state, repository } = await setup();
+      await state().addFromText(FIXTURES.todo);
+      await state().addFromText(FIXTURES.mvn);
+      await state().addFromText(FIXTURES.uatKeyLine);
+      await state().setPinnedMany(["id-1", "id-2"], true);
+      expect(state().items.map((i) => [i.id, i.pinned])).toEqual([
+        ["id-2", true],
+        ["id-1", true],
+        ["id-3", false],
+      ]);
+      expect(repository.records.get("id-1")?.pinned).toBe(true);
+      expect(repository.records.get("id-2")?.pinned).toBe(true);
+    });
+
+    it("unpins them again", async () => {
+      const { state } = await setup();
+      await state().addFromText(FIXTURES.todo);
+      await state().addFromText(FIXTURES.mvn);
+      await state().setPinnedMany(["id-1", "id-2"], true);
+      await state().setPinnedMany(["id-1", "id-2"], false);
+      expect(state().items.every((i) => !i.pinned)).toBe(true);
+    });
+
+    it("does nothing for an empty list", async () => {
+      const { state, repository } = await setup();
+      await state().addFromText(FIXTURES.mvn);
+      const put = jest.spyOn(repository, "putMany");
+      await state().setPinnedMany([], true);
+      expect(put).not.toHaveBeenCalled();
+    });
+
+    it("reports a failure and changes nothing", async () => {
+      const { state, repository } = await setup();
+      await state().addFromText(FIXTURES.mvn);
+      jest.spyOn(repository, "putMany").mockRejectedValueOnce(new Error("disk full"));
+      await state().setPinnedMany(["id-1"], true);
+      expect(state().error).toBe("disk full");
+      expect(state().items[0].pinned).toBe(false);
+    });
+
+    it("uses a fallback message for non-Error failures", async () => {
+      const { state, repository } = await setup();
+      await state().addFromText(FIXTURES.mvn);
+      jest.spyOn(repository, "putMany").mockRejectedValueOnce("nope");
+      await state().setPinnedMany(["id-1"], true);
+      expect(state().error).toBe("Could not update the entries");
+    });
+  });
+
+  describe("moveEntries", () => {
+    /** Three entries added in turn: the list reads id-3, id-2, id-1. */
+    async function threeEntries() {
+      const ctx = await setup();
+      await ctx.state().addFromText(FIXTURES.todo);
+      await ctx.state().addFromText(FIXTURES.mvn);
+      await ctx.state().addFromText(FIXTURES.uatKeyLine);
+      return ctx;
+    }
+    const order = (state: () => { items: { id: string }[] }) => state().items.map((i) => i.id);
+
+    it("moves an entry and persists its position", async () => {
+      const { state, repository } = await threeEntries();
+      await state().moveEntries(["id-1"], "top");
+      expect(order(state)).toEqual(["id-1", "id-3", "id-2"]);
+      expect(repository.records.get("id-1")?.order).toBe(0);
+      expect(repository.records.get("id-3")?.order).toBe(1);
+    });
+
+    it("moves several entries together", async () => {
+      const { state } = await threeEntries();
+      await state().moveEntries(["id-3", "id-2"], "bottom");
+      expect(order(state)).toEqual(["id-1", "id-3", "id-2"]);
+    });
+
+    it("moves one step up and down", async () => {
+      const { state } = await threeEntries();
+      await state().moveEntries(["id-1"], "up");
+      expect(order(state)).toEqual(["id-3", "id-1", "id-2"]);
+      await state().moveEntries(["id-1"], "down");
+      expect(order(state)).toEqual(["id-3", "id-2", "id-1"]);
+    });
+
+    it("writes nothing when the move changes nothing", async () => {
+      const { state, repository } = await threeEntries();
+      const put = jest.spyOn(repository, "putMany");
+      await state().moveEntries(["id-3"], "top");
+      expect(put).not.toHaveBeenCalled();
+      expect(repository.records.get("id-3")?.order).toBeUndefined();
+    });
+
+    it("keeps the arrangement after a reload", async () => {
+      const { state } = await threeEntries();
+      await state().moveEntries(["id-1"], "top");
+      state().close();
+      await state().open();
+      expect(order(state)).toEqual(["id-1", "id-3", "id-2"]);
+    });
+
+    it("puts a new paste at the top of a rearranged list", async () => {
+      const { state } = await threeEntries();
+      await state().moveEntries(["id-3"], "bottom");
+      await state().addFromText("brand new");
+      expect(state().items[0].id).toBe("id-4");
+      expect(order(state).slice(1)).toEqual(["id-2", "id-1", "id-3"]);
+    });
+
+    it("keeps pinned entries above unpinned ones", async () => {
+      const { state } = await threeEntries();
+      await state().togglePin("id-1");
+      await state().moveEntries(["id-1"], "down");
+      expect(order(state)).toEqual(["id-1", "id-3", "id-2"]);
+      await state().moveEntries(["id-2"], "top");
+      expect(order(state)).toEqual(["id-1", "id-2", "id-3"]);
+    });
+
+    it("reports a failure and leaves the list as it was", async () => {
+      const { state, repository } = await threeEntries();
+      jest.spyOn(repository, "putMany").mockRejectedValueOnce(new Error("disk full"));
+      await state().moveEntries(["id-1"], "top");
+      expect(state().error).toBe("disk full");
+      expect(order(state)).toEqual(["id-3", "id-2", "id-1"]);
+    });
+
+    it("uses a fallback message for non-Error failures", async () => {
+      const { state, repository } = await threeEntries();
+      jest.spyOn(repository, "putMany").mockRejectedValueOnce("nope");
+      await state().moveEntries(["id-1"], "top");
+      expect(state().error).toBe("Could not move the entries");
+    });
+  });
+
   describe("clearAll", () => {
     it("deletes every entry from storage and state", async () => {
       const { state, repository } = await setup();

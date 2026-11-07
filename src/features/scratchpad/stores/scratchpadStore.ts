@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import type { ScratchListItem } from "../types";
 import { getPrimaryCopyText, getSecretValues } from "../services/blockSegmenter";
-import { sortEntries } from "../services/entryOrdering";
+import { moveEntries, orderChanges, sortEntries, type MoveTarget } from "../services/entryOrdering";
 import { createEntryGateway } from "../services/entryGateway";
 import { createEditedPayload, createPayloads } from "../services/ingestText";
 import { markRangeAsSecret, unmarkSecrets } from "../services/payloadEdits";
@@ -52,10 +52,16 @@ export interface ScratchpadState {
   addFromText: (raw: string) => Promise<void>;
   undoLastAdd: () => Promise<void>;
   remove: (id: string) => Promise<void>;
+  /** Deletes several entries in one write. */
+  removeMany: (ids: string[]) => Promise<void>;
   clearAll: () => Promise<void>;
   setQuery: (query: string) => void;
   setPresenting: (presenting: boolean) => void;
   togglePin: (id: string) => Promise<void>;
+  /** Pins or unpins several entries at once. */
+  setPinnedMany: (ids: string[], pinned: boolean) => Promise<void>;
+  /** Moves entries to the top/bottom or one step up/down within their pinned group. */
+  moveEntries: (ids: string[], target: MoveTarget) => Promise<void>;
   /** Unmasks one false positive. */
   markNotSecret: (id: string, secretIndex: number) => Promise<void>;
   /** Masks a range the detectors missed. */
@@ -187,6 +193,21 @@ export function createScratchpadStore(deps: ScratchpadDeps) {
         }
       },
 
+      removeMany: async (ids) => {
+        if (ids.length === 0) return;
+        try {
+          await repository.remove(ids);
+          const removed = new Set(ids);
+          set((state) => ({
+            items: state.items.filter((item) => !removed.has(item.id)),
+            notice: null,
+            error: null,
+          }));
+        } catch (error) {
+          set({ error: errorMessage(error, "Could not delete the entries") });
+        }
+      },
+
       clearAll: async () => {
         try {
           await repository.clear();
@@ -209,6 +230,41 @@ export function createScratchpadStore(deps: ScratchpadDeps) {
           set(replaceItem({ ...item, pinned }));
         } catch (error) {
           set({ error: errorMessage(error, "Could not update the entry") });
+        }
+      },
+
+      setPinnedMany: async (ids, pinned) => {
+        if (ids.length === 0) return;
+        try {
+          await gateway.setPinnedMany(ids, pinned);
+          const changed = new Set(ids);
+          set((state) => ({
+            items: sortEntries(
+              state.items.map((item) => (changed.has(item.id) ? { ...item, pinned } : item)),
+            ),
+            error: null,
+          }));
+        } catch (error) {
+          set({ error: errorMessage(error, "Could not update the entries") });
+        }
+      },
+
+      moveEntries: async (ids, target) => {
+        const { items } = get();
+        const orderedIds = moveEntries(items, ids, target);
+        if (orderedIds.every((id, index) => id === items[index].id)) return;
+        const changes = orderChanges(items, orderedIds);
+        try {
+          await gateway.setOrders(changes);
+          const orders = new Map(changes.map(({ id, order }) => [id, order]));
+          set((state) => ({
+            items: sortEntries(
+              state.items.map((item) => (orders.has(item.id) ? { ...item, order: orders.get(item.id) } : item)),
+            ),
+            error: null,
+          }));
+        } catch (error) {
+          set({ error: errorMessage(error, "Could not move the entries") });
         }
       },
 

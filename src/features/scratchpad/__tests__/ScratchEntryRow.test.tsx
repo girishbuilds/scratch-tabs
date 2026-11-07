@@ -1,17 +1,27 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { ScratchEntryRow } from "../components/ScratchEntryRow";
+import type { RowSelection } from "../components/ScratchEntryShell";
 import type { ScratchListItem } from "../types";
+import * as clipboard from "../utils/copyToClipboard";
 import { createActions, plainEntry } from "../testing/entryFixtures";
 
-function renderRow(item: ScratchListItem, presenting = false) {
+function renderRow(
+  item: ScratchListItem,
+  presenting = false,
+  selection?: RowSelection,
+  move?: React.ComponentProps<typeof ScratchEntryRow>["move"],
+) {
   const actions = createActions();
   render(
     <ul>
-      <ScratchEntryRow item={item} actions={actions} presenting={presenting} />
+      <ScratchEntryRow item={item} actions={actions} presenting={presenting} selection={selection} move={move} />
     </ul>,
   );
   return actions;
 }
+
+// Spies on the clipboard must not leak their call history into the next test.
+afterEach(() => jest.restoreAllMocks());
 
 describe("ScratchEntryRow", () => {
   it("exposes the entry kind and pin state to tests and assistive tech", () => {
@@ -147,5 +157,171 @@ describe("ScratchEntryRow - long entries", () => {
     const actions = renderRow(longEntry(20));
     fireEvent.click(screen.getByTestId("scratch-expand"));
     expect(actions.getCopyText).not.toHaveBeenCalled();
+  });
+
+  describe("kind icon", () => {
+    it.each([
+      [plainEntry, "command"],
+      [{ ...plainEntry, kind: "url" as const }, "url"],
+      [{ ...plainEntry, kind: "note" as const }, "note"],
+      [{ ...plainEntry, kind: "secret" as const }, "secret"],
+      [{ id: "u", kind: "unreadable" as const, createdAt: 1, batchIndex: 0, pinned: false }, "unreadable"],
+    ])("shows an icon for %# (%s)", (item, kind) => {
+      renderRow(item as ScratchListItem);
+      expect(screen.getByTestId("scratch-kind-icon")).toHaveAttribute("data-kind", kind);
+    });
+  });
+
+  describe("selection mode", () => {
+    const select = (over: Partial<RowSelection> = {}): RowSelection => ({
+      active: true,
+      selected: false,
+      onSelect: jest.fn(),
+      ...over,
+    });
+    const row = () => screen.getByTestId("scratch-entry");
+
+    it("shows a checkbox instead of the kind icon and hides the hover toolbar", () => {
+      renderRow(plainEntry, false, select());
+      expect(screen.getByTestId("scratch-select-entry")).not.toBeChecked();
+      expect(screen.queryByTestId("scratch-kind-icon")).toBeNull();
+      expect(screen.queryByTestId("scratch-toolbar")).toBeNull();
+    });
+
+    it("reflects the selected state on the checkbox, the row and for tests", () => {
+      renderRow(plainEntry, false, select({ selected: true }));
+      expect(screen.getByTestId("scratch-select-entry")).toBeChecked();
+      expect(row()).toHaveAttribute("data-selected", "true");
+    });
+
+    it("toggles instead of copying when the row is clicked", () => {
+      const write = jest.spyOn(clipboard, "copyToClipboard").mockResolvedValue(true);
+      const selection = select();
+      renderRow(plainEntry, false, selection);
+      fireEvent.click(row());
+      expect(selection.onSelect).toHaveBeenCalledWith(false);
+      expect(write).not.toHaveBeenCalled();
+    });
+
+    it("passes shift through so a range can be selected", () => {
+      const selection = select();
+      renderRow(plainEntry, false, selection);
+      fireEvent.click(row(), { shiftKey: true });
+      expect(selection.onSelect).toHaveBeenCalledWith(true);
+    });
+
+    it("toggles when the checkbox itself is clicked, exactly once", () => {
+      const selection = select();
+      renderRow(plainEntry, false, selection);
+      fireEvent.click(screen.getByTestId("scratch-select-entry"));
+      expect(selection.onSelect).toHaveBeenCalledTimes(1);
+    });
+
+    it("makes the content inert so a masked secret cannot be copied by a click", () => {
+      renderRow({ ...plainEntry, kind: "secret" }, false, select());
+      expect(screen.getByTestId("scratch-row-content")).toHaveClass("pointer-events-none");
+    });
+
+    it("works for entries that cannot be decrypted", () => {
+      const selection = select();
+      renderRow({ id: "u", kind: "unreadable", createdAt: 1, batchIndex: 0, pinned: false }, false, selection);
+      fireEvent.click(row());
+      expect(selection.onSelect).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps a pinned marker visible", () => {
+      renderRow({ ...plainEntry, pinned: true }, false, select());
+      expect(screen.getByTestId("scratch-pinned-marker")).not.toHaveClass("group-hover:opacity-0");
+    });
+
+    it("does not advertise click-to-copy", () => {
+      renderRow(plainEntry, false, select());
+      expect(row()).not.toHaveAttribute("title");
+    });
+  });
+
+  describe("Cmd/Ctrl+click outside selection mode", () => {
+    const idle = (): RowSelection => ({ active: false, selected: false, onSelect: jest.fn() });
+
+    it.each([["metaKey"], ["ctrlKey"]])("starts a selection with %s instead of copying", (modifier) => {
+      const write = jest.spyOn(clipboard, "copyToClipboard").mockResolvedValue(true);
+      const selection = idle();
+      renderRow(plainEntry, false, selection);
+      fireEvent.click(screen.getByTestId("scratch-entry"), { [modifier]: true });
+      expect(selection.onSelect).toHaveBeenCalledWith(false);
+      expect(write).not.toHaveBeenCalled();
+    });
+
+    it("a plain click still copies and does not select", async () => {
+      const write = jest.spyOn(clipboard, "copyToClipboard").mockResolvedValue(true);
+      const selection = idle();
+      renderRow(plainEntry, false, selection);
+      fireEvent.click(screen.getByTestId("scratch-entry"));
+      expect(selection.onSelect).not.toHaveBeenCalled();
+      await waitFor(() => expect(write).toHaveBeenCalled());
+    });
+
+    it("keeps the toolbar and no checkbox while idle", () => {
+      renderRow(plainEntry, false, idle());
+      expect(screen.getByTestId("scratch-toolbar")).toBeInTheDocument();
+      expect(screen.queryByTestId("scratch-select-entry")).toBeNull();
+      expect(screen.getByTestId("scratch-entry")).not.toHaveAttribute("data-selected");
+    });
+  });
+
+  describe("move menu", () => {
+    const move = (over = {}) => ({ canMove: () => true, ...over });
+    const unreadable: ScratchListItem = { id: "u", kind: "unreadable", createdAt: 1, batchIndex: 0, pinned: false };
+
+    it("is absent when the list does not offer moving", () => {
+      renderRow(plainEntry);
+      expect(screen.queryByTestId("scratch-move")).toBeNull();
+    });
+
+    it("moves this entry, and only this entry, when an item is chosen", () => {
+      const actions = renderRow(plainEntry, false, undefined, move());
+      fireEvent.click(screen.getByTestId("scratch-move"));
+      fireEvent.click(screen.getByTestId("scratch-move-bottom"));
+      expect(actions.moveEntries).toHaveBeenCalledWith([plainEntry.id], "bottom");
+    });
+
+    it("works for entries that cannot be decrypted", () => {
+      const actions = renderRow(unreadable, false, undefined, move());
+      fireEvent.click(screen.getByTestId("scratch-move"));
+      fireEvent.click(screen.getByTestId("scratch-move-top"));
+      expect(actions.moveEntries).toHaveBeenCalledWith(["u"], "top");
+    });
+
+    it("disables the moves that would change nothing", () => {
+      renderRow(plainEntry, false, undefined, move({ canMove: (t: string) => t === "down" }));
+      fireEvent.click(screen.getByTestId("scratch-move"));
+      expect(screen.getByTestId("scratch-move-up")).toBeDisabled();
+      expect(screen.getByTestId("scratch-move-down")).toBeEnabled();
+    });
+
+    it("is disabled with an explanation while the list is filtered", () => {
+      renderRow(plainEntry, false, undefined, move({ disabledReason: "Clear the search to reorder" }));
+      expect(screen.getByTestId("scratch-move")).toBeDisabled();
+      expect(screen.getByTestId("scratch-move")).toHaveAttribute("title", "Clear the search to reorder");
+    });
+
+    it("keeps the hover toolbar visible while the menu is open", () => {
+      renderRow(plainEntry, false, undefined, move());
+      const toolbar = screen.getByTestId("scratch-toolbar");
+      expect(toolbar).toHaveClass("opacity-0");
+      fireEvent.click(screen.getByTestId("scratch-move"));
+      expect(toolbar).toHaveClass("opacity-100");
+      expect(toolbar).not.toHaveClass("opacity-0");
+      fireEvent.click(screen.getByTestId("scratch-move"));
+      expect(toolbar).toHaveClass("opacity-0");
+    });
+
+    it("does not copy the entry when the menu is used", () => {
+      const write = jest.spyOn(clipboard, "copyToClipboard").mockResolvedValue(true);
+      renderRow(plainEntry, false, undefined, move());
+      fireEvent.click(screen.getByTestId("scratch-move"));
+      fireEvent.click(screen.getByTestId("scratch-move-up"));
+      expect(write).not.toHaveBeenCalled();
+    });
   });
 });

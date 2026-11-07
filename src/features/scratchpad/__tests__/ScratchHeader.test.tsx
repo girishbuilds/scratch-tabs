@@ -100,4 +100,22 @@ describe("ScratchHeader", () => {
     fireEvent.click(screen.getByTestId("scratch-close"));
     expect(onClose).toHaveBeenCalled();
   });
+
+  describe("entry count", () => {
+    it("is hidden when there are no entries", () => {
+      renderHeader({ count: 0 });
+      expect(screen.queryByTestId("scratch-count")).toBeNull();
+    });
+
+    it("shows how many entries are stored", () => {
+      renderHeader({ count: 12 });
+      expect(screen.getByTestId("scratch-count")).toHaveTextContent("12");
+      expect(screen.getByTestId("scratch-count")).toHaveAttribute("aria-label", "12 entries");
+    });
+
+    it("uses the singular for one entry", () => {
+      renderHeader({ count: 1 });
+      expect(screen.getByTestId("scratch-count")).toHaveAttribute("aria-label", "1 entry");
+    });
+  });
 });

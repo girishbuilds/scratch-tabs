@@ -20,6 +20,7 @@ export function useEntryController(
   item: ScratchEntryView,
   actions: ScratchEntryActions,
   presenting: boolean,
+  selecting: boolean,
 ) {
   const copy = useScratchCopy();
   const [copied, flashCopied] = useTransientFlag(COPIED_TICK_MS);
@@ -33,12 +34,15 @@ export function useEntryController(
   const { hide: hideEditor } = editor;
   const { close: closeEdit } = edit;
 
+  // Plaintext is dropped while presenting, and when the list enters selection
+  // mode (the row is inert there, so an open editor could not be used anyway).
+  const hidePlaintext = presenting || selecting;
   useEffect(() => {
-    if (!presenting) return;
+    if (!hidePlaintext) return;
     hideReveal();
     hideEditor();
     closeEdit();
-  }, [presenting, hideReveal, hideEditor, closeEdit]);
+  }, [hidePlaintext, hideReveal, hideEditor, closeEdit]);
 
   // The two plaintext editors are mutually exclusive.
   const startEdit = useCallback(async () => {

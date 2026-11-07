@@ -2,6 +2,7 @@ import {
   DEFAULT_DRAWER_WIDTH,
   MAX_DRAWER_WIDTH,
   MIN_DRAWER_WIDTH,
+  DRAWER_EDGE_MARGIN,
   clampDrawerWidth,
   widthFromPointer,
 } from "../services/drawerWidth";
@@ -37,7 +38,12 @@ describe("clampDrawerWidth", () => {
 });
 
 describe("widthFromPointer", () => {
-  it("is the distance from the pointer to the right edge", () => {
-    expect(widthFromPointer(1000, 1400)).toBe(400);
+  it("is the distance from the pointer to the drawer's inset right edge", () => {
+    expect(widthFromPointer(1000, 1400)).toBe(1400 - DRAWER_EDGE_MARGIN - 1000);
+  });
+
+  it("puts the drawer's left edge exactly under the pointer", () => {
+    const width = widthFromPointer(1000, 1400);
+    expect(1400 - DRAWER_EDGE_MARGIN - width).toBe(1000);
   });
 });

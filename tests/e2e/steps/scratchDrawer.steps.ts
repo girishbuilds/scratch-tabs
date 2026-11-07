@@ -132,3 +132,61 @@ Then(
     await this.scratchDrawer.expectNothingReadableAtRest([a, b], count);
   },
 );
+
+When('I start selecting Scratch entries', async function () {
+  await this.scratchDrawer.startSelecting();
+});
+
+When('I select the Scratch entry containing {string}', async function (text: string) {
+  await this.scratchDrawer.selectEntryContaining(text);
+});
+
+When('I Cmd-click the Scratch entry containing {string}', async function (text: string) {
+  await this.scratchDrawer.modifierClickEntryContaining(text);
+});
+
+When('I delete the selected Scratch entries', async function () {
+  await this.scratchDrawer.deleteSelected();
+});
+
+When('I pin the selected Scratch entries', async function () {
+  await this.scratchDrawer.pinSelected();
+});
+
+When('I press Escape in the Scratch selection bar', async function () {
+  await this.scratchDrawer.leaveSelectionWithEscape();
+});
+
+Then('Scratch should show {int} selected', async function (count: number) {
+  await this.scratchDrawer.expectSelectedCount(count);
+});
+
+Then('Scratch selection mode should be {word}', async function (state: string) {
+  await this.scratchDrawer.expectSelecting(state === 'on');
+});
+
+When(
+  'I move the Scratch entry containing {string} to the {word}',
+  async function (text: string, place: string) {
+    await this.scratchDrawer.moveEntryContaining(text, place);
+  },
+);
+
+When(
+  'I move the Scratch entry containing {string} {word}',
+  async function (text: string, direction: string) {
+    await this.scratchDrawer.moveEntryContaining(text, direction);
+  },
+);
+
+When('I move the selected Scratch entries to the {word}', async function (place: string) {
+  await this.scratchDrawer.moveSelected(place);
+});
+
+Then('the Scratch entries should read {string}', async function (fragments: string) {
+  await this.scratchDrawer.expectEntryOrder(fragments.split(' | '));
+});
+
+Then('Scratch should not offer to move entries', async function () {
+  await this.scratchDrawer.expectMoveDisabled();
+});

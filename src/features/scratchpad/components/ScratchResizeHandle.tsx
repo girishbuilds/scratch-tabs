@@ -25,7 +25,7 @@ export const ScratchResizeHandle: React.FC<ScratchResizeHandleProps> = ({
     tabIndex={0}
     title="Drag to resize, double-click to reset"
     data-testid="scratch-resize"
-    className={`absolute inset-y-0 -left-1 z-10 w-2 cursor-col-resize touch-none transition-colors hover:bg-focus/40 focus-visible:bg-focus/60 focus-visible:outline-none ${
+    className={`absolute inset-y-2 -left-1 z-10 w-2 cursor-col-resize touch-none transition-colors hover:bg-focus/40 focus-visible:bg-focus/60 focus-visible:outline-none ${
       isDragging ? "bg-focus/60" : ""
     }`}
     {...handleProps}

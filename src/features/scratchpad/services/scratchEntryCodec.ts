@@ -63,6 +63,7 @@ export function toEntryView(
     createdAt: record.createdAt,
     batchIndex: record.batchIndex,
     pinned: record.pinned === true,
+    order: record.order,
     secretCount: payload.secrets.length,
   };
 }
@@ -74,5 +75,6 @@ export function toUnreadableView(record: ScratchEntryRecord): ScratchUnreadableV
     createdAt: record.createdAt,
     batchIndex: record.batchIndex,
     pinned: record.pinned === true,
+    order: record.order,
   };
 }

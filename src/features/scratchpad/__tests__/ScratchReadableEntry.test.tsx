@@ -130,27 +130,27 @@ describe("ScratchReadableEntry", () => {
   describe("copied tick", () => {
     beforeEach(() => jest.useFakeTimers());
 
-    it("shows the kind glyph at rest", () => {
+    it("shows the kind icon at rest", () => {
       renderEntry(plainEntry);
       expect(screen.queryByTestId("scratch-copied-tick")).toBeNull();
-      expect(row()).toHaveTextContent("$");
+      expect(screen.getByTestId("scratch-kind-icon")).toHaveAttribute("data-kind", "command");
       expect(row()).toHaveAttribute("data-copied", "false");
     });
 
-    it("replaces the glyph with a green tick for two seconds after a copy", async () => {
+    it("replaces the icon with a green tick for two seconds after a copy", async () => {
       jest.spyOn(clipboard, "copyToClipboard").mockResolvedValue(true);
       renderEntry(plainEntry);
       await click(row());
       const tick = screen.getByTestId("scratch-copied-tick");
       expect(tick).toHaveClass("text-success");
       expect(row()).toHaveAttribute("data-copied", "true");
-      expect(row()).not.toHaveTextContent("$");
+      expect(screen.queryByTestId("scratch-kind-icon")).toBeNull();
 
       await advance(COPIED_TICK_MS - 1);
       expect(screen.getByTestId("scratch-copied-tick")).toBeInTheDocument();
       await advance(1);
       expect(screen.queryByTestId("scratch-copied-tick")).toBeNull();
-      expect(row()).toHaveTextContent("$");
+      expect(screen.getByTestId("scratch-kind-icon")).toBeInTheDocument();
     });
 
     it("lasts 2 seconds", () => {
@@ -450,6 +450,33 @@ describe("ScratchReadableEntry", () => {
         </ul>,
       );
       await waitFor(() => expect(screen.queryByTestId("scratch-mask-editor")).toBeNull());
+    });
+  });
+
+  describe("selection mode", () => {
+    const selecting = { active: true, selected: false, onSelect: jest.fn() };
+    const withSelection = (item: ScratchEntryView, actions: ReturnType<typeof createActions>) => (
+      <ul>
+        <ScratchReadableEntry item={item} actions={actions} presenting={false} selection={selecting} />
+      </ul>
+    );
+
+    it("closes an open edit session when selection starts", async () => {
+      const actions = createActions();
+      const { rerender } = renderEntry(plainEntry, false, actions);
+      await clickId("scratch-edit");
+      expect(screen.getByTestId("scratch-text-editor")).toBeInTheDocument();
+      rerender(withSelection(plainEntry, actions));
+      expect(screen.queryByTestId("scratch-text-editor")).toBeNull();
+    });
+
+    it("hides a revealed secret when selection starts", async () => {
+      const actions = createActions();
+      const { rerender } = renderEntry(secretEntry, false, actions);
+      await clickId("scratch-reveal");
+      expect(screen.getByTestId("scratch-secret-revealed")).toBeInTheDocument();
+      rerender(withSelection(secretEntry, actions));
+      await waitFor(() => expect(screen.queryByTestId("scratch-secret-revealed")).toBeNull());
     });
   });
 });

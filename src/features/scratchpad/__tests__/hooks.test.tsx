@@ -4,6 +4,7 @@ import { isScratchHotkey, useScratchHotkey } from "../hooks/useScratchHotkey";
 import { REVEAL_TTL_MS, useSecretReveal } from "../hooks/useSecretReveal";
 import { useTransientFlag } from "../hooks/useTransientFlag";
 import { useDrawerResize } from "../hooks/useDrawerResize";
+import { DRAWER_EDGE_MARGIN } from "../services/drawerWidth";
 import { useEditSession } from "../hooks/useEditSession";
 import { useExpiringValue } from "../hooks/useExpiringValue";
 import { clearClipboard, copyToClipboard } from "../utils/copyToClipboard";
@@ -353,13 +354,14 @@ describe("useDrawerResize", () => {
     const commit = jest.fn();
     const { result } = renderHook(() => useDrawerResize(380, commit));
     act(() => result.current.handleProps.onPointerDown(pointer(1000)));
-    expect(result.current).toMatchObject({ width: 400, isDragging: true });
+    // The drawer floats DRAWER_EDGE_MARGIN px in from the window edge.
+    expect(result.current).toMatchObject({ width: 400 - DRAWER_EDGE_MARGIN, isDragging: true });
     act(() => result.current.handleProps.onPointerMove(pointer(700)));
-    expect(result.current.width).toBe(700);
+    expect(result.current.width).toBe(700 - DRAWER_EDGE_MARGIN);
     expect(commit).not.toHaveBeenCalled();
     act(() => result.current.handleProps.onPointerUp());
     expect(commit).toHaveBeenCalledTimes(1);
-    expect(commit).toHaveBeenCalledWith(700);
+    expect(commit).toHaveBeenCalledWith(700 - DRAWER_EDGE_MARGIN);
     expect(result.current.isDragging).toBe(false);
   });
 
