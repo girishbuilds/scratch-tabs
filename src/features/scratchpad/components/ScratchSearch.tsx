@@ -8,7 +8,7 @@ interface ScratchSearchProps {
 
 /** Searches non-secret text only; secret values are never decrypted for search. */
 export const ScratchSearch: React.FC<ScratchSearchProps> = ({ query, onChange }) => (
-  <label className="flex items-center gap-2 rounded border border-base bg-surface px-2 py-1 text-sm focus-within:border-focus">
+  <label className="flex min-w-0 flex-1 items-center gap-2 rounded border border-base bg-surface px-2 py-1 text-sm focus-within:border-focus">
     <Search size={14} className="flex-none text-muted" aria-hidden />
     <input
       type="search"

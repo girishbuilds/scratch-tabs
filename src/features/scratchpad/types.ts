@@ -32,6 +32,12 @@ export interface ScratchEntryRecord {
   batchIndex: number;
   /** Plaintext on purpose: pinning is organisational metadata, not content. */
   pinned?: boolean;
+  /**
+   * User-chosen position (0 = first), plaintext like `pinned`. Absent until the
+   * entry is first moved; entries without one sort above those that have one,
+   * newest first, so a fresh paste always lands at the top.
+   */
+  order?: number;
   iv: Uint8Array;
   ct: Uint8Array;
 }
@@ -56,6 +62,7 @@ export interface ScratchEntryView {
   createdAt: number;
   batchIndex: number;
   pinned: boolean;
+  order?: number;
   secretCount: number;
 }
 
@@ -66,6 +73,7 @@ export interface ScratchUnreadableView {
   createdAt: number;
   batchIndex: number;
   pinned: boolean;
+  order?: number;
 }
 
 export type ScratchListItem = ScratchEntryView | ScratchUnreadableView;

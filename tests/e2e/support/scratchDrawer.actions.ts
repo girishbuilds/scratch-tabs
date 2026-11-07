@@ -83,6 +83,68 @@ export class ScratchDrawerActions {
     await row.getByTestId('scratch-delete').click();
   }
 
+  async moveEntryContaining(text: string, target: 'top' | 'up' | 'down' | 'bottom') {
+    const row = this.entryContaining(text);
+    await row.hover();
+    await row.getByTestId('scratch-move').click();
+    await row.getByTestId(`scratch-move-${target}`).click();
+  }
+
+  async moveSelected(target: 'top' | 'up' | 'down' | 'bottom') {
+    await this.page.getByTestId('scratch-bulk-move').click();
+    await this.page.getByTestId(`scratch-bulk-move-${target}`).click();
+  }
+
+  /** Each fragment must appear in the entry at the same position, top to bottom. */
+  async expectEntryOrder(fragments: string[]) {
+    const entries = this.page.getByTestId('scratch-entry');
+    await expect(entries).toHaveCount(fragments.length);
+    for (let i = 0; i < fragments.length; i++) {
+      await expect(entries.nth(i)).toContainText(fragments[i]);
+    }
+  }
+
+  async expectMoveDisabled() {
+    await expect(this.page.getByTestId('scratch-move').first()).toBeDisabled();
+  }
+
+  async startSelecting() {
+    await this.page.getByTestId('scratch-select-toggle').click();
+  }
+
+  async selectEntryContaining(text: string) {
+    await this.entryContaining(text).click();
+  }
+
+  /** Cmd/Ctrl+click, which starts a selection straight from the list. */
+  async modifierClickEntryContaining(text: string) {
+    await this.entryContaining(text).click({ modifiers: ['ControlOrMeta'], position: { x: 40, y: 8 } });
+  }
+
+  async expectSelectedCount(count: number) {
+    await expect(this.page.getByTestId('scratch-selected-count')).toHaveText(`${count} selected`);
+  }
+
+  async deleteSelected() {
+    await this.page.getByTestId('scratch-bulk-delete').click();
+    await this.page
+      .getByTestId('confirmation-dialog')
+      .getByRole('button', { name: 'Delete', exact: true })
+      .click();
+  }
+
+  async pinSelected() {
+    await this.page.getByTestId('scratch-bulk-pin').click();
+  }
+
+  async leaveSelectionWithEscape() {
+    await this.page.getByTestId('scratch-selection-bar').press('Escape');
+  }
+
+  async expectSelecting(selecting: boolean) {
+    await expect(this.page.getByTestId('scratch-selection-bar')).toHaveCount(selecting ? 1 : 0);
+  }
+
   private entryContaining(text: string) {
     return this.page.getByTestId('scratch-entry').filter({ hasText: text });
   }

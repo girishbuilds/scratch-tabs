@@ -89,4 +89,24 @@ describe("scratchEntryCodec", () => {
       expect(updated.iv).not.toEqual(original.iv);
     });
   });
+
+  describe("position", () => {
+    it("is carried from the record into both kinds of view", async () => {
+      const record = { ...(await sealEntry(await newTestKey(), meta, payload)), order: 3 };
+      expect(toEntryView(record, payload).order).toBe(3);
+      expect(toUnreadableView(record).order).toBe(3);
+    });
+
+    it("is absent for an entry that was never placed", async () => {
+      const record = await sealEntry(await newTestKey(), meta, payload);
+      expect(toEntryView(record, payload).order).toBeUndefined();
+      expect(toUnreadableView(record).order).toBeUndefined();
+    });
+
+    it("is kept when an entry is re-encrypted after an edit", async () => {
+      const key = await newTestKey();
+      const record = { ...(await sealEntry(key, meta, payload)), order: 7 };
+      expect((await resealEntry(key, record, buildPayload("changed", []), 9)).order).toBe(7);
+    });
+  });
 });

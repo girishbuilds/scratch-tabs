@@ -15,6 +15,10 @@ export interface EntryGateway {
   edit(id: string, change: (payload: ScratchPayload) => ScratchPayload): Promise<ScratchEntryView>;
   /** Pin state is plaintext metadata, so no decryption is involved. */
   setPinned(id: string, pinned: boolean): Promise<void>;
+  /** Pins or unpins several entries in one write. Missing ids are skipped. */
+  setPinnedMany(ids: string[], pinned: boolean): Promise<void>;
+  /** Stores list positions in one write. Position is plaintext metadata, like pin state. */
+  setOrders(changes: { id: string; order: number }[]): Promise<void>;
 }
 
 /** Read/modify/write of single stored entries. No UI state lives here. */
@@ -41,6 +45,20 @@ export function createEntryGateway({ repository, getKey, now }: EntryGatewayDeps
 
     async setPinned(id, pinned) {
       await repository.putMany([{ ...(await findRecord(id)), pinned }]);
+    },
+
+    async setOrders(changes) {
+      const found = await Promise.all(changes.map(({ id }) => repository.get(id)));
+      await repository.putMany(
+        found.flatMap((record, i) => (record ? [{ ...record, order: changes[i].order }] : [])),
+      );
+    },
+
+    async setPinnedMany(ids, pinned) {
+      const found = await Promise.all(ids.map((id) => repository.get(id)));
+      await repository.putMany(
+        found.flatMap((record) => (record ? [{ ...record, pinned }] : [])),
+      );
     },
   };
 }

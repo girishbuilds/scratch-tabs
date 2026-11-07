@@ -3,31 +3,37 @@ import type { ScratchEntryView } from "../types";
 import { useEntryController } from "../hooks/useEntryController";
 import type { ScratchEntryActions } from "./entryActions";
 import { ScratchEntryContent } from "./ScratchEntryContent";
-import { ScratchEntryShell } from "./ScratchEntryShell";
-import { ScratchEntryToolbar } from "./ScratchEntryToolbar";
+import { ScratchEntryShell, type RowSelection } from "./ScratchEntryShell";
+import { ScratchEntryToolbar, type RowMove } from "./ScratchEntryToolbar";
 
 interface ScratchReadableEntryProps {
   item: ScratchEntryView;
   actions: ScratchEntryActions;
   /** While presenting, plaintext can't be shown; Copy still works. */
   presenting: boolean;
+  selection?: RowSelection;
+  move?: Omit<RowMove, "onMove">;
 }
 
 export const ScratchReadableEntry: React.FC<ScratchReadableEntryProps> = ({
   item,
   actions,
   presenting,
+  selection,
+  move,
 }) => {
-  const entry = useEntryController(item, actions, presenting);
+  const entry = useEntryController(item, actions, presenting, selection?.active ?? false);
 
   return (
     <ScratchEntryShell
       kind={item.kind}
       pinned={item.pinned}
       copied={entry.copied}
+      selection={selection}
       onActivate={entry.edit.isOpen ? undefined : () => void entry.copyEntry()}
       toolbar={
         <ScratchEntryToolbar
+          move={move && { ...move, onMove: (target) => actions.moveEntries([item.id], target) }}
           pinned={item.pinned}
           onTogglePin={() => actions.togglePin(item.id)}
           onDelete={() => actions.remove(item.id)}

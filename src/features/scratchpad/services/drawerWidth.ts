@@ -13,6 +13,13 @@ export function clampDrawerWidth(width: number, viewportWidth: number): number {
   return Math.round(Math.min(max, Math.max(MIN_DRAWER_WIDTH, width)));
 }
 
-/** The drawer is anchored to the right edge, so its width is the distance from the pointer to it. */
+/** Gap between the floating drawer and the window's right edge, in px (Tailwind `right-2`). */
+export const DRAWER_EDGE_MARGIN = 8;
+
+/**
+ * The drawer floats DRAWER_EDGE_MARGIN px in from the right edge, so its width is the
+ * distance from the pointer to that inset edge. Measuring to the window edge instead
+ * would make the drawer jump by the margin when a drag starts.
+ */
 export const widthFromPointer = (pointerX: number, viewportWidth: number): number =>
-  viewportWidth - pointerX;
+  viewportWidth - DRAWER_EDGE_MARGIN - pointerX;

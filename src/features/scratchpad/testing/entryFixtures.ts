@@ -31,6 +31,7 @@ export function createActions(overrides: Partial<ScratchEntryActions> = {}) {
   return {
     remove: jest.fn(),
     togglePin: jest.fn(),
+    moveEntries: jest.fn(),
     markNotSecret: jest.fn().mockResolvedValue(undefined),
     maskRange: jest.fn().mockResolvedValue(undefined),
     updateText: jest.fn().mockResolvedValue(undefined),

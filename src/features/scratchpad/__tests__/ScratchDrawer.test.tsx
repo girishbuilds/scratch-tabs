@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import { ScratchDrawer } from "../components/ScratchDrawer";
 import { ScratchToggleButton } from "../components/ScratchToggleButton";
 import { MASK_TEXT } from "../components/MaskedSegments";
+import { DRAWER_EDGE_MARGIN } from "../services/drawerWidth";
 import { FIXTURES } from "../testing/inMemory";
 import * as clipboard from "../utils/copyToClipboard";
 import { useScratchpadStore } from "../stores/useScratchpadStore";
@@ -452,10 +453,12 @@ describe("ScratchDrawer width", () => {
     const handle = screen.getByTestId("scratch-resize");
     fireEvent.pointerDown(handle, { clientX: 1020, pointerId: 1 });
     fireEvent.pointerMove(handle, { clientX: 800, pointerId: 1 });
-    expect(screen.getByTestId("scratch-drawer")).toHaveStyle({ width: "600px" });
+    // Measured to the drawer's inset right edge, so its left edge sits under the pointer.
+    const expected = 600 - DRAWER_EDGE_MARGIN;
+    expect(screen.getByTestId("scratch-drawer")).toHaveStyle({ width: `${expected}px` });
     expect(useScratchSettingsStore.getState().drawerWidth).toBe(380);
     fireEvent.pointerUp(handle, { pointerId: 1 });
-    expect(useScratchSettingsStore.getState().drawerWidth).toBe(600);
+    expect(useScratchSettingsStore.getState().drawerWidth).toBe(expected);
   });
 
   it("resizes with the arrow keys and resets on double-click", async () => {

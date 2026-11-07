@@ -69,4 +69,76 @@ describe("entryGateway", () => {
       await expect(gateway.setPinned("nope", true)).rejects.toThrow("Entry not found");
     });
   });
+
+  describe("setPinnedMany", () => {
+    async function withSecond() {
+      const ctx = await setup();
+      await ctx.repository.putMany([
+        await sealEntry(ctx.key, { id: "e2", createdAt: 2000, batchIndex: 0 }, buildPayload("hello", [])),
+      ]);
+      return ctx;
+    }
+
+    it("pins several entries in one write without touching ciphertext", async () => {
+      const { gateway, repository } = await withSecond();
+      const put = jest.spyOn(repository, "putMany");
+      const before = await repository.get("e1");
+      await gateway.setPinnedMany(["e1", "e2"], true);
+      expect(put).toHaveBeenCalledTimes(1);
+      expect((await repository.get("e1"))?.pinned).toBe(true);
+      expect((await repository.get("e2"))?.pinned).toBe(true);
+      expect((await repository.get("e1"))?.ct).toBe(before?.ct);
+    });
+
+    it("unpins", async () => {
+      const { gateway, repository } = await withSecond();
+      await gateway.setPinnedMany(["e1", "e2"], true);
+      await gateway.setPinnedMany(["e1"], false);
+      expect((await repository.get("e1"))?.pinned).toBe(false);
+      expect((await repository.get("e2"))?.pinned).toBe(true);
+    });
+
+    it("skips ids that no longer exist", async () => {
+      const { gateway, repository } = await withSecond();
+      await gateway.setPinnedMany(["e1", "gone"], true);
+      expect((await repository.get("e1"))?.pinned).toBe(true);
+      expect(repository.records.has("gone")).toBe(false);
+    });
+  });
+
+  describe("setOrders", () => {
+    async function withSecond() {
+      const ctx = await setup();
+      await ctx.repository.putMany([
+        await sealEntry(ctx.key, { id: "e2", createdAt: 2000, batchIndex: 0 }, buildPayload("hello", [])),
+      ]);
+      return ctx;
+    }
+
+    it("stores positions in one write without touching ciphertext or pin state", async () => {
+      const { gateway, repository } = await withSecond();
+      await gateway.setPinned("e1", true);
+      const put = jest.spyOn(repository, "putMany");
+      const before = await repository.get("e1");
+      await gateway.setOrders([{ id: "e1", order: 1 }, { id: "e2", order: 0 }]);
+      expect(put).toHaveBeenCalledTimes(1);
+      expect(await repository.get("e1")).toMatchObject({ order: 1, pinned: true });
+      expect((await repository.get("e2"))?.order).toBe(0);
+      expect((await repository.get("e1"))?.ct).toBe(before?.ct);
+    });
+
+    it("skips ids that no longer exist", async () => {
+      const { gateway, repository } = await withSecond();
+      await gateway.setOrders([{ id: "gone", order: 0 }, { id: "e2", order: 1 }]);
+      expect(repository.records.has("gone")).toBe(false);
+      expect((await repository.get("e2"))?.order).toBe(1);
+    });
+
+    it("survives a later text edit", async () => {
+      const { gateway, repository } = await withSecond();
+      await gateway.setOrders([{ id: "e1", order: 4 }]);
+      await gateway.edit("e1", (p) => buildPayload(`${p.text} more`, []));
+      expect((await repository.get("e1"))?.order).toBe(4);
+    });
+  });
 });

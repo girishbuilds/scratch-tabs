@@ -1,6 +1,11 @@
-import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { ListChecks } from "lucide-react";
 import { useDrawerResize } from "../hooks/useDrawerResize";
+import { useEntrySelection } from "../hooks/useEntrySelection";
 import { useScratchHotkey } from "../hooks/useScratchHotkey";
+import { DRAWER_EDGE_MARGIN } from "../services/drawerWidth";
+import { canMove } from "../services/entryOrdering";
+import { selectionState } from "../services/entrySelection";
 import { filterEntries } from "../services/searchEntries";
 import { useScratchpadStore } from "../stores/useScratchpadStore";
 import { useScratchSettingsStore } from "../stores/scratchSettingsStore";
@@ -11,6 +16,8 @@ import { ScratchEntryRow } from "./ScratchEntryRow";
 import { ScratchHeader } from "./ScratchHeader";
 import { ScratchResizeHandle } from "./ScratchResizeHandle";
 import { ScratchSearch } from "./ScratchSearch";
+import { ScratchSelectionBar } from "./ScratchSelectionBar";
+import { iconButton } from "./styles";
 
 /**
  * Restores focus to whatever had it (e.g. the editor) when the drawer closes.
@@ -32,6 +39,9 @@ export const ScratchDrawer: React.FC = () => {
     useScratchSettingsStore();
   const resize = useDrawerResize(drawerWidth, setDrawerWidth);
   const [confirmingClear, setConfirmingClear] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const selection = useEntrySelection();
+  const { retain: retainSelection, exit: exitSelection } = selection;
 
   const store = useScratchpadStore.getState();
   const actions = useMemo<ScratchEntryActions>(() => {
@@ -39,6 +49,7 @@ export const ScratchDrawer: React.FC = () => {
     return {
       remove: (id) => void s.remove(id),
       togglePin: (id) => void s.togglePin(id),
+      moveEntries: (ids, target) => void s.moveEntries(ids, target),
       markNotSecret: s.markNotSecret,
       maskRange: s.maskRange,
       updateText: s.updateText,
@@ -50,6 +61,23 @@ export const ScratchDrawer: React.FC = () => {
   }, []);
 
   const visibleItems = useMemo(() => filterEntries(items, query), [items, query]);
+
+  // Moving inside a filtered view would be ambiguous, so it waits for the search to clear.
+  const moveDisabledReason = query.trim().length > 0 ? "Clear the search to reorder" : undefined;
+  const visibleIds = useMemo(() => visibleItems.map((item) => item.id), [visibleItems]);
+  const selectedItems = useMemo(
+    () => visibleItems.filter((item) => selection.selected.has(item.id)),
+    [visibleItems, selection.selected],
+  );
+  const selectedIds = useMemo(() => selectedItems.map((item) => item.id), [selectedItems]);
+  const allSelectedPinned = selectedItems.length > 0 && selectedItems.every((item) => item.pinned);
+
+  // A selection only ever covers entries that are shown: filtering or deleting drops the rest.
+  useEffect(() => retainSelection(visibleIds), [visibleIds, retainSelection]);
+  // Leaving the drawer, or emptying it, ends selection mode.
+  useEffect(() => {
+    if (!isOpen || items.length === 0) exitSelection();
+  }, [isOpen, items.length, exitSelection]);
 
   useScratchHotkey(() => void store.toggle());
   useRestoreFocus(isOpen);
@@ -63,12 +91,15 @@ export const ScratchDrawer: React.FC = () => {
       data-testid="scratch-drawer"
       role="complementary"
       aria-label="Global Scratchpad"
-      style={{ width: resize.width }}
-      className={`fixed bottom-0 right-0 top-8 z-40 flex max-w-full flex-col border-l border-base bg-surface-secondary shadow-xl ${
+      style={{ width: resize.width, right: DRAWER_EDGE_MARGIN }}
+      className={`fixed bottom-2 top-10 z-40 flex max-w-[calc(100vw-1rem)] flex-col rounded-lg border border-base bg-surface-secondary shadow-2xl max-md:top-14 ${
         resize.isDragging ? "select-none" : ""
       }`}
       onKeyDown={(e) => {
-        if (e.key === "Escape") store.close();
+        if (e.key !== "Escape") return;
+        // Escape steps back out of selection mode before it closes the drawer.
+        if (selection.active) selection.exit();
+        else store.close();
       }}
     >
       <ScratchResizeHandle
@@ -77,6 +108,7 @@ export const ScratchDrawer: React.FC = () => {
         handleProps={resize.handleProps}
       />
       <ScratchHeader
+        count={items.length}
         presenting={isPresenting}
         clipboardAutoClear={clipboardAutoClear}
         canClearAll={items.length > 0}
@@ -87,13 +119,32 @@ export const ScratchDrawer: React.FC = () => {
       />
 
       <div className="space-y-2 border-b border-base p-3">
-        <ScratchComposer onSubmit={(text) => void store.addFromText(text)} />
+        {selection.active ? (
+          <ScratchSelectionBar
+            count={selectedIds.length}
+            state={selectionState(selectedIds.length, visibleIds.length)}
+            allPinned={allSelectedPinned}
+            canMove={(target) => canMove(items, selectedIds, target)}
+            onMove={(target) => void store.moveEntries(selectedIds, target)}
+            moveDisabledReason={moveDisabledReason}
+            onToggleAll={() =>
+              selectedIds.length === visibleIds.length
+                ? selection.clear()
+                : selection.selectAll(visibleIds)
+            }
+            onTogglePin={() => void store.setPinnedMany(selectedIds, !allSelectedPinned)}
+            onDelete={() => setConfirmingDelete(true)}
+            onDone={selection.exit}
+          />
+        ) : (
+          <ScratchComposer onSubmit={(text) => void store.addFromText(text)} />
+        )}
         {error && (
           <p role="alert" data-testid="scratch-error" className="text-xs text-warning">
             {error}
           </p>
         )}
-        {notice && (
+        {notice && !selection.active && (
           <p data-testid="scratch-notice" className="flex items-center justify-between text-xs text-secondary">
             <span>
               {notice.addedIds.length} added
@@ -109,12 +160,41 @@ export const ScratchDrawer: React.FC = () => {
             </button>
           </p>
         )}
-        {items.length > 0 && <ScratchSearch query={query} onChange={store.setQuery} />}
+        {items.length > 0 && (
+          <div className="flex items-center gap-1.5">
+            <ScratchSearch query={query} onChange={store.setQuery} />
+            <button
+              type="button"
+              data-testid="scratch-select-toggle"
+              aria-label="Select entries"
+              aria-pressed={selection.active}
+              title="Select entries (or Cmd/Ctrl+click a row)"
+              className={`${iconButton} flex-none ${selection.active ? "bg-element text-main" : ""}`}
+              onClick={selection.active ? selection.exit : selection.start}
+            >
+              <ListChecks size={16} />
+            </button>
+          </div>
+        )}
       </div>
 
       <ul className="custom-scrollbar flex-1 overflow-y-auto pb-16" data-testid="scratch-list">
         {visibleItems.map((item) => (
-          <ScratchEntryRow key={item.id} item={item} actions={actions} presenting={isPresenting} />
+          <ScratchEntryRow
+            key={item.id}
+            item={item}
+            actions={actions}
+            presenting={isPresenting}
+            move={{
+              canMove: (target) => canMove(items, [item.id], target),
+              disabledReason: moveDisabledReason,
+            }}
+            selection={{
+              active: selection.active,
+              selected: selection.selected.has(item.id),
+              onSelect: (range) => selection.select(item.id, range, visibleIds),
+            }}
+          />
         ))}
         {status === "ready" && items.length === 0 && (
           <li data-testid="scratch-empty" className="px-4 py-8 text-center text-sm text-muted">
@@ -129,6 +209,18 @@ export const ScratchDrawer: React.FC = () => {
         )}
       </ul>
 
+      <ConfirmationDialog
+        isOpen={confirmingDelete}
+        message={`Delete ${selectedIds.length} Scratch ${
+          selectedIds.length === 1 ? "entry" : "entries"
+        }? This cannot be undone.`}
+        confirmButtonText="Delete"
+        onCancel={() => setConfirmingDelete(false)}
+        onConfirm={() => {
+          setConfirmingDelete(false);
+          void store.removeMany(selectedIds);
+        }}
+      />
       <ConfirmationDialog
         isOpen={confirmingClear}
         message={`Delete all ${items.length} Scratch entries? This cannot be undone.`}
