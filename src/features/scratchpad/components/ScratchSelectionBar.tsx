@@ -1,7 +1,8 @@
 import React, { useEffect, useRef } from "react";
-import { Pin, PinOff, Trash2 } from "lucide-react";
+import { Check, Copy, ExternalLink, Pin, PinOff, Trash2 } from "lucide-react";
 import type { SelectionState } from "../services/entrySelection";
 import type { MoveTarget } from "../services/entryOrdering";
+import { useTransientFlag } from "../hooks/useTransientFlag";
 import { ScratchMoveMenu } from "./ScratchMoveMenu";
 import { iconButton } from "./styles";
 
@@ -16,6 +17,10 @@ interface ScratchSelectionBarProps {
   onMove: (target: MoveTarget) => void;
   /** Set (e.g. while searching) to disable Move and say why. */
   moveDisabledReason?: string;
+  /** Copies the selected entries, one per line. Resolves to whether it reached the clipboard. */
+  onCopy: () => Promise<boolean>;
+  /** Opens the selection in a new tab. Absent while presenting (the tab would show plaintext). */
+  onOpenInNewTab?: () => void;
   onToggleAll: () => void;
   onTogglePin: () => void;
   onDelete: () => void;
@@ -33,11 +38,14 @@ export const ScratchSelectionBar: React.FC<ScratchSelectionBarProps> = ({
   canMove,
   onMove,
   moveDisabledReason,
+  onCopy,
+  onOpenInNewTab,
   onToggleAll,
   onTogglePin,
   onDelete,
   onDone,
 }) => {
+  const [copied, flashCopied] = useTransientFlag();
   const checkbox = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (checkbox.current) checkbox.current.indeterminate = state === "some";
@@ -64,6 +72,30 @@ export const ScratchSelectionBar: React.FC<ScratchSelectionBarProps> = ({
       <span data-testid="scratch-selected-count" aria-live="polite" className="flex-1 text-main">
         {none ? "Select entries" : `${count} selected`}
       </span>
+      <button
+        type="button"
+        data-testid="scratch-bulk-copy"
+        aria-label="Copy selected"
+        title="Copy selected, one per line"
+        disabled={none}
+        className={`${iconButton} disabled:opacity-40 disabled:hover:bg-transparent`}
+        onClick={() => void onCopy().then((ok) => ok && flashCopied())}
+      >
+        {copied ? <Check size={14} className="text-success" /> : <Copy size={14} />}
+      </button>
+      {onOpenInNewTab && (
+        <button
+          type="button"
+          data-testid="scratch-bulk-open-tab"
+          aria-label="Open selected in new tab"
+          title="Open selected in new tab"
+          disabled={none}
+          className={`${iconButton} disabled:opacity-40 disabled:hover:bg-transparent`}
+          onClick={onOpenInNewTab}
+        >
+          <ExternalLink size={14} />
+        </button>
+      )}
       <ScratchMoveMenu
         label="Move selected"
         testId="scratch-bulk-move"

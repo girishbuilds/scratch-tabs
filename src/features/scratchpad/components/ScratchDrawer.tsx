@@ -2,6 +2,9 @@ import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "re
 import { ListChecks } from "lucide-react";
 import { useDrawerResize } from "../hooks/useDrawerResize";
 import { useEntrySelection } from "../hooks/useEntrySelection";
+import { useScratchCopy } from "../hooks/useScratchCopy";
+import { useStatusBarClearance } from "../hooks/useStatusBarClearance";
+import { useRootStore } from "../../../stores/rootStore";
 import { useScratchHotkey } from "../hooks/useScratchHotkey";
 import { DRAWER_EDGE_MARGIN } from "../services/drawerWidth";
 import { canMove } from "../services/entryOrdering";
@@ -57,6 +60,12 @@ export const ScratchDrawer: React.FC = () => {
       getSecretValue: s.getSecretValue,
       getEditableText: s.getEditableText,
       getCopyText: s.getCopyText,
+      openInNewTab: async (ids) => {
+        const texts = await Promise.all(ids.map((id) => s.getEditableText(id)));
+        await useRootStore
+          .getState()
+          .handleNewPopulatedTab({ title: "From Scratchpad", content: texts.join("\n") });
+      },
     };
   }, []);
 
@@ -72,12 +81,23 @@ export const ScratchDrawer: React.FC = () => {
   const selectedIds = useMemo(() => selectedItems.map((item) => item.id), [selectedItems]);
   const allSelectedPinned = selectedItems.length > 0 && selectedItems.every((item) => item.pinned);
 
+  const copy = useScratchCopy();
+  /** One entry per line, in the order shown; each is what clicking that entry would copy. */
+  const copySelected = async () => {
+    const texts = await Promise.all(selectedIds.map((id) => actions.getCopyText(id)));
+    return copy(texts.join("\n"), {
+      sensitive: selectedItems.some((item) => item.secretCount > 0),
+    });
+  };
+
   // A selection only ever covers entries that are shown: filtering or deleting drops the rest.
   useEffect(() => retainSelection(visibleIds), [visibleIds, retainSelection]);
   // Leaving the drawer, or emptying it, ends selection mode.
   useEffect(() => {
     if (!isOpen || items.length === 0) exitSelection();
   }, [isOpen, items.length, exitSelection]);
+
+  const statusBarClearance = useStatusBarClearance(isOpen);
 
   useScratchHotkey(() => void store.toggle());
   useRestoreFocus(isOpen);
@@ -91,8 +111,8 @@ export const ScratchDrawer: React.FC = () => {
       data-testid="scratch-drawer"
       role="complementary"
       aria-label="Global Scratchpad"
-      style={{ width: resize.width, right: DRAWER_EDGE_MARGIN }}
-      className={`fixed bottom-2 top-10 z-40 flex max-w-[calc(100vw-1rem)] flex-col rounded-lg border border-base bg-surface-secondary shadow-2xl max-md:top-14 ${
+      style={{ width: resize.width, right: DRAWER_EDGE_MARGIN, bottom: statusBarClearance + DRAWER_EDGE_MARGIN }}
+      className={`fixed top-10 z-40 flex max-w-[calc(100vw-1rem)] flex-col rounded-lg border border-base bg-surface-secondary shadow-2xl max-md:top-14 ${
         resize.isDragging ? "select-none" : ""
       }`}
       onKeyDown={(e) => {
@@ -127,6 +147,8 @@ export const ScratchDrawer: React.FC = () => {
             canMove={(target) => canMove(items, selectedIds, target)}
             onMove={(target) => void store.moveEntries(selectedIds, target)}
             moveDisabledReason={moveDisabledReason}
+            onCopy={copySelected}
+            onOpenInNewTab={isPresenting ? undefined : () => void actions.openInNewTab(selectedIds)}
             onToggleAll={() =>
               selectedIds.length === visibleIds.length
                 ? selection.clear()

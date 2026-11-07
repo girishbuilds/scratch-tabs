@@ -23,6 +23,8 @@ export const ScratchReadableEntry: React.FC<ScratchReadableEntryProps> = ({
   move,
 }) => {
   const entry = useEntryController(item, actions, presenting, selection?.active ?? false);
+  // An open editor replaces the row's content, so the hover toolbar would only get in its way.
+  const editing = entry.edit.text !== null || entry.editor.value !== null;
 
   return (
     <ScratchEntryShell
@@ -32,23 +34,26 @@ export const ScratchReadableEntry: React.FC<ScratchReadableEntryProps> = ({
       selection={selection}
       onActivate={entry.edit.isOpen ? undefined : () => void entry.copyEntry()}
       toolbar={
-        <ScratchEntryToolbar
-          move={move && { ...move, onMove: (target) => actions.moveEntries([item.id], target) }}
-          pinned={item.pinned}
-          onTogglePin={() => actions.togglePin(item.id)}
-          onDelete={() => actions.remove(item.id)}
-          copy={{
-            label: item.copyTarget === "value" ? "Copy value" : "Copy entry",
-            onCopy: () => void entry.copyEntry(),
-          }}
-          reveal={
-            !presenting && item.secretCount > 0
-              ? { isRevealed: entry.reveal.isRevealed, onToggle: () => void entry.reveal.toggle() }
-              : undefined
-          }
-          onMaskText={presenting ? undefined : () => void entry.startMasking()}
-          onEdit={presenting ? undefined : () => void entry.startEdit()}
-        />
+        editing ? null : (
+          <ScratchEntryToolbar
+            move={move && { ...move, onMove: (target) => actions.moveEntries([item.id], target) }}
+            pinned={item.pinned}
+            onTogglePin={() => actions.togglePin(item.id)}
+            onDelete={() => actions.remove(item.id)}
+            copy={{
+              label: item.copyTarget === "value" ? "Copy value" : "Copy entry",
+              onCopy: () => void entry.copyEntry(),
+            }}
+            reveal={
+              !presenting && item.secretCount > 0
+                ? { isRevealed: entry.reveal.isRevealed, onToggle: () => void entry.reveal.toggle() }
+                : undefined
+            }
+            onMaskText={presenting ? undefined : () => void entry.startMasking()}
+            onEdit={presenting ? undefined : () => void entry.startEdit()}
+            onOpenInNewTab={presenting ? undefined : () => void actions.openInNewTab([item.id])}
+          />
+        )
       }
     >
       <ScratchEntryContent

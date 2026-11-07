@@ -1,5 +1,16 @@
 import React, { useState } from "react";
-import { Check, Copy, Eye, EyeOff, Pencil, Pin, PinOff, TextSelect, Trash2 } from "lucide-react";
+import {
+  Check,
+  Copy,
+  ExternalLink,
+  Eye,
+  EyeOff,
+  Pencil,
+  Pin,
+  PinOff,
+  TextSelect,
+  Trash2,
+} from "lucide-react";
 import type { MoveTarget } from "../services/entryOrdering";
 import { ScratchMoveMenu } from "./ScratchMoveMenu";
 import { iconButton } from "./styles";
@@ -22,6 +33,8 @@ interface ScratchEntryToolbarProps {
   reveal?: { isRevealed: boolean; onToggle: () => void };
   onMaskText?: () => void;
   onEdit?: () => void;
+  /** Absent while presenting, since the new tab would show plaintext. */
+  onOpenInNewTab?: () => void;
 }
 
 /**
@@ -37,6 +50,7 @@ export const ScratchEntryToolbar: React.FC<ScratchEntryToolbarProps> = ({
   reveal,
   onMaskText,
   onEdit,
+  onOpenInNewTab,
 }) => {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   // An open menu keeps the toolbar visible even when the pointer wanders off the row.
@@ -45,7 +59,7 @@ export const ScratchEntryToolbar: React.FC<ScratchEntryToolbarProps> = ({
   return (
     <div
       data-testid="scratch-toolbar"
-      className={`absolute right-1.5 top-1 z-10 flex items-center gap-0.5 rounded border border-base bg-surface-raised p-0.5 shadow transition-opacity focus-within:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100 ${
+      className={`absolute right-1.5 top-1/2 -translate-y-1/2 z-10 flex items-center gap-0.5 rounded border border-base bg-surface-raised p-0.5 shadow transition-opacity focus-within:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100 ${
         menuOpen ? "opacity-100" : "opacity-0"
       }`}
       onMouseLeave={() => setConfirmingDelete(false)}
@@ -84,6 +98,18 @@ export const ScratchEntryToolbar: React.FC<ScratchEntryToolbarProps> = ({
           onClick={onEdit}
         >
           <Pencil size={14} />
+        </button>
+      )}
+      {onOpenInNewTab && (
+        <button
+          type="button"
+          data-testid="scratch-open-tab"
+          aria-label="Open in new tab"
+          title="Open in new tab"
+          className={iconButton}
+          onClick={onOpenInNewTab}
+        >
+          <ExternalLink size={14} />
         </button>
       )}
       {move && (

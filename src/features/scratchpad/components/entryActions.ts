@@ -12,4 +12,6 @@ export interface ScratchEntryActions {
   getSecretValue: (id: string, secretIndex: number) => Promise<string>;
   getEditableText: (id: string) => Promise<string>;
   getCopyText: (id: string) => Promise<string>;
+  /** Opens the entries' full text, one per line, in a new editor tab. */
+  openInNewTab: (ids: string[]) => Promise<void>;
 }

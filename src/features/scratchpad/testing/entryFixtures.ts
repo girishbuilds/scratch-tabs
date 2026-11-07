@@ -39,6 +39,7 @@ export function createActions(overrides: Partial<ScratchEntryActions> = {}) {
     getSecretValue: jest.fn().mockResolvedValue("3knd8dsuhds89hds"),
     getEditableText: jest.fn().mockResolvedValue("UAT key: 3knd8dsuhds89hds"),
     getCopyText: jest.fn().mockResolvedValue("copied-text"),
+    openInNewTab: jest.fn().mockResolvedValue(undefined),
     ...overrides,
   } satisfies ScratchEntryActions;
 }
