@@ -19,6 +19,7 @@ import {
 } from '../../../../components/Icons';
 import { optimizeWithSvgo, basicCleanup } from '../../utils/optimizer';
 import { useActiveEditorStore } from '../../../../stores/activeEditorStore';
+import { sanitizeSvg } from '../../../../utils/sanitizeHtml';
 
 interface ElementInfo {
   tagName: string;
@@ -298,7 +299,7 @@ export const SvgViewer: React.FC<SmartViewProps> = ({
     try {
       // Create a temporary SVG element to get dimensions
       const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = content;
+      tempDiv.innerHTML = sanitizeSvg(content);
       const svgElement = tempDiv.querySelector('svg');
 
       if (!svgElement) return;
@@ -631,7 +632,7 @@ export const SvgViewer: React.FC<SmartViewProps> = ({
                 data-testid="svg-container"
                 className="bg-white rounded-lg shadow-lg p-4 max-w-full max-h-full overflow-visible"
                 onClick={handleSvgClick}
-                dangerouslySetInnerHTML={{ __html: enhancedSvgContent }}
+                dangerouslySetInnerHTML={{ __html: sanitizeSvg(enhancedSvgContent) }}
                 style={{
                   minWidth: '200px',
                   minHeight: '200px',

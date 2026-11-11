@@ -105,7 +105,7 @@ export function useMermaidPreview(code: string): MermaidPreviewResult {
         if (cancelled) return null;
         mermaid.initialize({
           startOnLoad: false,
-          securityLevel: "loose",
+          securityLevel: "strict",
           theme: isDarkMode ? "dark" : "default",
         });
         return mermaid.render(id, trimmed);

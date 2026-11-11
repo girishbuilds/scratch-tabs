@@ -3,6 +3,7 @@ import { Tablet, TabletState } from "../types";
 import { Mail, RefreshCw, X, Loader2, Copy, Check } from "lucide-react";
 import { useThemeStore } from "../../stores/themeStore";
 import { normalizeMailTimestamp, formatMailTime } from "./emailTime";
+import { sanitizeHtml } from "../../utils/sanitizeHtml";
 
 interface Email {
   id: string;
@@ -81,7 +82,7 @@ const EmailModal: React.FC<EmailModalProps> = ({ email, onClose }) => {
       <div className="flex-1 p-6 overflow-auto custom-scrollbar">
         <div
           className={`prose max-w-none ${theme === "dark" ? "prose-invert" : ""}`}
-          dangerouslySetInnerHTML={{ __html: email.body || "" }}
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(email.body || "") }}
         />
       </div>
     </div>

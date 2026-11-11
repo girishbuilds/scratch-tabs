@@ -4,6 +4,7 @@ import Editor from '@monaco-editor/react';
 import { useTabletTabCreation } from '../../bridge';
 import { useTabletContext } from '../../bridge/context';
 import { useThemeStore } from '../../../stores/themeStore';
+import { sanitizeHtml } from '../../../utils/sanitizeHtml';
 
 interface WordCountInputProps {
   value: string;
@@ -332,7 +333,7 @@ export const WordCountInput: React.FC<WordCountInputProps> = ({
             {reportContent ? (
               <div
                 className={`prose max-w-none ${isDarkMode ? "prose-invert" : ""}`}
-                dangerouslySetInnerHTML={{ __html: renderMarkdown(reportContent) }}
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(renderMarkdown(reportContent)) }}
               />
             ) : (
               <div className="flex items-center justify-center h-full text-muted">
