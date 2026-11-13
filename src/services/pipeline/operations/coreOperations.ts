@@ -1092,6 +1092,56 @@ const coreOperations: OperationDefinition[] = [
         source: "core",
     },
 
+    {
+        id: "text.remove-chars",
+        name: "Remove Characters",
+        description: "Remove N characters from the start, end, or both ends of each line",
+        categories: ["text", "formatting"],
+        parameters: [
+            {
+                name: "count",
+                label: "Characters to remove",
+                type: "number",
+                default: 1,
+                description: "Number of characters to remove (from each end when 'Both' is selected)",
+            },
+            {
+                name: "from",
+                label: "Remove from",
+                type: "select",
+                default: "start",
+                options: [
+                    { value: "start", label: "Start of line" },
+                    { value: "end", label: "End of line" },
+                    { value: "both", label: "Both ends" },
+                ],
+            },
+        ],
+        processingMode: "line",
+        execute: (input, params) => {
+            const rawCount = Number(params.count ?? 1);
+            const count = Number.isFinite(rawCount) ? Math.max(0, Math.floor(rawCount)) : 0;
+            const from = (params.from as string) ?? "start";
+            if (count === 0) return input;
+
+            // Operate on code points so emoji and other astral characters count as one character
+            const chars = Array.from(input);
+            switch (from) {
+                case "end":
+                    return chars.slice(0, Math.max(0, chars.length - count)).join("");
+                case "both":
+                    return chars.length <= count * 2
+                        ? ""
+                        : chars.slice(count, chars.length - count).join("");
+                case "start":
+                default:
+                    return chars.slice(count).join("");
+            }
+        },
+        keywords: ["remove", "delete", "cut", "chop", "strip", "trim", "characters", "first", "last", "left", "right", "truncate"],
+        source: "core",
+    },
+
     // === FIND/REPLACE ===
     {
         id: "text.duplicate-lines",

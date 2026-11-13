@@ -43,7 +43,7 @@ cd changelog && npm run generate                      # changelog generation
 
 **Tablets** (`src/tablets/`): each tablet registers itself via `src/tablets/registry.ts`. Use `dynamicRegistry.ts` for lazy-loaded tablets.
 
-**Pipeline operations** (`src/services/pipeline/operations/`): each file exports `OperationDefinition` objects and registers them with `OperationRegistry`. Operations are format/tablet agnostic — they receive plain `string` input and return `string` output. The `processingMode` field controls whole-input vs. per-line execution.
+**Pipeline operations** are registered from several places, not just `src/services/pipeline/operations/` (core, `source: "core"`). Formats and tablets contribute their own via `src/formats/*/pipelineOperations.ts` and `src/tablets/*/pipelineOperations.ts`. To check whether an operation exists, grep all of `src/` for `OperationRegistry` or `pipelineOperations`, not just the pipeline folder. In `src/services/pipeline/operations/`, each file exports `OperationDefinition` objects and registers them with `OperationRegistry`. Operations are format/tablet agnostic — they receive plain `string` input and return `string` output. The `processingMode` field controls whole-input vs. per-line execution.
 
 ## Store Architecture
 
