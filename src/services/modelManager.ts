@@ -24,6 +24,7 @@ class ModelManager {
   private listeners = new Map<string, Monaco.IDisposable>();
   private storage = StorageProviderFactory.getProvider();
   private contentFetchPromises = new Map<string, Promise<string>>(); // Prevent duplicate fetches
+  private modelLoadPromises = new Map<string, Promise<Monaco.editor.ITextModel>>(); // Dedupe concurrent get() calls per tab
   private isPasteRef = new Map<string, boolean>(); // Track paste operations per tab
   private lastContent = new Map<string, string>(); // Track previous content for significant change detection
   private formatActionQueue = new Set<string>(); // Track pending format operations
@@ -505,6 +506,28 @@ class ModelManager {
   }
 
   public async get(tab: Tab, options?: { isNewTabFromPaste?: boolean }): Promise<Monaco.editor.ITextModel> {
+    if (!this.monaco) {
+      throw new Error("ModelManager not initialized");
+    }
+
+    // Overlapping calls for the same tab (e.g. an effect re-running while the first call is still
+    // awaiting) must share one load. Otherwise the second call finds the first call's not-yet-registered
+    // model by URI, disposes it, and the first caller is handed a disposed model.
+    const inFlight = this.modelLoadPromises.get(tab.id);
+    if (inFlight) {
+      return inFlight;
+    }
+
+    const loadPromise = this.loadModel(tab, options).finally(() => {
+      if (this.modelLoadPromises.get(tab.id) === loadPromise) {
+        this.modelLoadPromises.delete(tab.id);
+      }
+    });
+    this.modelLoadPromises.set(tab.id, loadPromise);
+    return loadPromise;
+  }
+
+  private async loadModel(tab: Tab, options?: { isNewTabFromPaste?: boolean }): Promise<Monaco.editor.ITextModel> {
     if (!this.monaco) {
       throw new Error("ModelManager not initialized");
     }
