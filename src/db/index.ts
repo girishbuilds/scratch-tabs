@@ -323,6 +323,15 @@ export interface StorageProvider {
     cursorPosition: { lineNumber: number; column: number },
   ): Promise<void>;
   purgeOrphanedTabData(tabId: string): Promise<void>;
+  purgeOrphanedWorkspaceData(): Promise<OrphanPurgeResult>;
+}
+
+export interface OrphanPurgeResult {
+  tabs: number;
+  splitViews: number;
+  canvasDocuments: number;
+  canvasAssets: number;
+  canvasSessions: number;
 }
 
 export class IndexedDBStorage implements StorageProvider {
@@ -374,25 +383,81 @@ export class IndexedDBStorage implements StorageProvider {
     if (now - this.lastSaveTabsTime < this.DEBOUNCE_TIME) return;
 
     this.lastSaveTabsTime = now;
-    await this.withRetry(async () => {
-      const records = tabs.map(toTabRecord);
-      await db.tabs.bulkPut(records);
-    });
+    await this.putTabs(tabs);
   }
 
   async saveTabNow(tab: Tab): Promise<void> {
     this.lastSaveTabsTime = Date.now();
-    await this.withRetry(async () => {
-      const record = toTabRecord(tab);
-      await db.tabs.put(record);
-    });
+    await this.putTabs([tab]);
   }
 
   async saveTabsNow(tabs: Tab[]): Promise<void> {
     this.lastSaveTabsTime = Date.now();
+    await this.putTabs(tabs);
+  }
+
+  /**
+   * Invariant: a tab or split-view row is only written while its workspace row exists.
+   * deleteWorkspace runs in a transaction over the same tables, and IndexedDB serializes
+   * overlapping transactions, so a save that races a delete (autosave, switchWorkspace,
+   * another window) either lands before the delete (and is removed by it) or sees the
+   * workspace missing and is skipped. Records without a workspaceId are written as before.
+   */
+  private async keepRecordsOfExistingWorkspaces<T extends { workspaceId?: string }>(
+    records: T[],
+    kind: string,
+  ): Promise<T[]> {
+    const workspaceIds = [
+      ...new Set(
+        records
+          .map((record) => record.workspaceId)
+          .filter((id): id is string => !!id),
+      ),
+    ];
+    if (workspaceIds.length === 0) return records;
+
+    const rows = await db.workspaces.bulkGet(workspaceIds);
+    const existing = new Set(workspaceIds.filter((_, index) => rows[index]));
+    const kept = records.filter(
+      (record) => !record.workspaceId || existing.has(record.workspaceId),
+    );
+    if (kept.length !== records.length) {
+      console.warn(
+        `[Storage] Skipped saving ${records.length - kept.length} ${kind} record(s) for a deleted workspace`,
+      );
+    }
+    return kept;
+  }
+
+  private async putTabs(tabs: Tab[]): Promise<void> {
     await this.withRetry(async () => {
-      const records = tabs.map(toTabRecord);
-      await db.tabs.bulkPut(records);
+      await db.transaction("rw", db.workspaces, db.tabs, async () => {
+        const kept = await this.keepRecordsOfExistingWorkspaces(
+          tabs.map(toTabRecord),
+          "tab",
+        );
+        if (kept.length > 0) {
+          await db.tabs.bulkPut(kept);
+        }
+      });
+    });
+  }
+
+  private async putSplitView(splitView: SplitViewRecord): Promise<void> {
+    await this.withRetry(async () => {
+      // Generate UUID if not provided
+      if (!splitView.id) {
+        splitView.id = crypto.randomUUID();
+      }
+      await db.transaction("rw", db.workspaces, db.splitView, async () => {
+        const [kept] = await this.keepRecordsOfExistingWorkspaces(
+          [splitView],
+          "split view",
+        );
+        if (kept) {
+          await db.splitView.put(kept);
+        }
+      });
     });
   }
 
@@ -414,24 +479,12 @@ export class IndexedDBStorage implements StorageProvider {
     if (now - this.lastSaveSplitViewTime < this.DEBOUNCE_TIME) return;
 
     this.lastSaveSplitViewTime = now;
-    await this.withRetry(async () => {
-      // Generate UUID if not provided
-      if (!splitView.id) {
-        splitView.id = crypto.randomUUID();
-      }
-      await db.splitView.put(splitView);
-    });
+    await this.putSplitView(splitView);
   }
 
   async saveSplitViewNow(splitView: SplitViewRecord): Promise<void> {
     this.lastSaveSplitViewTime = Date.now();
-    await this.withRetry(async () => {
-      // Generate UUID if not provided
-      if (!splitView.id) {
-        splitView.id = crypto.randomUUID();
-      }
-      await db.splitView.put(splitView);
-    });
+    await this.putSplitView(splitView);
   }
 
   async getWorkspaces(): Promise<Workspace[]> {
@@ -578,6 +631,102 @@ export class IndexedDBStorage implements StorageProvider {
     await this.withRetry(async () => {
       await db.tabs.update(tabId, { cursorPosition });
     });
+  }
+
+  /**
+   * Removes every record that belongs to a workspace that no longer exists: tabs, split views,
+   * Canvas documents and assets, plus the Canvas sessions of those tabs and any Canvas session
+   * whose document is gone. Records without a workspaceId are never touched.
+   *
+   * Runs in one transaction, so it is all-or-nothing and atomic with respect to workspace
+   * creation (which writes the workspace row first, in its own transaction).
+   */
+  async purgeOrphanedWorkspaceData(): Promise<OrphanPurgeResult> {
+    return this.withRetry(() =>
+      db.transaction(
+        "rw",
+        db.workspaces,
+        db.tabs,
+        db.splitView,
+        db.canvasDocuments,
+        db.canvasAssets,
+        db.canvasSessions,
+        async () => {
+          const workspaceIds = new Set(
+            (await db.workspaces.toCollection().primaryKeys()).map(String),
+          );
+          const orphanedWorkspaceIds = async (table: Dexie.Table<any, any>) =>
+            (await table.orderBy("workspaceId").uniqueKeys())
+              .filter(
+                (key): key is string =>
+                  typeof key === "string" && key !== "" && !workspaceIds.has(key),
+              );
+
+          const [tabWs, splitViewWs, documentWs, assetWs] = await Promise.all([
+            orphanedWorkspaceIds(db.tabs),
+            orphanedWorkspaceIds(db.splitView),
+            orphanedWorkspaceIds(db.canvasDocuments),
+            orphanedWorkspaceIds(db.canvasAssets),
+          ]);
+
+          const result: OrphanPurgeResult = {
+            tabs: 0,
+            splitViews: 0,
+            canvasDocuments: 0,
+            canvasAssets: 0,
+            canvasSessions: 0,
+          };
+
+          const sessionTabIds = new Set<string>();
+
+          if (tabWs.length > 0) {
+            const tabIds = await db.tabs
+              .where("workspaceId")
+              .anyOf(tabWs)
+              .primaryKeys();
+            tabIds.forEach((id) => sessionTabIds.add(String(id)));
+            result.tabs = tabIds.length;
+            await db.tabs.bulkDelete(tabIds);
+          }
+          if (splitViewWs.length > 0) {
+            result.splitViews = await db.splitView
+              .where("workspaceId")
+              .anyOf(splitViewWs)
+              .delete();
+          }
+          if (documentWs.length > 0) {
+            const documents = await db.canvasDocuments
+              .where("workspaceId")
+              .anyOf(documentWs)
+              .toArray();
+            documents.forEach((document) => sessionTabIds.add(document.tabId));
+            result.canvasDocuments = documents.length;
+            await db.canvasDocuments.bulkDelete(documents.map((d) => d.id));
+          }
+          if (assetWs.length > 0) {
+            result.canvasAssets = await db.canvasAssets
+              .where("workspaceId")
+              .anyOf(assetWs)
+              .delete();
+          }
+
+          // Sessions of the purged tabs/documents, plus any session whose document is gone.
+          const remainingDocumentTabIds = new Set(
+            (await db.canvasDocuments.orderBy("tabId").uniqueKeys()).map(String),
+          );
+          const sessionKeys = (await db.canvasSessions.toCollection().primaryKeys()).map(String);
+          const sessionsToDelete = sessionKeys.filter(
+            (tabId) => sessionTabIds.has(tabId) || !remainingDocumentTabIds.has(tabId),
+          );
+          if (sessionsToDelete.length > 0) {
+            result.canvasSessions = sessionsToDelete.length;
+            await db.canvasSessions.bulkDelete(sessionsToDelete);
+          }
+
+          return result;
+        },
+      ),
+    );
   }
 
   /**

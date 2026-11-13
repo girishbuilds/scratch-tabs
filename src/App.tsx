@@ -4,6 +4,7 @@ import { initializeFormatProviders } from "./formats";
 import { broadcastManager } from "./stores/broadcastStore";
 import { useThemeStore } from "./stores/themeStore";
 import { useNavigationStore } from "./stores/navigationStore";
+import { StorageProviderFactory } from "./db";
 import { ShareURLHandler } from "./components/Share/ShareURLHandler";
 import DragDropOverlay from "./components/DragDropOverlay";
 import { lazyWithReload } from "./utils/chunkLoadUtils";
@@ -34,6 +35,16 @@ function App() {
     useThemeStore.getState().initializeTheme();
     // Load navigation history from IndexedDB
     useNavigationStore.getState().loadHistory();
+    // Remove data left behind by deleted workspaces (older builds re-saved it on delete)
+    StorageProviderFactory.getProvider()
+      .purgeOrphanedWorkspaceData()
+      .then((purged) => {
+        const total = Object.values(purged).reduce((sum, count) => sum + count, 0);
+        if (total > 0) {
+          console.info("[Storage] Purged data of deleted workspaces:", purged);
+        }
+      })
+      .catch((error) => console.error("[Storage] Orphan purge failed:", error));
   }, []);
 
   useEffect(() => {
