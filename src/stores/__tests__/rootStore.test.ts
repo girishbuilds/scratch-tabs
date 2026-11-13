@@ -8,6 +8,7 @@ const mockStorageProvider = {
   updateTabPinned: jest.fn().mockResolvedValue(undefined),
   getTabsByWorkspace: jest.fn().mockResolvedValue([]),
   getSplitViewByWorkspace: jest.fn().mockResolvedValue(null),
+  saveSplitViewNow: jest.fn().mockResolvedValue(undefined),
   purgeOrphanedTabData: jest.fn().mockResolvedValue(undefined),
 };
 

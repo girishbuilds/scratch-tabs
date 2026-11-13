@@ -1,6 +1,25 @@
 import { OperationDefinition } from "../types";
 import punycode from 'punycode/';
 
+// === UTF-8 byte helpers (hex / binary operations) ===
+function toUtf8Bytes(input: string): number[] {
+    return typeof TextEncoder !== 'undefined'
+        ? Array.from(new TextEncoder().encode(input))
+        : Array.from(input).map(c => c.charCodeAt(0) & 0xff);
+}
+
+/** Decode bytes as UTF-8; fall back to Latin-1 when the bytes are not valid UTF-8. */
+function fromUtf8Bytes(bytes: number[]): string {
+    if (typeof TextDecoder !== 'undefined') {
+        try {
+            return new TextDecoder('utf-8', { fatal: true }).decode(Uint8Array.from(bytes));
+        } catch {
+            // not valid UTF-8, fall through
+        }
+    }
+    return bytes.map(b => String.fromCharCode(b)).join('');
+}
+
 // === Base32 helpers (RFC 4648) ===
 const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 
@@ -320,8 +339,8 @@ export const encodingOperations: OperationDefinition[] = [
             const delimiter = (params.delimiter as string) || "none";
             const uppercase = params.uppercase ?? true;
 
-            const hexChars = Array.from(input).map(char => {
-                let hex = char.charCodeAt(0).toString(16).padStart(2, '0');
+            const hexChars = toUtf8Bytes(input).map(byte => {
+                const hex = byte.toString(16).padStart(2, '0');
                 return uppercase ? hex.toUpperCase() : hex;
             });
 
@@ -383,14 +402,14 @@ export const encodingOperations: OperationDefinition[] = [
                 cleanInput = cleanInput.slice(0, -1);
             }
 
-            let output = '';
+            const bytes: number[] = [];
             for (let i = 0; i < cleanInput.length; i += 2) {
                 const byteVal = parseInt(cleanInput.substr(i, 2), 16);
                 if (!isNaN(byteVal)) {
-                    output += String.fromCharCode(byteVal);
+                    bytes.push(byteVal);
                 }
             }
-            return output;
+            return fromUtf8Bytes(bytes);
         },
         keywords: ["hex", "decode", "binary", "convert"],
         source: "core",
@@ -436,7 +455,7 @@ export const encodingOperations: OperationDefinition[] = [
             const padWidth = base === 2 ? 8 : (base === 16 ? 2 : 0);
 
             return Array.from(input).map(char => {
-                let code = char.charCodeAt(0).toString(base);
+                let code = char.codePointAt(0)!.toString(base);
                 if (padding && padWidth > 0) {
                     code = code.padStart(padWidth, '0');
                 }
@@ -482,7 +501,7 @@ export const encodingOperations: OperationDefinition[] = [
                     const cleanP = p.trim();
                     if (!cleanP) return '';
                     const code = parseInt(cleanP, base);
-                    return isNaN(code) ? '' : String.fromCharCode(code);
+                    return isNaN(code) || code < 0 || code > 0x10FFFF ? '' : String.fromCodePoint(code);
                 })
                 .join('');
         },
@@ -597,20 +616,20 @@ export const encodingOperations: OperationDefinition[] = [
                 // Let's use the fallback replacer logic as it's safer for partial content
                 // unless we are sure it's a valid JSON string body.
 
-                return input
-                    .replace(/\\n/g, '\n')
-                    .replace(/\\t/g, '\t')
-                    .replace(/\\r/g, '\r')
-                    .replace(/\\b/g, '\b')
-                    .replace(/\\f/g, '\f')
-                    .replace(/\\v/g, '\v')
-                    .replace(/\\'/g, "'")
-                    .replace(/\\"/g, '"')
-                    .replace(/\\\\/g, '\\')
-                    // Hex \xHH
-                    .replace(/\\x([0-9A-Fa-f]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
-                    // Unicode \uHHHH
-                    .replace(/\\u([0-9A-Fa-f]{4})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+                // Single left-to-right pass so an escaped backslash (two backslashes) is consumed
+                // before the character after it can be mistaken for an escape.
+                const simple: Record<string, string> = {
+                    n: '\n', t: '\t', r: '\r', b: '\b', f: '\f', v: '\v',
+                    "'": "'", '"': '"', '\\': '\\',
+                };
+                return input.replace(
+                    /\\(?:x([0-9A-Fa-f]{2})|u([0-9A-Fa-f]{4})|([ntrbfv'"\\]))/g,
+                    (_, hex, uni, ch) => {
+                        if (hex !== undefined) return String.fromCharCode(parseInt(hex, 16));
+                        if (uni !== undefined) return String.fromCharCode(parseInt(uni, 16));
+                        return simple[ch];
+                    },
+                );
             } catch (e) {
                 return input;
             }
@@ -772,18 +791,21 @@ export const encodingOperations: OperationDefinition[] = [
         categories: ["encoding", "web"],
         parameters: [],
         execute: (input) => {
-            // Heuristic regex replacer since we might be in a Worker (no DOM)
-            return input
-                .replace(/&amp;/g, '&')
-                .replace(/&lt;/g, '<')
-                .replace(/&gt;/g, '>')
-                .replace(/&quot;/g, '"')
-                .replace(/&apos;/g, "'")
-                .replace(/&nbsp;/g, ' ')
-                // Hex entities &#xHH;
-                .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
-                // Decimal entities &#DD;
-                .replace(/&#([0-9]+);/g, (_, dec) => String.fromCharCode(parseInt(dec, 10)));
+            // Single left-to-right pass so "&amp;lt;" decodes to "&lt;" (not "<").
+            // Regex replacer rather than DOM since we might be in a Worker.
+            const named: Record<string, string> = {
+                amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ',
+            };
+            const fromCodePoint = (cp: number, original: string) =>
+                Number.isFinite(cp) && cp >= 0 && cp <= 0x10FFFF ? String.fromCodePoint(cp) : original;
+            return input.replace(
+                /&(?:#x([0-9a-fA-F]+)|#([0-9]+)|(amp|lt|gt|quot|apos|nbsp));/g,
+                (match, hex, dec, name) => {
+                    if (hex !== undefined) return fromCodePoint(parseInt(hex, 16), match);
+                    if (dec !== undefined) return fromCodePoint(parseInt(dec, 10), match);
+                    return named[name];
+                },
+            );
         },
         keywords: ["html", "entity", "decode", "web"],
         source: "core",
@@ -813,8 +835,8 @@ export const encodingOperations: OperationDefinition[] = [
         execute: (input, params) => {
             const delimiter = (params.delimiter as string) || "space";
             const sep = delimiter === "newline" ? "\n" : delimiter === "comma" ? "," : delimiter === "none" ? "" : " ";
-            return Array.from(input)
-                .map(char => char.charCodeAt(0).toString(2).padStart(8, '0'))
+            return toUtf8Bytes(input)
+                .map(byte => byte.toString(2).padStart(8, '0'))
                 .join(sep);
         },
         keywords: ["binary", "encode", "bits", "convert", "bitstring"],
@@ -869,13 +891,19 @@ export const encodingOperations: OperationDefinition[] = [
                 else groups = splitIntoBytes(t);
             }
 
-            return groups
+            const codes = groups
                 .map(g => g.trim())
                 .filter(g => g.length > 0)
-                .map(g => {
-                    const code = parseInt(g, 2);
-                    return isNaN(code) ? '' : String.fromCharCode(code);
-                })
+                .map(g => parseInt(g, 2))
+                .filter(code => !isNaN(code));
+
+            // Normal case: every group is a byte, decode as UTF-8
+            if (codes.every(code => code <= 0xff)) {
+                return fromUtf8Bytes(codes);
+            }
+            // Wider groups are treated as code points
+            return codes
+                .map(code => (code > 0x10FFFF ? '' : String.fromCodePoint(code)))
                 .join('');
         },
         keywords: ["binary", "decode", "bits", "convert"],

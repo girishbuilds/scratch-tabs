@@ -16,12 +16,15 @@ describe("isPlaceholder", () => {
     "my-secret-value",
     "example-key",
     "some-value-here",
+    "example",
+    "example_key_1",
+    "your password",
     "  <token>  ",
   ])("treats %j as a placeholder", (value) => {
     expect(isPlaceholder(value)).toBe(true);
   });
 
-  it.each(["3knd8dsuhds89hds", "hunter22", "correct horse battery"])(
+  it.each(["3knd8dsuhds89hds", "hunter22", "correct horse battery", "my_Dog-Rex1985!", "examplePass#9917", "your-dog-rex"])(
     "treats %j as a real value",
     (value) => {
       expect(isPlaceholder(value)).toBe(false);

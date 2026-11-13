@@ -143,7 +143,19 @@ export class CanvasDocumentRepository
   }
 
   async saveSession(session: CanvasSessionRecord): Promise<void> {
-    await db.canvasSessions.put(parseCanvasSession(session));
+    const parsedSession = parseCanvasSession(session);
+    // A session is only meaningful while its document exists. Pending session saves can
+    // flush after the document was deleted with its workspace; skip them instead of
+    // re-creating an orphan row.
+    await db.transaction("rw", db.canvasDocuments, db.canvasSessions, async () => {
+      const document = await db.canvasDocuments
+        .where("tabId")
+        .equals(parsedSession.tabId)
+        .first();
+      if (document) {
+        await db.canvasSessions.put(parsedSession);
+      }
+    });
   }
 
   async removeWithTab(tab: Tab): Promise<void> {

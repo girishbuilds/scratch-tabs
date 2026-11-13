@@ -1,6 +1,41 @@
 import { CronExpression, CronDialect } from "../types";
 
 /**
+ * Applies `convertDay` to the day numbers of a day-of-week field and leaves
+ * everything else alone: step values (`*\/2`, `1-5/2`), the occurrence of an
+ * nth-weekday (`6#3`), and `*` / `?` / day names are not day numbers.
+ * Handles comma lists, ranges, steps, `5#3` and `5L`.
+ */
+function mapDayOfWeekNumbers(
+  value: string,
+  convertDay: (day: number) => number,
+): string {
+  const convert = (token: string): string =>
+    /^\d+$/.test(token) ? String(convertDay(parseInt(token, 10))) : token;
+
+  return value
+    .split(",")
+    .map((item) => {
+      const [base, ...stepParts] = item.split("/");
+      const step = stepParts.length > 0 ? `/${stepParts.join("/")}` : "";
+
+      let converted: string;
+      if (base.includes("#")) {
+        // Quartz nth weekday: only the weekday is renumbered, not the occurrence
+        const [day, nth] = base.split("#");
+        converted = `${convert(day)}#${nth}`;
+      } else if (/^\d+L$/i.test(base)) {
+        // Quartz "last <weekday> of the month"
+        converted = `${convert(base.slice(0, -1))}${base.slice(-1)}`;
+      } else {
+        converted = base.split("-").map(convert).join("-");
+      }
+      return converted + step;
+    })
+    .join(",");
+}
+
+/**
  * Converts day-of-week values between Unix and Quartz numbering systems
  * Unix: 0=Sunday, 1=Monday, 2=Tuesday, 3=Wednesday, 4=Thursday, 5=Friday, 6=Saturday, 7=Sunday
  * Quartz: 1=Sunday, 2=Monday, 3=Tuesday, 4=Wednesday, 5=Thursday, 6=Friday, 7=Saturday
@@ -9,14 +44,8 @@ function convertDayOfWeekUnixToQuartz(unixValue: string): string {
   if (unixValue === "*" || unixValue === "?") {
     return unixValue;
   }
-
-  // Handle complex expressions (ranges, lists, steps)
-  return unixValue.replace(/\b\d+\b/g, (match) => {
-    const num = parseInt(match);
-    // Convert Unix to Quartz: add 1, but handle 7 (Unix alternative Sunday) as 1
-    if (num === 7) return "1"; // Unix Sunday alternative -> Quartz Sunday
-    return String(num + 1);
-  });
+  // Add 1, but Unix's alternative Sunday (7) is Quartz Sunday (1)
+  return mapDayOfWeekNumbers(unixValue, (num) => (num === 7 ? 1 : num + 1));
 }
 
 /**
@@ -26,28 +55,25 @@ function convertDayOfWeekQuartzToUnix(quartzValue: string): string {
   if (quartzValue === "*" || quartzValue === "?") {
     return quartzValue;
   }
-
-  // Handle complex expressions (ranges, lists, steps)
-  return quartzValue.replace(/\b\d+\b/g, (match) => {
-    const num = parseInt(match);
-    // Convert Quartz to Unix: subtract 1, but handle 1 (Quartz Sunday) as 0
-    if (num === 1) return "0"; // Quartz Sunday -> Unix Sunday
-    return String(num - 1);
-  });
+  // Subtract 1, so Quartz Sunday (1) becomes Unix Sunday (0)
+  return mapDayOfWeekNumbers(quartzValue, (num) => (num === 1 ? 0 : num - 1));
 }
 
 /**
- * Determines if a dialect uses Quartz-style day-of-week numbering (1=Sunday)
+ * Determines if a dialect uses Quartz-style day-of-week numbering (1=Sunday).
+ * AWS EventBridge numbers days 1-7 = SUN-SAT, like Quartz.
  */
 function usesQuartzDayOfWeek(dialect: CronDialect): boolean {
-  return dialect === "quartz" || dialect === "spring";
+  return dialect === "quartz" || dialect === "spring" || dialect === "aws";
 }
 
 /**
- * Determines if a dialect requires ? for mutually exclusive day fields
+ * Determines if a dialect requires ? for mutually exclusive day fields.
+ * AWS EventBridge rejects expressions where day-of-month and day-of-week are
+ * both set (or both `*`); one of them must be `?`.
  */
 function requiresQuestionMark(dialect: CronDialect): boolean {
-  return dialect === "quartz" || dialect === "spring";
+  return dialect === "quartz" || dialect === "spring" || dialect === "aws";
 }
 
 /**

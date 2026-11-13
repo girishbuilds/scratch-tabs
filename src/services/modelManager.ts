@@ -24,6 +24,7 @@ class ModelManager {
   private listeners = new Map<string, Monaco.IDisposable>();
   private storage = StorageProviderFactory.getProvider();
   private contentFetchPromises = new Map<string, Promise<string>>(); // Prevent duplicate fetches
+  private modelLoadPromises = new Map<string, Promise<Monaco.editor.ITextModel>>(); // Dedupe concurrent get() calls per tab
   private isPasteRef = new Map<string, boolean>(); // Track paste operations per tab
   private lastContent = new Map<string, string>(); // Track previous content for significant change detection
   private formatActionQueue = new Set<string>(); // Track pending format operations
@@ -494,17 +495,52 @@ class ModelManager {
     this.cursorPositionListeners.delete(tabId);
   }
 
-  private evict() {
+  private evict(keepTabId?: string) {
     if (this.models.size < MAX_MODELS) return;
 
-    // The first item in a Set (when iterated) is the oldest one added
-    const lruTabId = this.lru.values().next().value;
-    if (lruTabId) {
-      this.dispose(lruTabId);
+    // Models an editor is displaying (e.g. the other pane of a split view)
+    // must survive: disposing one blanks that editor, and LRU order is only
+    // refreshed when an editor mounts, so a pane that stays on one tab ages.
+    const shownModels = new Set<Monaco.editor.ITextModel>();
+    for (const editor of this.monaco?.editor.getEditors?.() ?? []) {
+      const model = editor.getModel();
+      if (model) shownModels.add(model);
     }
+
+    // Sets iterate in insertion order, so the first match is the oldest
+    for (const tabId of this.lru) {
+      if (tabId === keepTabId) continue;
+      const model = this.models.get(tabId);
+      if (model && shownModels.has(model)) continue;
+      this.dispose(tabId);
+      return;
+    }
+    // Every other model is on screen: stay over the limit rather than blank one.
   }
 
   public async get(tab: Tab, options?: { isNewTabFromPaste?: boolean }): Promise<Monaco.editor.ITextModel> {
+    if (!this.monaco) {
+      throw new Error("ModelManager not initialized");
+    }
+
+    // Overlapping calls for the same tab (e.g. an effect re-running while the first call is still
+    // awaiting) must share one load. Otherwise the second call finds the first call's not-yet-registered
+    // model by URI, disposes it, and the first caller is handed a disposed model.
+    const inFlight = this.modelLoadPromises.get(tab.id);
+    if (inFlight) {
+      return inFlight;
+    }
+
+    const loadPromise = this.loadModel(tab, options).finally(() => {
+      if (this.modelLoadPromises.get(tab.id) === loadPromise) {
+        this.modelLoadPromises.delete(tab.id);
+      }
+    });
+    this.modelLoadPromises.set(tab.id, loadPromise);
+    return loadPromise;
+  }
+
+  private async loadModel(tab: Tab, options?: { isNewTabFromPaste?: boolean }): Promise<Monaco.editor.ITextModel> {
     if (!this.monaco) {
       throw new Error("ModelManager not initialized");
     }
@@ -593,7 +629,7 @@ class ModelManager {
     this.listeners.set(tab.id, contentListener);
     this.lru.add(tab.id);
     if (this.models.size > MAX_MODELS) {
-      this.evict();
+      this.evict(tab.id);
     }
     return model;
   }

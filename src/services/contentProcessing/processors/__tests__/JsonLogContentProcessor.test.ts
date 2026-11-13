@@ -194,6 +194,34 @@ prefix {"message": "test 3"}`;
     });
   });
 
+  describe("lossless output", () => {
+    it("preserves 64-bit integers, number formatting and string escapes", () => {
+      const content = [
+        'INFO {"id": 12345678901234567890, "n": 1.50, "s": "a  b \\"q\\" {x}"}',
+        'WARN {"id": 12345678901234567891, "n": 1e3}',
+        '{"id":  12345678901234567892}',
+      ].join("\n");
+
+      const result = processor.process(content, context);
+
+      expect(result.processed).toBe(true);
+      expect(result.content.split("\n")).toEqual([
+        '{"id":12345678901234567890,"n":1.50,"s":"a  b \\"q\\" {x}"}',
+        '{"id":12345678901234567891,"n":1e3}',
+        '{"id":12345678901234567892}',
+      ]);
+    });
+
+    it("preserves big integers inside double-escaped JSON lines", () => {
+      const inner = '{"id": 12345678901234567890}';
+      const content = [JSON.stringify(inner), JSON.stringify(inner), 'x {"a": 1}'].join("\n");
+
+      const result = processor.process(content, context);
+
+      expect(result.content.split("\n")[0]).toBe('{"id":12345678901234567890}');
+    });
+  });
+
   describe("properties", () => {
     it("should have correct properties", () => {
       expect(processor.id).toBe("json-log-cleaner");

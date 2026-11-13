@@ -34,7 +34,7 @@ const MERMAID_CDN_URLS = [
 
 const DEFAULT_MERMAID_CONFIG = {
   startOnLoad: false,
-  securityLevel: 'loose',
+  securityLevel: 'strict',
   fontFamily: 'Inter, system-ui, sans-serif',
   flowchart: {
     useMaxWidth: true,

@@ -2,6 +2,7 @@ import { useNavigationStore, NavigationEntry } from "../stores/navigationStore";
 import { useWorkspaceStore } from "../stores/workspaceStore";
 import { useTabsStore } from "../stores/tabsStore";
 import { useSplitViewStore } from "../stores/splitViewStore";
+import { StorageProviderFactory } from "../db";
 
 /**
  * Navigation Service
@@ -56,9 +57,15 @@ export class NavigationService {
         useSplitViewStore.getState().setActiveLeftTab(entry.tabId);
       } else if (updatedSplitView.rightTabs.includes(entry.tabId)) {
         useSplitViewStore.getState().setActiveRightTab(entry.tabId);
-      } else {
-        // Tab not in current split view - just activate it on left
+      } else if (useTabsStore.getState().tabs.some((tab) => tab.id === entry.tabId)) {
+        // Tab exists in the loaded workspace but is not in either pane - activate it on left
         useSplitViewStore.getState().setActiveLeftTab(entry.tabId);
+      } else {
+        // The tab was deleted. Activating its id would leave the workspace with no matching
+        // active tab (empty "Default Workspace" page), so report failure and let
+        // goBack()/goForward() skip to the next valid entry.
+        console.warn("Navigation entry points to a deleted tab:", entry);
+        return false;
       }
 
       return true;
@@ -141,10 +148,16 @@ export class NavigationService {
       return tabs.some((tab) => tab.id === entry.tabId);
     }
 
-    // For inactive workspaces, we'd need to query the DB
-    // For simplicity, assume the tab exists (we'll handle the error during navigation)
-    // Alternative: query DB here, but that's slower
-    return true;
+    // For inactive workspaces, check the persisted tab metadata (no content is loaded).
+    try {
+      const storage = StorageProviderFactory.getProvider();
+      const metadata = await storage.getTabsMetadataByWorkspace(entry.workspaceId);
+      return metadata.some((tab) => tab.id === entry.tabId);
+    } catch (error) {
+      // If the lookup fails, don't block navigation; navigateTo re-checks after the switch.
+      console.warn("Could not verify navigation entry in inactive workspace:", error);
+      return true;
+    }
   }
 
   /**

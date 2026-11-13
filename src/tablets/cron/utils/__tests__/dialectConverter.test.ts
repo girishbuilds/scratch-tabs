@@ -255,7 +255,7 @@ describe("dialectConverter", () => {
   });
 
   describe("AWS Dialect", () => {
-    test("converts Unix to AWS (should keep same day-of-week numbering)", () => {
+    test("converts Unix to AWS (renumbers day-of-week like Quartz, uses ? for day-of-month)", () => {
       const unixExpression: CronExpression = {
         minute: "0",
         hour: "8",
@@ -272,8 +272,9 @@ describe("dialectConverter", () => {
         "unix",
         "aws",
       );
-      expect(awsExpression.dayOfWeek).toBe("1"); // Should stay Monday (same numbering)
-      expect(awsExpression.raw).toBe("0 8 * * 1 *");
+      expect(awsExpression.dayOfWeek).toBe("2"); // EventBridge: 1=Sunday, so Monday is 2
+      expect(awsExpression.dayOfMonth).toBe("?");
+      expect(awsExpression.raw).toBe("0 8 ? * 2 *");
     });
   });
 

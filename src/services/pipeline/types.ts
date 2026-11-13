@@ -108,6 +108,16 @@ export interface OperationDefinition {
   processingMode?: "entire" | "line" | "configurable";
 
   /**
+   * Set on whole-input operations that treat the input as a list of lines
+   * (sort, dedupe, keep first N, ...). The executor hands them LF-only text
+   * and converts the output back to the input's line ending (CRLF or CR), so
+   * the operation can split on "\n" without leaving stray "\r" characters.
+   * Leave unset for operations that treat the text as opaque (hashing,
+   * encoding, ...), which must see the input byte for byte.
+   */
+  lineBased?: boolean;
+
+  /**
    * Opt in to a "did not change the input" warning when the output equals the
    * input. Leave unset for operations where a no-op is a normal result
    * (trim, sort, find/replace with no matches, ...).

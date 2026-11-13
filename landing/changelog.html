@@ -130,27 +130,47 @@
     <div class="container mx-auto px-6">
       <div class="max-w-4xl mx-auto">
 
-        <!-- Version 1.54.0 -->
+        <!-- Version 1.55.0 -->
         <div class="changelog-entry latest">
           <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2">
             <div class="flex items-center gap-3">
-              <h2 class="text-2xl font-bold text-white">V1.54.0</h2>
+              <h2 class="text-2xl font-bold text-white">V1.55.0</h2>
               <span class="badge latest">LATEST</span>
+            </div>
+            <span class="text-gray-500 text-xs font-mono">11/13/2026</span>
+          </div>
+          <h3 class="text-lg font-bold text-emerald-500 mb-4 font-mono">SECURITY AND STABILITY FIXES</h3>
+          <div class="changelog-content text-gray-400 text-sm leading-relaxed">
+            <p class="mb-4">HTML and SVG previews are now sanitized, and many cases where tabs or workspaces ended up in the wrong state after a reload are fixed. Pipelines also get a Remove Characters operation and more accurate output in several existing ones.</p>
+
+            <h4 class="text-white text-xs font-mono uppercase tracking-widest mb-3"># new_features</h4>
+            <ul class="space-y-2 mb-6">
+              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Remove Characters:</strong> A new pipeline operation that removes a set number of characters from the start, the end or both ends of each line</span></li>
+            </ul>
+
+            <h4 class="text-white text-xs font-mono uppercase tracking-widest mb-3"># bug_fixes</h4>
+            <ul class="space-y-2 mb-6">
+              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Security:</strong> HTML and SVG previews, Temp Email bodies and Word Count reports are sanitized, and Mermaid diagrams run in strict mode</span></li>
+              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Tabs and workspaces:</strong> Closing, duplicating, moving or reordering tabs no longer leaves empty panes, hidden tabs or duplicate entries after a reload. Deleted workspaces stay deleted, and back and forward skip closed tabs</span></li>
+              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Split view:</strong> A pane no longer goes blank when the other pane opens many tabs</span></li>
+              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Pipelines:</strong> Fixes for base conversion, hex and binary encoding, HTML entity decoding, AES on large input and CSV to JSON. Line-based operations such as Sort now handle Windows line endings</span></li>
+              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Paste and Scratchpad:</strong> Pasted CSV and JSON data is no longer altered, and secrets that start with my- or example are masked correctly</span></li>
+              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Cron and search:</strong> Day-of-week conversion and AWS EventBridge output use the right numbering, and search highlights line up after characters such as İ</span></li>
+            </ul>
+          </div>
+        </div>
+        <!-- Version 1.54.0 -->
+        <div class="changelog-entry release">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2">
+            <div class="flex items-center gap-3">
+              <h2 class="text-xl font-bold text-white uppercase">V1.54.0</h2>
+              <span class="badge release">RELEASE</span>
             </div>
             <span class="text-gray-500 text-xs font-mono">11/06/2026</span>
           </div>
-          <h3 class="text-lg font-bold text-emerald-500 mb-4 font-mono">MINOR IMPROVEMENTS</h3>
+          <h3 class="text-lg font-bold text-gray-400 mb-4 font-mono">MINOR IMPROVEMENTS</h3>
           <div class="changelog-content text-gray-400 text-sm leading-relaxed">
-            <p class="mb-4">Data View is now called Smart View, and its suggestion chip stays until you open a view or dismiss it. This release also adds a paste fallback dialog, better JWT detection, and several CSV and JSON refinements.</p>
-
-            <h4 class="text-white text-xs font-mono uppercase tracking-widest mb-3"># improvements</h4>
-            <ul class="space-y-2 mb-6">
-              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Smart View:</strong> Renamed from Data View, with a larger Text View / Smart View toggle and a suggestion chip that no longer auto-dismisses</span></li>
-              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>Paste fallback:</strong> A new dialog helps when a paste cannot be handled directly</span></li>
-              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>JWT detection:</strong> JWTs are now recognized more reliably</span></li>
-              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>TypeScript interfaces:</strong> Objects that map to the same interface name are merged instead of dropped</span></li>
-              <li class="flex items-start gap-2"><span class="text-emerald-500 mt-1">+</span> <span><strong>CSV and JSON:</strong> Refinements to CSV editing, sorting and export, and to JSON queries and conversions</span></li>
-            </ul>
+            <p>A round of minor improvements across Smart View, paste handling, JWT, CSV and JSON.</p>
           </div>
         </div>
         <!-- Version 1.53.0 -->
@@ -1062,7 +1082,7 @@
       <div class="flex flex-col md:flex-row justify-between items-center gap-8">
         <div class="flex items-center space-x-3">
           <img src="https://scratchtabs.b-cdn.net/favicon-gray.svg" alt="Scratch Tabs" class="logo-size" />
-          <span class="text-gray-400 font-mono text-sm">SCRATCH_TABS // v1.54.0</span>
+          <span class="text-gray-400 font-mono text-sm">SCRATCH_TABS // v1.55.0</span>
         </div>
 
         <div class="flex space-x-8">

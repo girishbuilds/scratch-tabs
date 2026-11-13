@@ -545,6 +545,183 @@ describe("Core Pipeline Operations", () => {
         });
     });
 
+    describe("text.remove-chars", () => {
+        it("is registered with count and from parameters", () => {
+            const op = operationRegistry.getById("text.remove-chars");
+            expect(op).toBeDefined();
+            expect(op?.processingMode).toBe("line");
+            expect(op?.parameters?.map((p) => p.name)).toEqual(["count", "from"]);
+        });
+
+        describe("from start", () => {
+            it("removes N characters from the start of each line", async () => {
+                const result = await execute("text.remove-chars", "abcdef\nghijkl", { count: 2, from: "start" });
+                expect(result).toBe("cdef\nijkl");
+            });
+
+            it("defaults to removing 1 character from the start", async () => {
+                const result = await execute("text.remove-chars", "abc\ndef");
+                expect(result).toBe("bc\nef");
+            });
+
+            it("defaults to start when from is omitted", async () => {
+                const result = await execute("text.remove-chars", "abcdef", { count: 3 });
+                expect(result).toBe("def");
+            });
+
+            it("falls back to start for an unknown from value", async () => {
+                const result = await execute("text.remove-chars", "abcdef", { count: 2, from: "bogus" });
+                expect(result).toBe("cdef");
+            });
+        });
+
+        describe("from end", () => {
+            it("removes N characters from the end of each line", async () => {
+                const result = await execute("text.remove-chars", "abcdef\nghijkl", { count: 2, from: "end" });
+                expect(result).toBe("abcd\nghij");
+            });
+
+            it("removes a single character from the end", async () => {
+                const result = await execute("text.remove-chars", "abc\ndef", { count: 1, from: "end" });
+                expect(result).toBe("ab\nde");
+            });
+        });
+
+        describe("from both ends", () => {
+            it("removes N characters from each end of each line", async () => {
+                const result = await execute("text.remove-chars", "[abc]\n(def)", { count: 1, from: "both" });
+                expect(result).toBe("abc\ndef");
+            });
+
+            it("removes N from each end, not N in total", async () => {
+                const result = await execute("text.remove-chars", "12abcdef34", { count: 2, from: "both" });
+                expect(result).toBe("abcdef");
+            });
+
+            it("returns an empty line when the line is exactly 2N long", async () => {
+                const result = await execute("text.remove-chars", "abcd", { count: 2, from: "both" });
+                expect(result).toBe("");
+            });
+
+            it("returns an empty line when the line is shorter than 2N", async () => {
+                const result = await execute("text.remove-chars", "abc", { count: 5, from: "both" });
+                expect(result).toBe("");
+            });
+
+            it("leaves a single character when the line is 2N + 1 long", async () => {
+                const result = await execute("text.remove-chars", "abcde", { count: 2, from: "both" });
+                expect(result).toBe("c");
+            });
+        });
+
+        describe("short and empty lines", () => {
+            it("empties lines shorter than N when removing from start", async () => {
+                const result = await execute("text.remove-chars", "ab\nabcdef", { count: 4, from: "start" });
+                expect(result).toBe("\nef");
+            });
+
+            it("empties lines shorter than N when removing from end", async () => {
+                const result = await execute("text.remove-chars", "ab\nabcdef", { count: 4, from: "end" });
+                expect(result).toBe("\nab");
+            });
+
+            it("empties a line whose length equals N", async () => {
+                expect(await execute("text.remove-chars", "abc", { count: 3, from: "start" })).toBe("");
+                expect(await execute("text.remove-chars", "abc", { count: 3, from: "end" })).toBe("");
+            });
+
+            it("handles empty input", async () => {
+                expect(await execute("text.remove-chars", "", { count: 2, from: "start" })).toBe("");
+                expect(await execute("text.remove-chars", "", { count: 2, from: "end" })).toBe("");
+                expect(await execute("text.remove-chars", "", { count: 2, from: "both" })).toBe("");
+            });
+
+            it("keeps blank lines as blank lines", async () => {
+                const result = await execute("text.remove-chars", "abc\n\ndef", { count: 1, from: "start" });
+                expect(result).toBe("bc\n\nef");
+            });
+        });
+
+        describe("count handling", () => {
+            it("is a no-op when count is 0", async () => {
+                for (const from of ["start", "end", "both"]) {
+                    expect(await execute("text.remove-chars", "abc\ndef", { count: 0, from })).toBe("abc\ndef");
+                }
+            });
+
+            it("is a no-op when count is negative", async () => {
+                for (const from of ["start", "end", "both"]) {
+                    expect(await execute("text.remove-chars", "abc\ndef", { count: -3, from })).toBe("abc\ndef");
+                }
+            });
+
+            it("floors fractional counts", async () => {
+                const result = await execute("text.remove-chars", "abcdef", { count: 2.9, from: "start" });
+                expect(result).toBe("cdef");
+            });
+
+            it("is a no-op for NaN and Infinity counts", async () => {
+                expect(await execute("text.remove-chars", "abc", { count: NaN, from: "start" })).toBe("abc");
+                expect(await execute("text.remove-chars", "abc", { count: Infinity, from: "start" })).toBe("abc");
+            });
+
+            it("accepts a numeric string count", async () => {
+                const result = await execute("text.remove-chars", "abcdef", { count: "2", from: "end" });
+                expect(result).toBe("abcd");
+            });
+
+            it("empties every line when count exceeds all line lengths", async () => {
+                const result = await execute("text.remove-chars", "ab\ncd", { count: 100, from: "start" });
+                expect(result).toBe("\n");
+            });
+        });
+
+        describe("character handling", () => {
+            it("preserves whitespace that is not removed", async () => {
+                const result = await execute("text.remove-chars", "  a b  ", { count: 1, from: "both" });
+                expect(result).toBe(" a b ");
+            });
+
+            it("counts emoji as a single character", async () => {
+                expect(await execute("text.remove-chars", "😀😁😂abc", { count: 1, from: "start" })).toBe("😁😂abc");
+                expect(await execute("text.remove-chars", "abc😀😁😂", { count: 2, from: "end" })).toBe("abc😀");
+                expect(await execute("text.remove-chars", "😀abc😂", { count: 1, from: "both" })).toBe("abc");
+            });
+
+            it("handles accented characters", async () => {
+                const result = await execute("text.remove-chars", "éàüabc", { count: 3, from: "start" });
+                expect(result).toBe("abc");
+            });
+
+            it("handles tabs as single characters", async () => {
+                const result = await execute("text.remove-chars", "\t\tabc", { count: 2, from: "start" });
+                expect(result).toBe("abc");
+            });
+        });
+
+        describe("line endings", () => {
+            it("preserves CRLF line endings", async () => {
+                const result = await execute("text.remove-chars", "abc\r\ndef", { count: 1, from: "start" });
+                expect(result).toBe("bc\r\nef");
+            });
+
+            it("does not remove the CRLF when removing from the end", async () => {
+                const result = await execute("text.remove-chars", "abc\r\ndef", { count: 1, from: "end" });
+                expect(result).toBe("ab\r\nde");
+            });
+
+            it("preserves CR-only line endings", async () => {
+                const result = await execute("text.remove-chars", "abc\rdef", { count: 1, from: "end" });
+                expect(result).toBe("ab\rde");
+            });
+
+            it("preserves a trailing newline", async () => {
+                const result = await execute("text.remove-chars", "abc\ndef\n", { count: 1, from: "start" });
+                expect(result).toBe("bc\nef\n");
+            });
+        });
+    });
+
     describe("Find/Replace Operations", () => {
         describe("text.find-replace-regex", () => {
             it("should find and replace with regex", async () => {

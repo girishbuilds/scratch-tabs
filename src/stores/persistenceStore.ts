@@ -4,6 +4,7 @@ import { useWorkspaceStore } from "./workspaceStore";
 import { useTabsStore } from "./tabsStore";
 import { useSplitViewStore } from "./splitViewStore";
 import { modelManager } from "../services/modelManager";
+import { waitForTabLifecycleActions } from "../services/tabLifecycleGate";
 
 interface PersistenceStore {
   saveState: () => Promise<void>;
@@ -15,6 +16,10 @@ export const usePersistenceStore = create<PersistenceStore>((set, get) => {
   return {
     saveState: async () => {
       try {
+        // Snapshot only after in-flight close/move actions have finished
+        // updating the stores, so they are not written back in their old state.
+        await waitForTabLifecycleActions();
+
         const { activeWorkspaceId } = useWorkspaceStore.getState();
         if (!activeWorkspaceId) {
           return;

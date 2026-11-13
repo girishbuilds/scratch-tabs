@@ -163,28 +163,49 @@ export const cryptoOperations: OperationDefinition[] = [
             const toBase = parseInt((params.toBase as string) ?? "16");
             const addPrefix = params.prefix ?? true;
 
-            // Clean input - remove common prefixes and whitespace
-            let cleanInput = input.trim()
-                .replace(/^0b/i, '')  // Binary prefix
-                .replace(/^0o/i, '')  // Octal prefix
-                .replace(/^0x/i, ''); // Hex prefix
+            const prefixes: Record<number, string> = { 2: '0b', 8: '0o', 16: '0x' };
+            const digitChars = '0123456789abcdefghijklmnopqrstuvwxyz'.slice(0, fromBase);
+            const validDigits = new RegExp(`^[${digitChars}]+$`, 'i');
+
+            // Clean input - remove whitespace, sign, and only the prefix that belongs to the source base
+            // (for hex input "0B1F" is the number 0x0B1F, not a binary prefix followed by "1F")
+            let cleanInput = input.trim();
+            let negative = false;
+            if (cleanInput.startsWith('-')) {
+                negative = true;
+                cleanInput = cleanInput.slice(1);
+            } else if (cleanInput.startsWith('+')) {
+                cleanInput = cleanInput.slice(1);
+            }
+            const prefix = prefixes[fromBase];
+            if (prefix && cleanInput.toLowerCase().startsWith(prefix) && cleanInput.length > prefix.length) {
+                cleanInput = cleanInput.slice(prefix.length);
+            }
 
             try {
-                // Parse the number from source base
-                const decimal = parseInt(cleanInput, fromBase);
-
-                if (isNaN(decimal)) {
+                if (!validDigits.test(cleanInput)) {
                     throw new Error('Invalid number for specified base');
                 }
 
+                // Parse with BigInt so values above 2^53 keep full precision
+                const base = BigInt(fromBase);
+                let value = 0n;
+                for (const ch of cleanInput.toLowerCase()) {
+                    value = value * base + BigInt(parseInt(ch, 36));
+                }
+                if (negative) value = -value;
+
                 // Convert to target base
-                let result = decimal.toString(toBase).toUpperCase();
+                let result = value.toString(toBase).toUpperCase();
 
                 // Add prefix if requested
                 if (addPrefix) {
-                    if (toBase === 2) result = '0b' + result;
-                    else if (toBase === 8) result = '0o' + result;
-                    else if (toBase === 16) result = '0x' + result;
+                    const outPrefix = prefixes[toBase];
+                    if (outPrefix) {
+                        result = result.startsWith('-')
+                            ? '-' + outPrefix + result.slice(1)
+                            : outPrefix + result;
+                    }
                 }
 
                 return result;
@@ -465,7 +486,7 @@ export const cryptoOperations: OperationDefinition[] = [
                     .map((b) => b.toString(16).padStart(2, "0"))
                     .join("");
             }
-            return btoa(String.fromCharCode(...combined));
+            return bytesToBase64(combined);
         },
         keywords: ["aes", "encrypt", "gcm", "symmetric", "cipher", "passphrase", "pbkdf2", "secret"],
         source: "core",

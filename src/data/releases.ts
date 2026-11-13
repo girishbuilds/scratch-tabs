@@ -15,12 +15,38 @@ export interface Release {
   categories: ReleaseCategory[];
 }
 
-export const APP_VERSION = '1.54.0';
+export const APP_VERSION = '1.55.0';
 
 export const RELEASES: Release[] = [
   {
-    "version": "1.54.0",
+    "version": "1.55.0",
     "type": "latest",
+    "date": "2026-11-13",
+    "headline": "Security and Stability Fixes",
+    "summary": "Security fixes, safer tab and workspace handling, and a new pipeline operation.",
+    "categories": [
+      {
+        "name": "New Features",
+        "changes": [
+          "**Remove Characters:** A new pipeline operation that removes a set number of characters from the start, the end or both ends of each line"
+        ]
+      },
+      {
+        "name": "Bug Fixes",
+        "changes": [
+          "**Security:** HTML and SVG previews, Temp Email bodies and Word Count reports are sanitized, and Mermaid diagrams run in strict mode",
+          "**Tabs and workspaces:** Closing, duplicating, moving or reordering tabs no longer leaves empty panes, hidden tabs or duplicate entries after a reload. Deleted workspaces stay deleted, and back and forward skip closed tabs",
+          "**Split view:** A pane no longer goes blank when the other pane opens many tabs",
+          "**Pipelines:** Fixes for base conversion, hex and binary encoding, HTML entity decoding, AES on large input and CSV to JSON. Line-based operations such as Sort now handle Windows line endings",
+          "**Paste and Scratchpad:** Pasted CSV and JSON data is no longer altered, and secrets that start with my- or example are masked correctly",
+          "**Cron and search:** Day-of-week conversion and AWS EventBridge output use the right numbering, and search highlights line up after characters such as İ"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "1.54.0",
+    "type": "release",
     "date": "2026-11-06",
     "headline": "Minor Improvements",
     "summary": "A round of minor improvements across Smart View, paste handling, JWT, CSV and JSON.",

@@ -19,6 +19,16 @@ export class CsvContentProcessor implements ContentProcessor {
    * Check if this processor can handle the content
    */
   canProcess(content: string, context: ContentProcessingContext): boolean {
+    // Never rewrite escapes in structured languages (e.g. YAML/JSON strings legitimately contain \t)
+    if (!this.supportedLanguages.includes(context.currentLanguage)) {
+      return false;
+    }
+
+    // Windows paths such as C:\temp\tools contain \t but are not escaped tabs
+    if (this.looksLikeWindowsPaths(content)) {
+      return false;
+    }
+
     // Only process if:
     // 1. Content is from paste or likely from clipboard
     // 2. Content has literal \t sequences (likely TSV from another app)
@@ -64,6 +74,13 @@ export class CsvContentProcessor implements ContentProcessor {
       content,
       language: context.currentLanguage
     };
+  }
+
+  /**
+   * Detect Windows drive or UNC paths, where `\t` is a directory separator + "t", not a tab
+   */
+  private looksLikeWindowsPaths(content: string): boolean {
+    return /(^|[\s"'=,;(])[A-Za-z]:\\|(^|[\s"'=,;(])\\\\[\w.$-]+\\/m.test(content);
   }
 
   /**

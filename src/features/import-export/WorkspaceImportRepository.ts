@@ -1,3 +1,4 @@
+import { normalizeSplitViewTabLists } from "../../utils/splitViewUtils";
 import { db, type StorageProvider } from "../../db";
 import type { SplitViewRecord, Tab } from "../../types";
 import type { ExistingImportIds, WorkspaceImportPlan } from "./importPlanner";
@@ -12,12 +13,13 @@ const toTabRecord = (tab: Tab) => ({
 
 const toSplitViewRecord = (
   splitView: WorkspaceImportPlan["splitViews"][number],
-): SplitViewRecord => ({
-  ...splitView,
-  lastModified: Date.now(),
-  leftTabHistory: splitView.leftTabHistory || [],
-  rightTabHistory: splitView.rightTabHistory || [],
-});
+): SplitViewRecord =>
+  normalizeSplitViewTabLists({
+    ...splitView,
+    lastModified: Date.now(),
+    leftTabHistory: splitView.leftTabHistory || [],
+    rightTabHistory: splitView.rightTabHistory || [],
+  }).value;
 
 export interface WorkspaceImportRepositoryContract {
   readExistingIds(): Promise<ExistingImportIds>;

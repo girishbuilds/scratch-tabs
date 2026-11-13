@@ -106,13 +106,28 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
           // Enhanced status icon rendering from Word Count tablet
           p: ({ children }) => {
             if (typeof children === 'string') {
-              const processedContent = children
-                .replace(/✅/g, '<span class="text-green-400">✅</span>')
-                .replace(/⚠️/g, '<span class="text-yellow-400">⚠️</span>')
-                .replace(/❌/g, '<span class="text-red-400">❌</span>');
-              
-              if (processedContent !== children) {
-                return <p dangerouslySetInnerHTML={{ __html: processedContent }} />;
+              // Colour the status icons using React nodes (never HTML strings),
+              // since the text is untrusted markdown content.
+              const iconClass: Record<string, string> = {
+                '✅': 'text-green-400',
+                '⚠️': 'text-yellow-400',
+                '❌': 'text-red-400',
+              };
+              const parts = children.split(/(✅|⚠️|❌)/g);
+              if (parts.length > 1) {
+                return (
+                  <p>
+                    {parts.map((part, index) =>
+                      iconClass[part] ? (
+                        <span key={index} className={iconClass[part]}>
+                          {part}
+                        </span>
+                      ) : (
+                        part
+                      ),
+                    )}
+                  </p>
+                );
               }
             }
             return <p>{children}</p>;

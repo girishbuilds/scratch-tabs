@@ -59,13 +59,7 @@ const searchLoadedTabDocuments = (
 ): SearchResult[] => {
   if (!query) return [];
   const results: SearchResult[] = [];
-  const queryLower = options.caseSensitive ? query : query.toLowerCase();
-  const queryRegex = options.wholeWord
-    ? new RegExp(
-        `\\b${escapeRegex(query)}\\b`,
-        options.caseSensitive ? "g" : "gi",
-      )
-    : null; // Create regex only if needed
+  const queryRegex = createQueryRegex(query, options);
 
   for (const { tab, searchData } of loadedTabs) {
     if (!searchData.searchText || !searchData.entries.length) continue;
@@ -74,10 +68,7 @@ const searchLoadedTabDocuments = (
       appendEntryResults({
         entry,
         tab,
-        query,
-        queryLower,
         queryRegex,
-        options,
         results,
       });
     }
@@ -88,51 +79,26 @@ const searchLoadedTabDocuments = (
 const appendEntryResults = ({
   entry,
   tab,
-  queryLower,
   queryRegex,
-  options,
   results,
 }: {
   entry: TabDocumentSearchEntry;
   tab: Tab;
-  query: string;
-  queryLower: string;
-  queryRegex: RegExp | null;
-  options: SearchOptions;
+  queryRegex: RegExp;
   results: SearchResult[];
 }): void => {
+    // Match against the original line, never a lower-cased copy: lower-casing
+    // changes the length of some characters (e.g. "İ"), which would shift
+    // every offset after them.
     const lines = entry.text.split("\n");
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
-      const lineToSearch = options.caseSensitive ? line : line.toLowerCase();
-
-      if (queryRegex) {
-        queryRegex.lastIndex = 0;
-        let match;
-        while ((match = queryRegex.exec(lineToSearch)) !== null) {
-          results.push(toSearchResult(tab, entry, line, i, match.index, match[0].length));
-          if (match.index === queryRegex.lastIndex) {
-            queryRegex.lastIndex++;
-          }
-        }
-      } else {
-        // Simple substring search
-        let startIndex = 0;
-        let matchIndex: number;
-        while (
-          (matchIndex = lineToSearch.indexOf(queryLower, startIndex)) !== -1
-        ) {
-          results.push(
-            toSearchResult(
-              tab,
-              entry,
-              line,
-              i,
-              matchIndex,
-              queryLower.length,
-            ),
-          );
-          startIndex = matchIndex + 1;
+      queryRegex.lastIndex = 0;
+      let match;
+      while ((match = queryRegex.exec(line)) !== null) {
+        results.push(toSearchResult(tab, entry, line, i, match.index, match[0].length));
+        if (match[0].length === 0) {
+          queryRegex.lastIndex++;
         }
       }
     }
@@ -161,20 +127,27 @@ const toSearchResult = (
   ...(entry.itemLabel ? { itemLabel: entry.itemLabel } : {}),
 });
 
+/**
+ * Builds the global regex used to find matches in the original text.
+ * Case-insensitivity comes from the `i` flag rather than from lower-casing the
+ * text, so match offsets always refer to the original string.
+ */
+const createQueryRegex = (query: string, options: SearchOptions): RegExp => {
+  const source = escapeRegex(query);
+  return new RegExp(
+    options.wholeWord ? `\\b${source}\\b` : source,
+    options.caseSensitive ? "g" : "gi",
+  );
+};
+
 const containsQuery = (
   text: string,
   query: string,
   options: SearchOptions,
 ): boolean => {
-  if (options.wholeWord) {
-    return new RegExp(
-      `\\b${escapeRegex(query)}\\b`,
-      options.caseSensitive ? "" : "i",
-    ).test(text);
-  }
-  const searchable = options.caseSensitive ? text : text.toLowerCase();
-  const needle = options.caseSensitive ? query : query.toLowerCase();
-  return searchable.includes(needle);
+  const regex = createQueryRegex(query, options);
+  regex.lastIndex = 0;
+  return regex.test(text);
 };
 
 /** Helper to escape regex special characters in the query */
@@ -194,35 +167,19 @@ export function highlightMatchesInText(
     return escapeHtml(text); // Return escaped text if no query or text
   }
 
-  const queryLower = options.caseSensitive ? query : query.toLowerCase();
-  const textToSearch = options.caseSensitive ? text : text.toLowerCase();
-  const queryRegex = options.wholeWord
-    ? new RegExp(
-        `\\b${escapeRegex(query)}\\b`,
-        options.caseSensitive ? "g" : "gi",
-      )
-    : null;
+  const queryRegex = createQueryRegex(query, options);
 
   let lastIndex = 0;
   let highlightedText = "";
 
-  if (queryRegex) {
-    let match;
-    while ((match = queryRegex.exec(textToSearch)) !== null) {
-      highlightedText += escapeHtml(text.substring(lastIndex, match.index));
-      highlightedText += `<mark class="bg-yellow-500/40 text-yellow-100 px-0.5 rounded">${escapeHtml(text.substring(match.index, match.index + match[0].length))}</mark>`;
-      lastIndex = match.index + match[0].length;
-      if (match.index === queryRegex.lastIndex) {
-        // Prevent infinite loop for zero-width matches
-        queryRegex.lastIndex++;
-      }
-    }
-  } else {
-    let matchIndex;
-    while ((matchIndex = textToSearch.indexOf(queryLower, lastIndex)) !== -1) {
-      highlightedText += escapeHtml(text.substring(lastIndex, matchIndex));
-      highlightedText += `<mark class="bg-yellow-500/40 text-yellow-100 px-0.5 rounded">${escapeHtml(text.substring(matchIndex, matchIndex + query.length))}</mark>`;
-      lastIndex = matchIndex + query.length;
+  let match;
+  while ((match = queryRegex.exec(text)) !== null) {
+    highlightedText += escapeHtml(text.substring(lastIndex, match.index));
+    highlightedText += `<mark class="bg-yellow-500/40 text-yellow-100 px-0.5 rounded">${escapeHtml(text.substring(match.index, match.index + match[0].length))}</mark>`;
+    lastIndex = match.index + match[0].length;
+    if (match[0].length === 0) {
+      // Prevent infinite loop for zero-width matches
+      queryRegex.lastIndex++;
     }
   }
 

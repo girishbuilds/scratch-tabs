@@ -175,11 +175,10 @@ export function toPipeline(saved: SavedPipeline): Pipeline {
  */
 export async function getFavoritePipelines(): Promise<SavedPipeline[]> {
   try {
-    const pipelines = await db.pipelines
-      .where("isFavorite")
-      .equals(1) // Dexie uses 1 for true in indexed fields
-      .toArray();
-    return pipelines;
+    // isFavorite is stored as a boolean, and booleans are not valid IndexedDB
+    // keys, so rows never enter an index on it. Filter in memory instead.
+    const pipelines = await db.pipelines.toArray();
+    return pipelines.filter((p) => p.isFavorite);
   } catch (error) {
     console.error("[PipelineStorage] Failed to get favorites:", error);
     return [];
