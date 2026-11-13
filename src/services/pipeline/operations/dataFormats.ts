@@ -343,7 +343,7 @@ export const dataFormatOperations: OperationDefinition[] = [
                 label: "Parse Numbers",
                 type: "boolean",
                 default: true,
-                description: "Convert numeric strings to numbers"
+                description: "Convert plain numeric strings to numbers (zero-padded values and integers beyond 2^53 stay strings)"
             }
         ],
         processingMode: "entire",
@@ -353,54 +353,81 @@ export const dataFormatOperations: OperationDefinition[] = [
             const indent = (params.indent as number) ?? 2;
             const parseNumbers = params.parseNumbers ?? true;
 
-            const lines = input.trim().split('\n').filter(l => l.trim());
-            if (lines.length === 0) {
-                return '[]';
-            }
-
-            // CSV parser that handles quoted fields
-            const parseRow = (row: string): string[] => {
-                const cells: string[] = [];
-                let currentCell = '';
+            // RFC 4180 parser over the whole input, so quoted fields may contain newlines
+            const parseRows = (text: string): string[][] => {
+                const rows: string[][] = [];
+                let row: string[] = [];
+                let cell = '';
                 let inQuotes = false;
+                let wasQuoted = false;
 
-                for (let i = 0; i < row.length; i++) {
-                    const char = row[i];
-                    const nextChar = row[i + 1];
+                const endCell = () => {
+                    row.push(wasQuoted ? cell : cell.trim());
+                    cell = '';
+                    wasQuoted = false;
+                };
+                const endRow = () => {
+                    endCell();
+                    // Skip blank lines (a single empty, unquoted cell)
+                    if (!(row.length === 1 && row[0] === '')) rows.push(row);
+                    row = [];
+                };
 
-                    if (char === '"') {
-                        if (inQuotes && nextChar === '"') {
-                            currentCell += '"';
-                            i++;
+                for (let i = 0; i < text.length; i++) {
+                    const char = text[i];
+
+                    if (inQuotes) {
+                        if (char === '"') {
+                            if (text[i + 1] === '"') {
+                                cell += '"';
+                                i++;
+                            } else {
+                                inQuotes = false;
+                            }
                         } else {
-                            inQuotes = !inQuotes;
+                            cell += char;
                         }
-                    } else if (char === delimiter && !inQuotes) {
-                        cells.push(currentCell);
-                        currentCell = '';
+                    } else if (char === '"' && !wasQuoted && cell.trim() === '') {
+                        // Opening quote at the start of a field
+                        inQuotes = true;
+                        wasQuoted = true;
+                        cell = '';
+                    } else if (char === delimiter) {
+                        endCell();
+                    } else if (char === '\n' || char === '\r') {
+                        if (char === '\r' && text[i + 1] === '\n') i++;
+                        endRow();
+                    } else if (wasQuoted) {
+                        // Ignore stray characters between a closing quote and the delimiter
+                        if (char.trim() !== '') cell += char;
                     } else {
-                        currentCell += char;
+                        cell += char;
                     }
                 }
-                cells.push(currentCell);
+                if (cell !== '' || wasQuoted || row.length > 0) endRow();
 
-                return cells.map(c => {
-                    let trimmed = c.trim();
-                    if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
-                        trimmed = trimmed.slice(1, -1).replace(/""/g, '"');
-                    }
-                    return trimmed;
-                });
+                return rows;
             };
+
+            const parsedRows = parseRows(input.trim());
+            if (parsedRows.length === 0) {
+                return '[]';
+            }
 
             const parseValue = (val: string): string | number | boolean | null => {
                 if (val === '') return null;
                 if (val.toLowerCase() === 'true') return true;
                 if (val.toLowerCase() === 'false') return false;
                 if (val.toLowerCase() === 'null') return null;
-                if (parseNumbers && /^-?\d+(\.\d+)?$/.test(val)) {
-                    const num = parseFloat(val);
-                    if (!isNaN(num)) return num;
+                // Only convert canonical numbers. Zero-padded identifiers ("02134") and integers
+                // beyond Number.MAX_SAFE_INTEGER would be silently changed, so they stay strings.
+                if (parseNumbers && /^-?(0|[1-9]\d*)(\.\d+)?$/.test(val)) {
+                    const num = Number(val);
+                    const isInteger = !val.includes('.');
+                    const digits = val.replace(/[-.]/g, '').length;
+                    if (isInteger ? Number.isSafeInteger(num) : Number.isFinite(num) && digits <= 15) {
+                        return num;
+                    }
                 }
                 return val;
             };
@@ -409,19 +436,19 @@ export const dataFormatOperations: OperationDefinition[] = [
             let startRow: number;
 
             if (hasHeaders) {
-                headers = parseRow(lines[0]);
+                headers = parsedRows[0];
                 startRow = 1;
             } else {
                 // Generate column names: col0, col1, col2, ...
-                const firstRow = parseRow(lines[0]);
+                const firstRow = parsedRows[0];
                 headers = firstRow.map((_, i) => `col${i}`);
                 startRow = 0;
             }
 
             const result: Record<string, unknown>[] = [];
 
-            for (let i = startRow; i < lines.length; i++) {
-                const cells = parseRow(lines[i]);
+            for (let i = startRow; i < parsedRows.length; i++) {
+                const cells = parsedRows[i];
                 const obj: Record<string, unknown> = {};
 
                 headers.forEach((header, idx) => {
