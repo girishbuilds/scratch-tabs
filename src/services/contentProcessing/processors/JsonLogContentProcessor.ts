@@ -1,6 +1,33 @@
 import { ContentProcessor, ContentProcessingResult, ContentProcessingContext } from "../types";
 
 /**
+ * Minify already-valid JSON text by removing whitespace outside string literals.
+ * Unlike JSON.stringify(JSON.parse(x)), number and string text is preserved exactly,
+ * so values beyond Number.MAX_SAFE_INTEGER (e.g. 64-bit IDs) are not rounded.
+ */
+function compactJsonText(text: string): string {
+  let out = "";
+  let inString = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inString) {
+      out += ch;
+      if (ch === "\\") {
+        out += text[++i] ?? "";
+      } else if (ch === '"') {
+        inString = false;
+      }
+    } else if (ch === '"') {
+      inString = true;
+      out += ch;
+    } else if (ch !== " " && ch !== "\t" && ch !== "\n" && ch !== "\r") {
+      out += ch;
+    }
+  }
+  return out;
+}
+
+/**
  * Content processor for cleaning messy JSON log pastes
  * Handles common scenarios like:
  * - Lines with timestamp/level prefixes before JSON
@@ -85,12 +112,12 @@ export class JsonLogContentProcessor implements ContentProcessor {
           // It's a stringified JSON, try to parse the inner string
           const innerParsed = JSON.parse(parsed);
           if (typeof innerParsed === "object" && innerParsed !== null) {
-            processedLine = JSON.stringify(innerParsed);
+            processedLine = compactJsonText(parsed);
             successfullyProcessedCount++;
           }
         } else if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
           // It's already a valid JSON object, just ensure it's compact
-          processedLine = JSON.stringify(parsed);
+          processedLine = compactJsonText(trimmedLine);
           successfullyProcessedCount++;
         }
       } catch (e) {
@@ -101,7 +128,7 @@ export class JsonLogContentProcessor implements ContentProcessor {
           try {
             const parsed = JSON.parse(jsonPart);
             if (typeof parsed === "object" && parsed !== null) {
-              processedLine = JSON.stringify(parsed);
+              processedLine = compactJsonText(jsonPart);
               successfullyProcessedCount++;
             }
           } catch (e2) {

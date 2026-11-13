@@ -37,6 +37,21 @@ describe('CsvContentProcessor', () => {
       expect(processor.canProcess(content, nonPasteContext)).toBe(false);
     });
 
+    it('should not process Windows paths containing \\t (\\temp, \\tools)', () => {
+      const content = 'C:\\temp\\tools\\bin\nD:\\temp\\tests\\bin';
+      expect(processor.canProcess(content, context)).toBe(false);
+    });
+
+    it('should not process UNC paths', () => {
+      const content = '\\\\server\\tmp\\tools\n\\\\server\\tmp\\tests';
+      expect(processor.canProcess(content, context)).toBe(false);
+    });
+
+    it('should not process content in a structured language such as yaml', () => {
+      const content = 'name\\tage\nAlice\\t30';
+      expect(processor.canProcess(content, { ...context, currentLanguage: 'yaml' })).toBe(false);
+    });
+
     it('should not process single-line content', () => {
       const content = 'name\\tage\\temail';
       expect(processor.canProcess(content, context)).toBe(false);
