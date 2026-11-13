@@ -495,14 +495,27 @@ class ModelManager {
     this.cursorPositionListeners.delete(tabId);
   }
 
-  private evict() {
+  private evict(keepTabId?: string) {
     if (this.models.size < MAX_MODELS) return;
 
-    // The first item in a Set (when iterated) is the oldest one added
-    const lruTabId = this.lru.values().next().value;
-    if (lruTabId) {
-      this.dispose(lruTabId);
+    // Models an editor is displaying (e.g. the other pane of a split view)
+    // must survive: disposing one blanks that editor, and LRU order is only
+    // refreshed when an editor mounts, so a pane that stays on one tab ages.
+    const shownModels = new Set<Monaco.editor.ITextModel>();
+    for (const editor of this.monaco?.editor.getEditors?.() ?? []) {
+      const model = editor.getModel();
+      if (model) shownModels.add(model);
     }
+
+    // Sets iterate in insertion order, so the first match is the oldest
+    for (const tabId of this.lru) {
+      if (tabId === keepTabId) continue;
+      const model = this.models.get(tabId);
+      if (model && shownModels.has(model)) continue;
+      this.dispose(tabId);
+      return;
+    }
+    // Every other model is on screen: stay over the limit rather than blank one.
   }
 
   public async get(tab: Tab, options?: { isNewTabFromPaste?: boolean }): Promise<Monaco.editor.ITextModel> {
@@ -616,7 +629,7 @@ class ModelManager {
     this.listeners.set(tab.id, contentListener);
     this.lru.add(tab.id);
     if (this.models.size > MAX_MODELS) {
-      this.evict();
+      this.evict(tab.id);
     }
     return model;
   }

@@ -5,6 +5,7 @@ import {
   getPreviousActiveTab,
   removeTabFromHistory,
   createDefaultSplitViewState,
+  removeTabFromSplitView,
 } from "../utils";
 
 interface SplitViewStore {
@@ -329,115 +330,9 @@ export const useSplitViewStore = create<SplitViewStore>((set, get) => ({
     }),
 
   removeTabFromSide: (tabId) =>
-    set((state) => {
-      const newSplitView = { ...state.splitView };
-      let wasTabOnLeft = false;
-      let wasTabOnRight = false;
-
-      if (newSplitView.leftTabs.includes(tabId)) {
-        wasTabOnLeft = true;
-        newSplitView.leftTabs = newSplitView.leftTabs.filter(
-          (id) => id !== tabId,
-        );
-        newSplitView.leftTabHistory = removeTabFromHistory(
-          newSplitView.leftTabHistory || [],
-          tabId,
-        );
-        if (newSplitView.activeLeftTabId === tabId) {
-          newSplitView.activeLeftTabId = getPreviousActiveTab(
-            newSplitView.leftTabHistory,
-            newSplitView.leftTabs,
-          );
-        }
-      }
-      if (newSplitView.rightTabs.includes(tabId)) {
-        wasTabOnRight = true;
-        newSplitView.rightTabs = newSplitView.rightTabs.filter(
-          (id) => id !== tabId,
-        );
-        newSplitView.rightTabHistory = removeTabFromHistory(
-          newSplitView.rightTabHistory || [],
-          tabId,
-        );
-        if (newSplitView.activeRightTabId === tabId) {
-          newSplitView.activeRightTabId = getPreviousActiveTab(
-            newSplitView.rightTabHistory,
-            newSplitView.rightTabs,
-          );
-        }
-      }
-
-      if (newSplitView.isSplit) {
-        if (
-          newSplitView.leftTabs.length === 0 &&
-          newSplitView.rightTabs.length > 0
-        ) {
-          // Left side empty, unsplit to right
-          newSplitView.isSplit = false;
-          newSplitView.leftTabs = [...newSplitView.rightTabs];
-          newSplitView.leftTabHistory = [...newSplitView.rightTabHistory];
-          newSplitView.activeLeftTabId =
-            newSplitView.activeRightTabId || newSplitView.leftTabs[0] || null;
-          newSplitView.rightTabs = [];
-          newSplitView.rightTabHistory = [];
-          newSplitView.activeRightTabId = null;
-          newSplitView.activeSide = "left";
-        } else if (
-          newSplitView.rightTabs.length === 0 &&
-          newSplitView.leftTabs.length > 0
-        ) {
-          // Right side empty, unsplit to left
-          newSplitView.isSplit = false;
-          newSplitView.activeRightTabId = null;
-          newSplitView.rightTabHistory = [];
-          newSplitView.activeSide = "left"; // Keep focus on left
-        } else if (
-          newSplitView.leftTabs.length === 0 &&
-          newSplitView.rightTabs.length === 0
-        ) {
-          // Both sides empty
-          newSplitView.isSplit = false;
-          newSplitView.activeLeftTabId = null;
-          newSplitView.activeRightTabId = null;
-          newSplitView.activeSide = "left";
-        }
-      } else {
-        // Not split
-        if (newSplitView.leftTabs.length === 0) {
-          newSplitView.activeLeftTabId = null;
-        }
-      }
-      // Determine active side after removal
-      if (!newSplitView.isSplit) {
-        newSplitView.activeSide = "left";
-      } else if (
-        wasTabOnLeft &&
-        newSplitView.leftTabs.length === 0 &&
-        newSplitView.rightTabs.length > 0
-      ) {
-        newSplitView.activeSide = "right"; // If left became empty, shift focus to right
-      } else if (
-        wasTabOnRight &&
-        newSplitView.rightTabs.length === 0 &&
-        newSplitView.leftTabs.length > 0
-      ) {
-        newSplitView.activeSide = "left"; // If right became empty, shift focus to left
-      } else if (
-        newSplitView.activeSide === "left" &&
-        newSplitView.leftTabs.length === 0 &&
-        newSplitView.rightTabs.length > 0
-      ) {
-        newSplitView.activeSide = "right";
-      } else if (
-        newSplitView.activeSide === "right" &&
-        newSplitView.rightTabs.length === 0 &&
-        newSplitView.leftTabs.length > 0
-      ) {
-        newSplitView.activeSide = "left";
-      }
-
-      return { splitView: newSplitView };
-    }),
+    set((state) => ({
+      splitView: removeTabFromSplitView(state.splitView, tabId),
+    })),
 
   closeTabsToLeft: (tabId, isRightSide) =>
     set((state) => {

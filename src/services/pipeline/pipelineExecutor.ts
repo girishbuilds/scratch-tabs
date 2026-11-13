@@ -16,6 +16,7 @@ import {
   StepResult,
   PipelineResult,
   PipelineExecutionOptions,
+  OperationDefinition,
 } from "./types";
 
 /** Default execution options */
@@ -40,6 +41,24 @@ function splitLines(input: string): string[] {
 function detectLineEnding(input: string): string {
   const match = input.match(/\r\n|\r|\n/);
   return match ? match[0] : "\n";
+}
+
+/**
+ * Run an operation on the whole input. Line-based operations (see
+ * `OperationDefinition.lineBased`) see LF-only text and their output is
+ * converted back to the input's own line ending.
+ */
+async function executeWholeInput(
+  operation: OperationDefinition,
+  input: string,
+  params: Record<string, unknown>,
+  context: ExecutionContext,
+): Promise<string> {
+  const eol = operation.lineBased ? detectLineEnding(input) : "\n";
+  const normalized = eol === "\n" ? input : splitLines(input).join("\n");
+  const output = await operation.execute(normalized, params, context);
+  const text = typeof output === "string" ? output : String(output ?? "");
+  return eol === "\n" ? text : text.replace(/\n/g, eol);
 }
 
 /**
@@ -144,8 +163,12 @@ export async function executeStep(
       );
       stringOutput = processedLines.join(eol);
     } else {
-      const output = await operation.execute(input, step.params, context);
-      stringOutput = typeof output === "string" ? output : String(output ?? "");
+      stringOutput = await executeWholeInput(
+        operation,
+        input,
+        step.params,
+        context,
+      );
     }
 
     if (
@@ -339,8 +362,12 @@ export async function executeSingleOperation(
       );
       finalOutput = processedLines.join(eol);
     } else {
-      const output = await operation.execute(input, params, context);
-      finalOutput = typeof output === "string" ? output : String(output ?? "");
+      finalOutput = await executeWholeInput(
+        operation,
+        input,
+        params,
+        context,
+      );
     }
 
     return {

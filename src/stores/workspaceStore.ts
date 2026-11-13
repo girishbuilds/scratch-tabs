@@ -10,6 +10,7 @@ import { WELCOME_TAB_CONTENT, NEW_TAB_PREFIX } from "../constants";
 import { modelManager } from "../services/modelManager";
 import { broadcastManager } from "./broadcastStore";
 import { canvasLifecycleCoordinator } from "../services/canvasLifecycleCoordinator";
+import { reconcileSplitViewWithTabs } from "../utils/splitViewUtils";
 
 // Helper function to sort workspaces by displayOrder (primary) or lastAccessed (fallback)
 const sortWorkspaces = (workspaces: Workspace[]): Workspace[] => {
@@ -114,19 +115,24 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => {
           useTabsStore.setState({ tabs });
 
           if (splitView) {
-            const finalSplitViewState: SplitViewState = {
-              id: splitView.id,
-              isSplit: splitView.isSplit,
-              leftTabs: splitView.leftTabs || [],
-              rightTabs: splitView.rightTabs || [],
-              activeLeftTabId: splitView.activeLeftTabId,
-              activeRightTabId: splitView.activeRightTabId,
-              activeSide: parseActiveSide(splitView.activeSide),
-              splitRatio: splitView.splitRatio,
-              workspaceId: splitView.workspaceId,
-              leftTabHistory: splitView.leftTabHistory || [],
-              rightTabHistory: splitView.rightTabHistory || [],
-            };
+            // The persisted split view can lag behind the tab rows (a tab was
+            // closed or duplicated right before a reload), so reconcile it.
+            const finalSplitViewState = reconcileSplitViewWithTabs<SplitViewState>(
+              {
+                id: splitView.id,
+                isSplit: splitView.isSplit,
+                leftTabs: splitView.leftTabs || [],
+                rightTabs: splitView.rightTabs || [],
+                activeLeftTabId: splitView.activeLeftTabId,
+                activeRightTabId: splitView.activeRightTabId,
+                activeSide: parseActiveSide(splitView.activeSide),
+                splitRatio: splitView.splitRatio,
+                workspaceId: splitView.workspaceId,
+                leftTabHistory: splitView.leftTabHistory || [],
+                rightTabHistory: splitView.rightTabHistory || [],
+              },
+              tabs.map((t) => t.id),
+            ).value;
             useSplitViewStore.setState({ splitView: finalSplitViewState });
           } else {
             useSplitViewStore.setState({ splitView: undefined });
@@ -319,20 +325,23 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => {
         }));
 
         useTabsStore.setState({ tabs: tabsToLoad });
-        const finalSplitViewState: SplitViewState = {
-          // Convert record to state
-          id: splitViewToLoad.id,
-          isSplit: splitViewToLoad.isSplit,
-          leftTabs: splitViewToLoad.leftTabs || [],
-          rightTabs: splitViewToLoad.rightTabs || [],
-          activeLeftTabId: splitViewToLoad.activeLeftTabId,
-          activeRightTabId: splitViewToLoad.activeRightTabId,
-          activeSide: parseActiveSide(splitViewToLoad.activeSide),
-          splitRatio: splitViewToLoad.splitRatio,
-          workspaceId: splitViewToLoad.workspaceId,
-          leftTabHistory: splitViewToLoad.leftTabHistory || [],
-          rightTabHistory: splitViewToLoad.rightTabHistory || [],
-        };
+        // Convert record to state, reconciled with the tab rows that exist
+        const finalSplitViewState = reconcileSplitViewWithTabs<SplitViewState>(
+          {
+            id: splitViewToLoad.id,
+            isSplit: splitViewToLoad.isSplit,
+            leftTabs: splitViewToLoad.leftTabs || [],
+            rightTabs: splitViewToLoad.rightTabs || [],
+            activeLeftTabId: splitViewToLoad.activeLeftTabId,
+            activeRightTabId: splitViewToLoad.activeRightTabId,
+            activeSide: parseActiveSide(splitViewToLoad.activeSide),
+            splitRatio: splitViewToLoad.splitRatio,
+            workspaceId: splitViewToLoad.workspaceId,
+            leftTabHistory: splitViewToLoad.leftTabHistory || [],
+            rightTabHistory: splitViewToLoad.rightTabHistory || [],
+          },
+          tabsToLoad.map((t) => t.id),
+        ).value;
         useSplitViewStore.setState({ splitView: finalSplitViewState });
 
         // Update the active tab ID based on the loaded split view state

@@ -63,6 +63,7 @@ const coreOperations: OperationDefinition[] = [
     },
     {
         id: "text.remove-blank-lines",
+        lineBased: true,
         name: "Remove Blank Lines",
         description: "Remove all empty or whitespace-only lines",
         categories: ["text", "cleanup"],
@@ -78,6 +79,7 @@ const coreOperations: OperationDefinition[] = [
     },
     {
         id: "text.remove-extra-blank-lines",
+        lineBased: true,
         name: "Remove Extra Blank Lines",
         description: "Collapse consecutive blank lines into single blank lines",
         categories: ["text", "cleanup"],
@@ -171,6 +173,7 @@ const coreOperations: OperationDefinition[] = [
     },
     {
         id: "text.sentence-case",
+        lineBased: true,
         name: "Sentence Case",
         description: "Capitalize the first letter of the text",
         categories: ["text", "case"],
@@ -190,6 +193,7 @@ const coreOperations: OperationDefinition[] = [
     },
     {
         id: "text.camel-case",
+        lineBased: true,
         name: "camelCase",
         description: "Convert text to camelCase",
         categories: ["text", "case"],
@@ -212,6 +216,7 @@ const coreOperations: OperationDefinition[] = [
     },
     {
         id: "text.pascal-case",
+        lineBased: true,
         name: "PascalCase",
         description: "Convert text to PascalCase",
         categories: ["text", "case"],
@@ -232,6 +237,7 @@ const coreOperations: OperationDefinition[] = [
     },
     {
         id: "text.kebab-case",
+        lineBased: true,
         name: "kebab-case",
         description: "Convert text to kebab-case",
         categories: ["text", "case"],
@@ -248,6 +254,7 @@ const coreOperations: OperationDefinition[] = [
     },
     {
         id: "text.snake-case",
+        lineBased: true,
         name: "snake_case",
         description: "Convert text to snake_case",
         categories: ["text", "case"],
@@ -264,6 +271,7 @@ const coreOperations: OperationDefinition[] = [
     },
     {
         id: "text.screaming-snake-case",
+        lineBased: true,
         name: "SCREAMING_SNAKE_CASE",
         description: "Convert text to SCREAMING_SNAKE_CASE",
         categories: ["text", "case"],
@@ -324,6 +332,7 @@ const coreOperations: OperationDefinition[] = [
     // === DUPLICATES ===
     {
         id: "text.remove-duplicates",
+        lineBased: true,
         name: "Remove Duplicate Lines",
         description: "Remove duplicate lines, keeping first occurrence",
         categories: ["text", "cleanup"],
@@ -365,6 +374,7 @@ const coreOperations: OperationDefinition[] = [
     },
     {
         id: "text.frequency",
+        lineBased: true,
         name: "Word/Character Frequency",
         description: "Count occurrences of unique lines, words, or characters",
         categories: ["text", "utilities"],
@@ -454,6 +464,7 @@ const coreOperations: OperationDefinition[] = [
     // === SORTING & LINE ORDER ===
     {
         id: "text.sort",
+        lineBased: true,
         name: "Sort Lines",
         description: "Sort lines using various algorithms",
         categories: ["text", "sorting"],
@@ -507,6 +518,7 @@ const coreOperations: OperationDefinition[] = [
     },
     {
         id: "text.reverse-lines",
+        lineBased: true,
         name: "Reverse Lines",
         description: "Reverse the order of all lines",
         categories: ["text", "sorting"],
@@ -519,6 +531,7 @@ const coreOperations: OperationDefinition[] = [
     },
     {
         id: "text.reverse",
+        lineBased: true,
         name: "Reverse Text",
         description: "Reverse the characters in the text",
         categories: ["text"],
@@ -620,6 +633,7 @@ const coreOperations: OperationDefinition[] = [
     },
     {
         id: "text.shuffle-lines",
+        lineBased: true,
         name: "Shuffle Lines",
         description: "Randomly reorder all lines",
         categories: ["text", "sorting"],
@@ -639,6 +653,7 @@ const coreOperations: OperationDefinition[] = [
     // === FILTERING & SELECTION ===
     {
         id: "text.filter-regex",
+        lineBased: true,
         name: "Filter by Regex",
         description: "Keep or remove lines that match a regular expression",
         categories: ["text", "filtering"],
@@ -691,6 +706,7 @@ const coreOperations: OperationDefinition[] = [
     },
     {
         id: "text.filter-keyword",
+        lineBased: true,
         name: "Filter by Keyword",
         description: "Keep or remove lines containing a keyword",
         categories: ["text", "filtering"],
@@ -747,6 +763,7 @@ const coreOperations: OperationDefinition[] = [
     },
     {
         id: "text.keep-first-n",
+        lineBased: true,
         name: "Keep First N Lines",
         description: "Keep only the first N lines of text",
         categories: ["text", "filtering"],
@@ -767,6 +784,7 @@ const coreOperations: OperationDefinition[] = [
     },
     {
         id: "text.keep-last-n",
+        lineBased: true,
         name: "Keep Last N Lines",
         description: "Keep only the last N lines of text",
         categories: ["text", "filtering"],
@@ -1003,6 +1021,7 @@ const coreOperations: OperationDefinition[] = [
     // === JOIN/SPLIT ===
     {
         id: "text.join-lines",
+        lineBased: true,
         name: "Join Lines",
         description: "Join all lines with a specified separator",
         categories: ["text", "formatting"],
@@ -1145,6 +1164,7 @@ const coreOperations: OperationDefinition[] = [
     // === FIND/REPLACE ===
     {
         id: "text.duplicate-lines",
+        lineBased: true,
         name: "Duplicate Lines",
         description: "Repeat each line N times",
         categories: ["text", "lines"],
@@ -1299,6 +1319,7 @@ const coreOperations: OperationDefinition[] = [
     },
     {
         id: "text.obfuscate",
+        lineBased: true,
         name: "Obfuscate Text",
         description: "Hide the middle of a sensitive value while preserving configurable characters at the start and end",
         categories: ["text", "redaction", "privacy"],
@@ -1667,6 +1688,7 @@ const coreOperations: OperationDefinition[] = [
     // === COLUMN ALIGN ===
     {
         id: "text.column-align",
+        lineBased: true,
         name: "Align Columns",
         description: "Align whitespace- or tab-separated columns to uniform widths (like `column -t`)",
         categories: ["text", "formatting"],
@@ -1822,6 +1844,7 @@ const coreOperations: OperationDefinition[] = [
     // === REMOVE COMMENTS ===
     {
         id: "text.remove-comments",
+        lineBased: true,
         name: "Remove Comments",
         description:
             "Strip comments from source code while preserving strings and line structure. Generic counterpart to the JSON-only json.removeComments.",
