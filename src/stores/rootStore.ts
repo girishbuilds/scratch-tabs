@@ -1,3 +1,4 @@
+import { applyCombinedTabOrder } from "../utils/splitViewUtils";
 import { create } from "zustand";
 import { useTabsStore } from "./tabsStore";
 import { useSplitViewStore } from "./splitViewStore";
@@ -989,9 +990,15 @@ export const useRootStore = create<RootStore>((set, get) => {
         const splitView = await storage.getSplitViewByWorkspace(workspaceId);
 
         if (splitView) {
-          // Update the tab order in splitView
-          // For inactive workspaces, we maintain the combined order in leftTabs
-          splitView.leftTabs = newTabOrder;
+          // The sidebar shows the combined order (left pane, then right pane).
+          // Keep every tab in its own pane and only reorder within each pane,
+          // so a tab id can never end up in both leftTabs and rightTabs.
+          const { leftTabs, rightTabs } = applyCombinedTabOrder(
+            splitView,
+            newTabOrder,
+          );
+          splitView.leftTabs = leftTabs;
+          splitView.rightTabs = rightTabs;
           splitView.lastModified = Date.now();
 
           // Save the updated splitView

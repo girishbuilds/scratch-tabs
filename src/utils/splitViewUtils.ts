@@ -172,3 +172,116 @@ export function groupTabsByLanguage(tabs: Tab[], tabIds: string[]): string[] {
 
   return result;
 }
+
+/**
+ * Tab-list fields shared by SplitViewState and SplitViewRecord. Histories are
+ * optional because older persisted records may not have them.
+ */
+interface SplitViewTabLists {
+  isSplit: boolean;
+  leftTabs: string[];
+  rightTabs: string[];
+  activeLeftTabId: string | null;
+  activeRightTabId: string | null;
+  leftTabHistory?: string[];
+  rightTabHistory?: string[];
+}
+
+const dedupe = (ids: string[]): string[] => Array.from(new Set(ids));
+
+/**
+ * Enforces the split view invariant: a tab id lives in exactly one pane and at
+ * most once in it. Repairs records that already violate it.
+ *
+ * When an id is in both panes, `rightTabs` is treated as authoritative. The
+ * known corruption (reordering an inactive split workspace) wrote the whole
+ * combined order into `leftTabs` and left `rightTabs` untouched, so the right
+ * pane entry is the original placement. If that would empty the left pane, the
+ * left entry wins instead so a split never ends up with an empty pane.
+ *
+ * Returns the input object unchanged when it is already valid, so it is cheap
+ * to call on every read and write.
+ */
+export function normalizeSplitViewTabLists<T extends SplitViewTabLists>(
+  splitView: T,
+): { value: T; changed: boolean } {
+  const originalLeft = splitView.leftTabs || [];
+  const originalRight = splitView.rightTabs || [];
+
+  let left = dedupe(originalLeft);
+  let right = dedupe(originalRight);
+
+  const rightSet = new Set(right);
+  const overlap = new Set(left.filter((id) => rightSet.has(id)));
+  if (overlap.size > 0) {
+    const leftOnly = left.filter((id) => !overlap.has(id));
+    if (leftOnly.length > 0) {
+      left = leftOnly;
+    } else {
+      // Every left id is also on the right: keep the left pane populated.
+      right = right.filter((id) => !overlap.has(id));
+    }
+  }
+
+  const changed =
+    left.length !== originalLeft.length ||
+    right.length !== originalRight.length ||
+    left.some((id, i) => id !== originalLeft[i]) ||
+    right.some((id, i) => id !== originalRight[i]);
+
+  if (!changed) return { value: splitView, changed: false };
+
+  const leftSet = new Set(left);
+  const pickActive = (active: string | null, list: string[], set: Set<string>) =>
+    active && !set.has(active) ? (list[0] ?? null) : active;
+
+  const value: T = {
+    ...splitView,
+    leftTabs: left,
+    rightTabs: right,
+    activeLeftTabId: pickActive(splitView.activeLeftTabId, left, leftSet),
+    activeRightTabId: pickActive(
+      splitView.activeRightTabId,
+      right,
+      new Set(right),
+    ),
+  };
+  if (splitView.leftTabHistory) {
+    value.leftTabHistory = dedupe(splitView.leftTabHistory).filter((id) =>
+      leftSet.has(id),
+    );
+  }
+  if (splitView.rightTabHistory) {
+    const rSet = new Set(right);
+    value.rightTabHistory = dedupe(splitView.rightTabHistory).filter((id) =>
+      rSet.has(id),
+    );
+  }
+  return { value, changed: true };
+}
+
+/**
+ * Applies a combined display order (the sidebar lists left pane then right
+ * pane) to a split view without moving any tab between panes. Each pane keeps
+ * its own ids, ordered as they appear in `newOrder`; ids missing from
+ * `newOrder` keep their relative order at the end of their pane, and ids not
+ * in the split view (stale sidebar data) are ignored.
+ *
+ * Dragging across panes therefore only reorders within each pane, matching how
+ * reordering works in the active workspace.
+ */
+export function applyCombinedTabOrder(
+  splitView: Pick<SplitViewTabLists, "leftTabs" | "rightTabs">,
+  newOrder: string[],
+): { leftTabs: string[]; rightTabs: string[] } {
+  const orderFor = (current: string[]): string[] => {
+    const currentSet = new Set(current);
+    const ordered = dedupe(newOrder.filter((id) => currentSet.has(id)));
+    const orderedSet = new Set(ordered);
+    return [...ordered, ...current.filter((id) => !orderedSet.has(id))];
+  };
+  return {
+    leftTabs: orderFor(dedupe(splitView.leftTabs || [])),
+    rightTabs: orderFor(dedupe(splitView.rightTabs || [])),
+  };
+}

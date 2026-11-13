@@ -1,5 +1,6 @@
 import Dexie from "dexie";
 import { Tab, Workspace, WorkspaceLink, SplitViewRecord } from "../types";
+import { normalizeSplitViewTabLists } from "../utils/splitViewUtils";
 import type {
   ScratchEntryRecord,
   ScratchKeyRecord,
@@ -153,6 +154,43 @@ export class ScratchTabsDB extends Dexie {
       scratchEntries: "id, createdAt",
       scratchKeys: "id",
     });
+
+    // Version 9: no schema change. Repairs split views where a tab id was
+    // saved in both leftTabs and rightTabs (reordering tabs in an inactive
+    // split workspace used to do this).
+    this.version(9)
+      .stores({
+        tabs: "id, workspaceId, lastModified, lastAccessed",
+        splitView: "id, workspaceId, lastModified",
+        workspaces: "id, lastAccessed, displayOrder",
+        settings: "key",
+        pipelines: "id, name, lastUsedAt, lastModified, isFavorite",
+        canvasDocuments: "id, tabId, workspaceId, updatedAt",
+        canvasAssets: "id, workspaceId, sha256, createdAt",
+        canvasSessions: "tabId, updatedAt",
+        scratchEntries: "id, createdAt",
+        scratchKeys: "id",
+      })
+      .upgrade((tx) => this.upgradeToV9(tx));
+  }
+
+  private async upgradeToV9(tx: any): Promise<void> {
+    // An upgrade that throws aborts opening the database, so never let a bad
+    // row block the app: repair what can be repaired and skip the rest.
+    try {
+      const table = tx.table("splitView");
+      const rows: SplitViewRecord[] = await table.toArray();
+      for (const row of rows) {
+        try {
+          const { value, changed } = normalizeSplitViewTabLists(row);
+          if (changed) await table.put(value);
+        } catch (error) {
+          console.error("Failed to repair split view", row?.id, error);
+        }
+      }
+    } catch (error) {
+      console.error("Split view repair (v9) skipped:", error);
+    }
   }
 
   private async upgradeToV2(tx: any): Promise<void> {
@@ -451,7 +489,7 @@ export class IndexedDBStorage implements StorageProvider {
       }
       await db.transaction("rw", db.workspaces, db.splitView, async () => {
         const [kept] = await this.keepRecordsOfExistingWorkspaces(
-          [splitView],
+          [normalizeSplitViewTabLists(splitView).value],
           "split view",
         );
         if (kept) {
@@ -582,7 +620,9 @@ export class IndexedDBStorage implements StorageProvider {
         .where("workspaceId")
         .equals(workspaceId)
         .first();
-      return result || null;
+      // Heal rows written by older versions or other windows; the repaired
+      // row is persisted on the next normal save.
+      return result ? normalizeSplitViewTabLists(result).value : null;
     });
   }
 
